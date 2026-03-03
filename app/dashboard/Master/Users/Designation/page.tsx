@@ -33,14 +33,13 @@ import { CapitalizedInput } from "@/component/form/CapitalizedInput";
 import { usePrint } from "@/context/print/usePrintContext";
 import { useRouter } from "next/navigation";
 import { FaPrint, FaFileExcel } from "react-icons/fa";
-import { ActiveSelect } from "@/components/ui/ActiveSelect";
 
 // Types
 interface Designation {
     DESIGNATIONCODE?: number;
     DESCRIPTION: string;
     ACTIVE: "Y" | "N";
-    CREATEDBY?: string;
+   CREATEDBY?: number; 
     CREATEDDATE?: string;
     CREATEDTIME?: string;
 }

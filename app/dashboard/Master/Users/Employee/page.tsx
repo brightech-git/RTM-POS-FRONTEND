@@ -14,6 +14,7 @@ import {
     For,
     Flex,
     Spinner,
+    Input,
 } from "@chakra-ui/react";
 import { Table } from "@chakra-ui/react/table";
 import { AiOutlineSave } from "react-icons/ai";
@@ -25,7 +26,6 @@ import {
     useAllEmployees,
     useCreateEmployee,
     useUpdateEmployee,
-    useDeleteEmployee,
 } from "@/hooks/Employee/useEmployee";
 import ScrollToTop from "@/component/scroll/ScrollToTop";
 import { Employee } from "@/service/EmployeeService";
@@ -49,8 +49,8 @@ interface StateResponse {
     STATENAME: string;
 }
 
-// Interface for create payload (without EMPUID)
-interface CreateEmployeePayload {
+// Interface for employee form
+interface EmployeeFormData {
     EMPNAME: string;
     EMPSURNAME: string;
     EMPFATHERNAME: string;
@@ -77,7 +77,6 @@ function EmployeeMaster() {
     const { data: employees, isLoading, refetch: employeeRefetch } = useAllEmployees();
     const createEmployee = useCreateEmployee();
     const updateEmployee = useUpdateEmployee();
-    const deleteEmployee = useDeleteEmployee();
 
     const employeeList = employees ?? [];
 
@@ -117,15 +116,6 @@ function EmployeeMaster() {
         fetchStates();
     }, []);
 
-    /* -------------------- HARDCODED DISTRICTS (TAMIL NADU) - User can enter manually -------------------- */
-    const districtOptions = [
-        { label: "Chennai", value: "Chennai" },
-        { label: "Coimbatore", value: "Coimbatore" },
-        { label: "Madurai", value: "Madurai" },
-        { label: "Tiruchirappalli", value: "Tiruchirappalli" },
-        { label: "Salem", value: "Salem" },
-    ];
-
     const activeStatus = [
         { label: "YES", value: "Y" },
         { label: "NO", value: "N" },
@@ -139,7 +129,7 @@ function EmployeeMaster() {
     ];
 
     /* -------------------- FORM STATE -------------------- */
-    const emptyForm: CreateEmployeePayload = {
+    const emptyForm: EmployeeFormData = {
         EMPNAME: "",
         EMPSURNAME: "",
         EMPFATHERNAME: "",
@@ -157,60 +147,53 @@ function EmployeeMaster() {
         CREATEDBY: 1,
     };
 
-    const [form, setForm] = useState<CreateEmployeePayload>(emptyForm);
-    const [empId, setEmpId] = useState("");
-    const [editId, setEditId] = useState<string | null>(null);
-    const [highlightedId, setHighlightedId] = useState<string | null>(null);
+    const [form, setForm] = useState<EmployeeFormData>(emptyForm);
+    const [editIndex, setEditIndex] = useState<number | null>(null);
+    const [highlightedIndex, setHighlightedIndex] = useState<number | null>(null);
 
     /* -------------------- EFFECTS -------------------- */
     useEffect(() => {
-        if (editId) {
-            const employeeToEdit = employeeList.find(emp => emp.EMPUID === editId);
-            if (employeeToEdit) {
-                // For edit, we need to populate the form with employee data
-                const { EMPUID, ...rest } = employeeToEdit;
-                setForm({
-                    EMPNAME: rest.EMPNAME || "",
-                    EMPSURNAME: rest.EMPSURNAME || "",
-                    EMPFATHERNAME: rest.EMPFATHERNAME || "",
-                    SALUTATION: rest.SALUTATION || "",
-                    DOORNO: rest.DOORNO || "",
-                    STREET: rest.STREET || "",
-                    ADDRESS: rest.ADDRESS || "",
-                    AREA: rest.AREA || "",
-                    CITY: rest.CITY || "",
-                    STATE: rest.STATE || "",
-                    PINCODE: rest.PINCODE || "",
-                    PHONENO: rest.PHONENO || "",
-                    MOBILENO: rest.MOBILENO || "",
-                    ACTIVE: rest.ACTIVE || "Y",
-                    CREATEDBY: 1,
-                });
-                setEmpId(EMPUID);
-                toastLoaded("Employee");
-                ScrollToTop();
-            }
+        if (editIndex !== null && employeeList[editIndex]) {
+            const employeeToEdit = employeeList[editIndex];
+            setForm({
+                EMPNAME: employeeToEdit.EMPNAME || "",
+                EMPSURNAME: employeeToEdit.EMPSURNAME || "",
+                EMPFATHERNAME: employeeToEdit.EMPFATHERNAME || "",
+                SALUTATION: employeeToEdit.SALUTATION || "",
+                DOORNO: employeeToEdit.DOORNO || "",
+                STREET: employeeToEdit.STREET || "",
+                ADDRESS: employeeToEdit.ADDRESS || "",
+                AREA: employeeToEdit.AREA || "",
+                CITY: employeeToEdit.CITY || "",
+                STATE: employeeToEdit.STATE || "",
+                PINCODE: employeeToEdit.PINCODE || "",
+                PHONENO: employeeToEdit.PHONENO || "",
+                MOBILENO: employeeToEdit.MOBILENO || "",
+                ACTIVE: employeeToEdit.ACTIVE || "Y",
+                CREATEDBY: 1,
+            });
+            toastLoaded("Employee");
+            ScrollToTop();
         }
-    }, [editId, employeeList]);
+    }, [editIndex, employeeList]);
 
     useEffect(() => {
-        if (!highlightedId) return;
+        if (highlightedIndex === null) return;
 
         const timer = setTimeout(() => {
-            setHighlightedId(null);
+            setHighlightedIndex(null);
         }, 3000);
 
         return () => clearTimeout(timer);
-    }, [highlightedId]);
+    }, [highlightedIndex]);
 
     /* -------------------- HANDLERS -------------------- */
-    const handleChange = (field: keyof CreateEmployeePayload, value: any) => {
+    const handleChange = (field: keyof EmployeeFormData, value: any) => {
         setForm((prev) => ({ ...prev, [field]: value }));
     };
 
     const resetForm = () => {
-        setEditId(null);
-        setEmpId("");
+        setEditIndex(null);
         setForm(emptyForm);
     };
 
@@ -263,8 +246,7 @@ function EmployeeMaster() {
     const handleSave = () => {
         if (!validateForm()) return;
 
-        // Prepare payload with correct data types (without EMPUID for create)
-        const payload: CreateEmployeePayload = {
+        const payload: EmployeeFormData = {
             EMPNAME: String(form.EMPNAME).trim(),
             EMPSURNAME: String(form.EMPSURNAME).trim(),
             EMPFATHERNAME: String(form.EMPFATHERNAME).trim(),
@@ -282,16 +264,19 @@ function EmployeeMaster() {
             CREATEDBY: 1,
         };
 
-        if (editId) {
-            // For update, we need to include EMPUID
+        if (editIndex !== null) {
+            // For update, we need to send the full employee object
+            // The API will identify which employee to update based on some identifier
+            // You may need to include EMPUID or other identifier here if your API requires it
             const updatePayload = {
                 ...payload,
-                EMPUID: empId
+                // If your API requires an ID for update, you'll need to include it here
+                // EMPUID: employeeList[editIndex].EMPUID // Uncomment if your API has EMPUID
             };
             updateEmployee.mutate(updatePayload as Employee, {
                 onSuccess: () => {
                     employeeRefetch();
-                    setHighlightedId(empId);
+                    setHighlightedIndex(editIndex);
                     resetForm();
                 },
                 onError: (error: any) => {
@@ -300,7 +285,7 @@ function EmployeeMaster() {
                 }
             });
         } else {
-            // For create, send payload without EMPUID
+            // For create
             createEmployee.mutate(payload as any, {
                 onSuccess: () => {
                     employeeRefetch();
@@ -311,18 +296,16 @@ function EmployeeMaster() {
                     toastError("Failed to create employee");
                 }
             });
-            console.log("Creating employee with payload:", payload);
         }
     };
 
-    const handleEdit = (employee: Employee) => {
-        setEditId(employee.EMPUID);
+    const handleEdit = (index: number) => {
+        setEditIndex(index);
     };
 
-    /* -------------------- TABLE COLUMNS - All data columns with edit in S.No -------------------- */
+    /* -------------------- TABLE COLUMNS -------------------- */
     const employeeColumns = [
         { key: 'SNO', label: 'S.No' },
-        { key: 'EMPUID', label: 'Employee ID' },
         { key: 'EMPNAME', label: 'First Name' },
         { key: 'EMPSURNAME', label: 'Surname' },
         { key: 'EMPFATHERNAME', label: 'Father Name' },
@@ -343,7 +326,6 @@ function EmployeeMaster() {
     const handleExport = (option: string) => {
         setData(employeeList);
         setColumns([
-            { key: "EMPUID", label: "Employee ID" },
             { key: "EMPNAME", label: "First Name" },
             { key: "EMPSURNAME", label: "Surname" },
             { key: "EMPFATHERNAME", label: "Father Name" },
@@ -383,11 +365,6 @@ function EmployeeMaster() {
                         <Fieldset.Root size="sm" width="100%">
                             <Fieldset.Content>
                                 <Grid gap={2}>
-                                    {/* Hidden Employee ID field (only for update) */}
-                                    {editId && (
-                                        <input type="hidden" value={empId} />
-                                    )}
-
                                     {/* SALUTATION */}
                                     <Box display="flex" alignItems="center" gap={2}>
                                         <Box minW="100px" fontSize="2xs">SALUTATION :</Box>
@@ -502,19 +479,23 @@ function EmployeeMaster() {
                                         />
                                     </Box>
 
-                                    {/* DISTRICT - User can enter manually or select from options */}
+                                    {/* DISTRICT */}
                                     <Box display="flex" alignItems="center" gap={2}>
                                         <Box minW="100px" fontSize="2xs">DISTRICT :</Box>
-                                        <SelectCombobox
-                                            items={districtOptions}
+                                        <Input
                                             value={form.CITY}
-                                            onChange={(val) => handleChange("CITY", val)}
-                                            placeholder="Type or select District"
-                                            allowCustomValue={true}
+                                            onChange={(e) => handleChange("CITY", e.target.value)}
+                                            size="xs"
+                                            width="200px"
+                                            rounded="full"
+                                            bg="#eee"
+                                            border="1px solid #e5e7eb"
+                                            _focus={{ borderColor: "blue.500", boxShadow: "none" }}
+                                            placeholder="Enter district"
                                         />
                                     </Box>
 
-                                    {/* STATE - From API */}
+                                    {/* STATE */}
                                     <Box display="flex" alignItems="center" gap={2}>
                                         <Box minW="100px" fontSize="2xs">STATE :</Box>
                                         {isLoadingStates ? (
@@ -525,7 +506,6 @@ function EmployeeMaster() {
                                                 value={form.STATE}
                                                 onChange={(val) => handleChange("STATE", val)}
                                                 placeholder="Select State"
-                                                allowCustomValue={false}
                                             />
                                         )}
                                     </Box>
@@ -610,7 +590,7 @@ function EmployeeMaster() {
                                 loading={createEmployee.isPending || updateEmployee.isPending}
                                 onClick={handleSave}
                             >
-                                <AiOutlineSave /> {editId ? "Update" : "Save"}
+                                <AiOutlineSave /> {editIndex !== null ? "Update" : "Save"}
                             </Button>
                             <Button size="xs" colorPalette="blue" onClick={resetForm}>
                                 <IoIosExit /> Exit
@@ -660,8 +640,8 @@ function EmployeeMaster() {
                                 <>
                                     <Table.Cell>
                                         <Box display="flex" alignItems="center" gap={2}>
-                                            <FaEdit 
-                                                onClick={() => handleEdit(employee)} 
+                                            <FaEdit
+                                                onClick={() => handleEdit(index)}
                                                 cursor="pointer"
                                                 color={theme.colors.primaryText}
                                                 size={14}
@@ -670,7 +650,6 @@ function EmployeeMaster() {
                                             <Text>{index + 1}</Text>
                                         </Box>
                                     </Table.Cell>
-                                    <Table.Cell>{employee.EMPUID}</Table.Cell>
                                     <Table.Cell>{employee.EMPNAME}</Table.Cell>
                                     <Table.Cell>{employee.EMPSURNAME}</Table.Cell>
                                     <Table.Cell>{employee.EMPFATHERNAME}</Table.Cell>
@@ -685,7 +664,7 @@ function EmployeeMaster() {
                                     <Table.Cell>{employee.PHONENO}</Table.Cell>
                                     <Table.Cell>{employee.MOBILENO}</Table.Cell>
                                     <Table.Cell>
-                                        <Badge 
+                                        <Badge
                                             colorPalette={employee.ACTIVE === "Y" ? "green" : "red"}
                                             fontSize="2xs"
                                             px={2}
@@ -701,8 +680,7 @@ function EmployeeMaster() {
                             headerColor="white"
                             borderColor="white"
                             bodyBg={theme.colors.primary}
-                            highlightRowId={highlightedId}
-                            rowIdKey="EMPUID"
+                            highlightRowId={highlightedIndex !== null ? highlightedIndex : null}
                             emptyText="No employees available"
                         />
                     </Box>

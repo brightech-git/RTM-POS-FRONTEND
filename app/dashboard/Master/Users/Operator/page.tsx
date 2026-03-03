@@ -448,7 +448,7 @@ export default function OperatorMaster() {
                                     onChange={(_, val) => setSearchTerm(val as string)}
                                     placeholder="Search..."
                                     size="2xs"
-                                    width="200px"
+                                    
                                 />
 
                                 {/* Export Buttons */}
