@@ -1,6 +1,7 @@
 import "./globals.css";
 import { AllProviders } from "@/providers/AllProviders";
 import { fontVariables } from "@/context/theme/font";
+import {Toaster} from "@/components/ui/toaster";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -8,6 +9,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <AllProviders>
             {children}
+            <Toaster />
         </AllProviders>
       </body>
     </html>
