@@ -92,14 +92,14 @@ interface SidebarContextType {
   menuData: SidebarMenu;
   sidebarConfig: SidebarConfig;
   sidebarCollapsed: boolean;
-  
+
   // Actions
   toggleSidebar: () => void;
   updateSidebarConfig: (config: Partial<SidebarConfig>) => void;
   expandAll: () => void;
   collapseAll: () => void;
   searchMenu: (query: string) => MenuItem[];
-  
+
   // Derived
   isMobile: boolean;
   activeRoute: string;
@@ -137,10 +137,12 @@ const createMenuData = (): SidebarMenu => ({
       Users: {
         icon: UserCog,
         items: [
-          { label: "Company", route: "/dashboard/Master/Users/Company", icon: Building2 },
-          { label: "AccountHead", route: "/dashboard/Master/Users/AccountHead", icon: Users },
+          { label: "Designation", route: "/dashboard/Master/Users/Designation", icon: Building2 },
+          { label: "Employee", route: "/dashboard/Master/Users/Employee", icon: Users },
           { label: "Operator", route: "/dashboard/Master/Users/Operator", icon: UserCog },
           { label: "System Assigning", route: "/dashboard/Master/Users/SystemAssigning", icon: Settings },
+          { label: "Company", route: "/dashboard/Master/Users/Company", icon: Building2 },
+          { label: "AccountHead", route: "/dashboard/Master/Users/AccountHead", icon: Users },
         ],
       },
       Object: {
@@ -217,10 +219,10 @@ export const SidebarProvider = ({ children }: { children: ReactNode }) => {
     // Load sidebar state
     const savedCollapsedState = localStorage.getItem(SIDEBAR_STORAGE_KEY);
     const savedExpandedNodes = localStorage.getItem(EXPANDED_NODES_KEY);
-    
+
     setSidebarCollapsed(savedCollapsedState === "true");
     setCurrentSection(DEFAULT_SIDEBAR_CONFIG.defaultSection);
-    
+
     if (savedExpandedNodes) {
       try {
         setExpandedNodes(JSON.parse(savedExpandedNodes));
@@ -299,7 +301,7 @@ export const SidebarProvider = ({ children }: { children: ReactNode }) => {
 
   const searchMenu = useCallback((query: string): MenuItem[] => {
     if (!query.trim()) return [];
-    
+
     const results: MenuItem[] = [];
     const searchTerm = query.toLowerCase();
 
@@ -334,14 +336,14 @@ export const SidebarProvider = ({ children }: { children: ReactNode }) => {
     menuData,
     sidebarConfig,
     sidebarCollapsed,
-    
+
     // Actions
     toggleSidebar,
     updateSidebarConfig,
     expandAll,
     collapseAll,
     searchMenu,
-    
+
     // Derived
     isMobile,
     activeRoute,
@@ -381,7 +383,7 @@ export const withSidebarProtection = <P extends object>(
 ) => {
   return function WithSidebarProtection(props: P) {
     const { menuData } = useSidebar();
-    
+
     return <WrappedComponent {...props} />;
   };
 };
