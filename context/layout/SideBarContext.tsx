@@ -148,7 +148,7 @@ const createMenuData = (): SidebarMenu => ({
       Object: {
         icon: Package,
         items: [
-          // { label: "Product", route: "/dashboard/Master/Object/Products", icon: Package },
+          { label: "Product", route: "/dashboard/Master/Objects/Product", icon: Package },
           // { label: "CreditCard", route: "/dashboard/Master/Object/CreditCard", icon: CreditCard },
           // { label: "OrionBarCode", route: "/dashboard/Master/Object/OrionBarCode", icon: Barcode },
           // { label: "RateUpdation", route: "/dashboard/Master/Object/RateUpdation", icon: TrendingUp },
