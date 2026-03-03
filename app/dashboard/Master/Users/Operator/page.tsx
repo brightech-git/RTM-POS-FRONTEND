@@ -10,14 +10,16 @@ import {
     GridItem,
     HStack,
     Fieldset,
-    NativeSelect,
     Flex,
     IconButton,
+    Spinner,
+    Badge,
 } from "@chakra-ui/react";
 import { Table } from "@chakra-ui/react/table";
 import { AiOutlineSave } from "react-icons/ai";
 import { IoIosExit } from "react-icons/io";
 import { FaEdit, FaTrash, FaEye, FaEyeSlash } from "react-icons/fa";
+import { FaPrint, FaFileExcel } from "react-icons/fa";
 import { Toaster, toaster } from "@/components/ui/toaster";
 import { useTheme } from "@/context/theme/themeContext";
 import ScrollToTop from "@/component/scroll/ScrollToTop";
@@ -25,97 +27,142 @@ import { CustomTable } from "@/component/table/CustomTable";
 import { CapitalizedInput } from "@/component/form/CapitalizedInput";
 import { usePrint } from "@/context/print/usePrintContext";
 import { useRouter } from "next/navigation";
-import { FaPrint, FaFileExcel } from "react-icons/fa";
-import  ActiveSelect  from "@/components/ui/ActiveSelect";
+import ActiveSelect from "@/components/ui/ActiveSelect";
+import { SelectCombobox } from "@/components/ui/selectComboBox";
+import { useAllEmployees } from "@/hooks/Employee/useEmployee";
+import { 
+    useAllOperators,
+    useRegisterOperator, 
+    useDeleteOperator,
+    useUpdateOperatorPassword 
+} from "@/hooks/useOperator/useOperator";
 
 /* ================= TYPES ================= */
 interface Operator {
-    id: string;
-    operatorName: string;
-    employeeName: string;
-    password: string;
-    isActive: boolean;
-    createdAt: string;
-    updatedAt: string;
+    ACTIVE: "Y" | "N";
+    CREATED_BY: number;
+    CREATED_DATE: string;
+    CREATED_TIME: string;
+    EMP_CODE: string;
+    OPER_CODE: number;
+    OPER_NAME: string;
+    PASSWORD?: string | null;
+    employeeName?: string; // For display purposes
 }
 
-interface CreateOperatorPayload {
-    operatorName: string;
-    employeeName: string;
-    password: string;
-    isActive: boolean;
+interface OperatorFormData {
+    OPER_NAME: string;
+    EMP_CODE: string;
+    PASSWORD: string;
+    ACTIVE: "Y" | "N";
 }
 
-/* ================= MOCK DATA ================= */
-const MOCK_OPERATORS: Operator[] = [
-    {
-        id: "1",
-        operatorName: "OP001",
-        employeeName: "John Doe",
-        password: "Password123",
-        isActive: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-    },
-    {
-        id: "2",
-        operatorName: "OP002",
-        employeeName: "Jane Smith",
-        password: "Password456",
-        isActive: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-    },
-    {
-        id: "3",
-        operatorName: "OP003",
-        employeeName: "Mike Johnson",
-        password: "Password789",
-        isActive: false,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-    },
-];
+// Employee interface matching the EmployeeMaster structure
+interface Employee {
+    EMPNAME?: string;
+    EMPSURNAME?: string;
+    EMPFATHERNAME?: string;
+    SALUTATION?: string;
+    DOORNO?: string;
+    STREET?: string;
+    ADDRESS?: string;
+    AREA?: string;
+    CITY?: string;
+    STATE?: string;
+    PINCODE?: string;
+    PHONENO?: string;
+    MOBILENO?: string;
+    ACTIVE?: string;
+    CREATEDBY?: number;
+    EMPUID?: number; // This might be the employee code/id
+    EMP_CODE?: string; // Some APIs use this
+    EMPCODE?: string; // Some APIs use this
+}
 
 export default function OperatorMaster() {
     const { theme } = useTheme();
     const router = useRouter();
     const { setData, setColumns, setShowSno, title } = usePrint();
 
+    /* -------------------- API HOOKS -------------------- */
+    const { data: operators = [], isLoading, refetch: refetchOperators } = useAllOperators();
+    const { data: employees = [], isLoading: isLoadingEmployees } = useAllEmployees();
+    
+    const registerOperator = useRegisterOperator();
+    const deleteOperator = useDeleteOperator();
+    const updatePassword = useUpdateOperatorPassword();
+
+    /* -------------------- EMPLOYEE OPTIONS FOR DROPDOWN -------------------- */
+    const employeeOptions = employees.map((emp: Employee) => {
+        // Try different possible employee code fields
+        // From your EmployeeMaster, the employee might have EMPUID as the unique identifier
+        const empCode = emp.EMP_CODE || emp.EMPCODE || emp.EMPUID?.toString() || '';
+        
+        // Combine first name and surname for full name
+        const firstName = emp.EMPNAME || '';
+        const lastName = emp.EMPSURNAME || '';
+        const employeeName = `${firstName} ${lastName}`.trim();
+        
+        return {
+            label: employeeName ? `${employeeName} (${empCode})` : empCode,
+            value: empCode,
+            employeeName: employeeName,
+            empCode: empCode
+        };
+    }).filter(opt => opt.value); // Filter out options without code
+
     /* -------------------- STATE -------------------- */
-    const [operators, setOperators] = useState<Operator[]>(MOCK_OPERATORS);
     const [searchTerm, setSearchTerm] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
-    const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
 
     /* -------------------- FORM STATE -------------------- */
-    const emptyForm: CreateOperatorPayload = {
-        operatorName: "",
-        employeeName: "",
-        password: "",
-        isActive: true,
+    const emptyForm: OperatorFormData = {
+        OPER_NAME: "",
+        EMP_CODE: "",
+        PASSWORD: "",
+        ACTIVE: "Y",
     };
 
-    const [form, setForm] = useState<CreateOperatorPayload>(emptyForm);
-    const [editId, setEditId] = useState<string | null>(null);
-    const [highlightedId, setHighlightedId] = useState<string | null>(null);
+    const [form, setForm] = useState<OperatorFormData>(emptyForm);
+    const [editCode, setEditCode] = useState<number | null>(null);
+    const [highlightedCode, setHighlightedCode] = useState<number | null>(null);
 
     /* -------------------- ACTIVE STATUS OPTIONS -------------------- */
     const activeStatus = [
-        { label: "YES", value: "true" },
-        { label: "NO", value: "false" },
+        { label: "YES", value: "Y" },
+        { label: "NO", value: "N" },
     ];
 
+    /* -------------------- ENRICH OPERATORS WITH EMPLOYEE NAMES -------------------- */
+    const enrichedOperators = operators.map((op: Operator) => {
+        // Find matching employee
+        const employee = employees.find((emp: Employee) => {
+            // Try to match using various possible code fields
+            const empCode = emp.EMP_CODE || emp.EMPCODE || emp.EMPUID?.toString() || '';
+            return empCode === op.EMP_CODE;
+        });
+        
+        // Construct employee name from first name and surname
+        const employeeName = employee ? 
+            `${employee.EMPNAME || ''} ${employee.EMPSURNAME || ''}`.trim() : '';
+        
+        return {
+            ...op,
+            employeeName: employeeName || 'N/A'
+        };
+    });
+
     /* -------------------- FILTER AND PAGINATION -------------------- */
-    const filteredOperators = operators.filter(
-        (op) =>
-            op.operatorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            op.employeeName.toLowerCase().includes(searchTerm.toLowerCase())
+    const filteredOperators = enrichedOperators.filter(
+        (op: Operator) =>
+            op.OPER_NAME?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            op.employeeName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            op.EMP_CODE?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const ITEMS_PER_PAGE = 5;
+    const ITEMS_PER_PAGE = 10;
     const totalPages = Math.ceil(filteredOperators.length / ITEMS_PER_PAGE);
 
     const paginatedOperators = filteredOperators.slice(
@@ -129,68 +176,84 @@ export default function OperatorMaster() {
     }, [searchTerm]);
 
     useEffect(() => {
-        if (editId) {
-            const operatorToEdit = operators.find((op) => op.id === editId);
+        if (editCode) {
+            const operatorToEdit = operators.find((op: Operator) => op.OPER_CODE === editCode);
             if (operatorToEdit) {
                 setForm({
-                    operatorName: operatorToEdit.operatorName,
-                    employeeName: operatorToEdit.employeeName,
-                    password: operatorToEdit.password,
-                    isActive: operatorToEdit.isActive,
+                    OPER_NAME: operatorToEdit.OPER_NAME,
+                    EMP_CODE: operatorToEdit.EMP_CODE,
+                    PASSWORD: "", // Don't populate password for security
+                    ACTIVE: operatorToEdit.ACTIVE,
                 });
                 ScrollToTop();
             }
         }
-    }, [editId, operators]);
+    }, [editCode, operators]);
 
     useEffect(() => {
-        if (!highlightedId) return;
+        if (!highlightedCode) return;
 
         const timer = setTimeout(() => {
-            setHighlightedId(null);
+            setHighlightedCode(null);
         }, 3000);
 
         return () => clearTimeout(timer);
-    }, [highlightedId]);
+    }, [highlightedCode]);
 
     /* -------------------- HANDLERS -------------------- */
-    const handleChange = (field: keyof CreateOperatorPayload, value: any) => {
+    const handleChange = (field: keyof OperatorFormData, value: any) => {
         setForm((prev) => ({ ...prev, [field]: value }));
     };
 
+    const handleEmployeeSelect = (empCode: string) => {
+        const selectedOption = employeeOptions.find(opt => opt.value === empCode);
+        
+        if (selectedOption) {
+            setForm((prev) => ({
+                ...prev,
+                EMP_CODE: selectedOption.empCode,
+            }));
+            
+            // Optionally set operator name from employee name
+            // Uncomment if you want to auto-populate operator name
+            // if (!form.OPER_NAME) {
+            //     setForm((prev) => ({
+            //         ...prev,
+            //         OPER_NAME: selectedOption.employeeName,
+            //     }));
+            // }
+        }
+    };
+
     const resetForm = () => {
-        setEditId(null);
+        setEditCode(null);
         setForm(emptyForm);
         setShowPassword(false);
     };
 
     const validateForm = () => {
-        if (!form.operatorName?.trim()) {
+        if (!form.OPER_NAME?.trim()) {
             toaster.error({ title: "Error", description: "Operator name is required" });
             return false;
         }
-        if (form.operatorName.length > 50) {
+        if (form.OPER_NAME.length > 50) {
             toaster.error({ title: "Error", description: "Operator name must be at most 50 characters" });
             return false;
         }
-        if (!/^[A-Za-z0-9]+$/.test(form.operatorName)) {
-            toaster.error({ title: "Error", description: "Only alphanumeric characters allowed" });
+        if (!/^[A-Za-z0-9\s]+$/.test(form.OPER_NAME)) {
+            toaster.error({ title: "Error", description: "Only alphanumeric characters and spaces allowed" });
             return false;
         }
-        if (!form.employeeName?.trim()) {
-            toaster.error({ title: "Error", description: "Employee name is required" });
+        if (!form.EMP_CODE) {
+            toaster.error({ title: "Error", description: "Please select an employee" });
             return false;
         }
-        if (!form.password?.trim()) {
-            toaster.error({ title: "Error", description: "Password is required" });
+        if (!editCode && !form.PASSWORD?.trim()) {
+            toaster.error({ title: "Error", description: "Password is required for new operator" });
             return false;
         }
-        if (form.password.length < 6) {
+        if (!editCode && form.PASSWORD.length < 6) {
             toaster.error({ title: "Error", description: "Password must be at least 6 characters" });
-            return false;
-        }
-        if (!/(?=.*[A-Z])(?=.*[0-9])/.test(form.password)) {
-            toaster.error({ title: "Error", description: "Password must contain uppercase and number" });
             return false;
         }
         return true;
@@ -201,56 +264,94 @@ export default function OperatorMaster() {
 
         setIsSubmitting(true);
 
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 800));
-
-        if (editId) {
-            // Update
-            setOperators((prev) =>
-                prev.map((op) =>
-                    op.id === editId
-                        ? {
-                              ...op,
-                              ...form,
-                              updatedAt: new Date().toISOString(),
-                          }
-                        : op
-                )
-            );
-            toaster.success({
-                title: "Success",
-                description: "Operator updated successfully",
+        try {
+            if (editCode) {
+                // For update, you'll need to implement an update endpoint
+                toaster.info({ 
+                    title: "Info", 
+                    description: "Update functionality - please implement update endpoint" 
+                });
+            } else {
+                // Create new operator
+                const payload = {
+                    OPER_NAME: form.OPER_NAME,
+                    EMP_CODE: form.EMP_CODE,
+                    PASSWORD: form.PASSWORD,
+                    ACTIVE: form.ACTIVE,
+                    // Note: Your register API might need EMP_CODE as well
+                    // If needed, add: empCode: form.EMP_CODE
+                };
+                
+                await registerOperator.mutateAsync(payload);
+                
+                toaster.success({
+                    title: "Success",
+                    description: "Operator created successfully",
+                });
+            }
+            
+            resetForm();
+            await refetchOperators();
+            
+        } catch (error: any) {
+            console.error("Save error:", error);
+            toaster.error({ 
+                title: "Error", 
+                description: error.message || "Failed to save operator" 
             });
-            setHighlightedId(editId);
-        } else {
-            // Create
-            const newOperator: Operator = {
-                id: Date.now().toString(),
-                ...form,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-            };
-            setOperators((prev) => [newOperator, ...prev]);
-            toaster.success({
-                title: "Success",
-                description: "Operator created successfully",
-            });
+        } finally {
+            setIsSubmitting(false);
         }
-
-        setIsSubmitting(false);
-        resetForm();
     };
 
     const handleEdit = (operator: Operator) => {
-        setEditId(operator.id);
+        setEditCode(operator.OPER_CODE);
     };
 
-    const handleDelete = (id: string) => {
+    const handleDelete = async (operCode: number) => {
         if (window.confirm("Are you sure you want to delete this operator?")) {
-            setOperators((prev) => prev.filter((op) => op.id !== id));
+            try {
+                await deleteOperator.mutateAsync(operCode);
+                await refetchOperators();
+                toaster.success({
+                    title: "Success",
+                    description: "Operator deleted successfully",
+                });
+            } catch (error: any) {
+                toaster.error({
+                    title: "Error",
+                    description: error.message || "Failed to delete operator",
+                });
+            }
+        }
+    };
+
+    const handleUpdatePassword = async (operator: Operator) => {
+        const oldPassword = prompt("Enter old password:");
+        if (!oldPassword) return;
+        
+        const newPassword = prompt("Enter new password (min 6 characters):");
+        if (!newPassword) return;
+        
+        if (newPassword.length < 6) {
+            toaster.error({ title: "Error", description: "Password must be at least 6 characters" });
+            return;
+        }
+        
+        try {
+            await updatePassword.mutateAsync({
+                operCode: operator.OPER_CODE,
+                oldPassword,
+                newPassword,
+            });
             toaster.success({
                 title: "Success",
-                description: "Operator deleted successfully",
+                description: "Password updated successfully",
+            });
+        } catch (error: any) {
+            toaster.error({
+                title: "Error",
+                description: error.message || "Failed to update password",
             });
         }
     };
@@ -270,32 +371,35 @@ export default function OperatorMaster() {
         return new Date(dateString).toLocaleTimeString("en-IN", {
             hour: "2-digit",
             minute: "2-digit",
+            second: "2-digit",
         });
     };
 
     /* -------------------- TABLE COLUMNS -------------------- */
     const operatorColumns = [
         { key: "SNO", label: "S.No" },
-        { key: "operatorName", label: "Operator Name" },
+        { key: "OPER_NAME", label: "Operator Name" },
+        { key: "EMP_CODE", label: "Employee Code" },
         { key: "employeeName", label: "Employee Name" },
-        { key: "isActive", label: "Status" },
-        { key: "createdAt", label: "Created Date" },
-        { key: "createdTime", label: "Created Time" },
+        { key: "ACTIVE", label: "Status" },
+        { key: "CREATED_DATE", label: "Created Date" },
+        { key: "CREATED_TIME", label: "Created Time" },
         { key: "actions", label: "Actions" },
     ];
 
     /* -------------------- EXPORT -------------------- */
     const handleExport = (option: string) => {
-        setData(operators);
+        setData(enrichedOperators);
         setColumns([
-            { key: "operatorName", label: "Operator Name" },
+            { key: "OPER_NAME", label: "Operator Name" },
+            { key: "EMP_CODE", label: "Employee Code" },
             { key: "employeeName", label: "Employee Name" },
-            { key: "isActive", label: "Status" },
-            { key: "createdAt", label: "Created Date" },
-            { key: "updatedAt", label: "Updated Date" },
+            { key: "ACTIVE", label: "Status" },
+            { key: "CREATED_DATE", label: "Created Date" },
+            { key: "CREATED_TIME", label: "Created Time" },
         ]);
         setShowSno(true);
-        title?.("Operator Master");
+        title("Operator Master");
         router.push(`/print?export=${option}`);
     };
 
@@ -303,6 +407,21 @@ export default function OperatorMaster() {
     const togglePasswordVisibility = () => {
         setShowPassword(!showPassword);
     };
+
+    /* -------------------- LOADING STATE -------------------- */
+    if (isLoading || isLoadingEmployees) {
+        return (
+            <Box
+                display="flex"
+                justifyContent="center"
+                alignItems="center"
+                minH="100vh"
+                bg={theme.colors.primary}
+            >
+                <Spinner size="xl" color={theme.colors.primaryText} />
+            </Box>
+        );
+    }
 
     /* -------------------- UI -------------------- */
     return (
@@ -325,7 +444,7 @@ export default function OperatorMaster() {
                         align="stretch"
                     >
                         <Text fontSize="small" fontWeight="600" textAlign="center" mb={2}>
-                            OPERATOR MASTER
+                            OPERATOR MASTER {editCode ? "(Edit Mode)" : ""}
                         </Text>
 
                         <Fieldset.Root size="sm" width="100%">
@@ -337,55 +456,68 @@ export default function OperatorMaster() {
                                             OPERATOR NAME :
                                         </Box>
                                         <CapitalizedInput
-                                            field="operatorName"
-                                            value={form.operatorName}
+                                            field="OPER_NAME"
+                                            value={form.OPER_NAME}
                                             onChange={handleChange}
                                             size="2xs"
                                             placeholder="Enter operator name"
-                                            max={50}
+                                            maxLength={50}
                                         />
                                     </Box>
 
-                                    {/* EMPLOYEE NAME */}
+                                    {/* EMPLOYEE SELECTION */}
                                     <Box display="flex" alignItems="center" gap={2}>
                                         <Box minW="120px" fontSize="2xs">
-                                            EMPLOYEE NAME :
+                                            EMPLOYEE :
                                         </Box>
-                                        <CapitalizedInput
-                                            field="employeeName"
-                                            value={form.employeeName}
-                                            onChange={handleChange}
-                                            isCapitalized
-                                            size="2xs"
-                                            placeholder="Enter employee name"
-                                            max={50}
-                                        />
-                                    </Box>
-
-                                    {/* PASSWORD */}
-                                    <Box display="flex" alignItems="center" gap={2}>
-                                        <Box minW="120px" fontSize="2xs">
-                                            PASSWORD :
-                                        </Box>
-                                        <Flex flex={1} align="center" gap={1}>
-                                            <CapitalizedInput
-                                                field="password"
-                                                value={form.password}
-                                                onChange={handleChange}
-                                                type={showPassword ? "text" : "password"}
-                                                size="2xs"
-                                                placeholder="Enter password"
+                                        <Box flex={1}>
+                                            <SelectCombobox
+                                                items={employeeOptions}
+                                                value={form.EMP_CODE}
+                                                onChange={handleEmployeeSelect}
+                                                placeholder="Select Employee"
                                             />
-                                            <IconButton
-                                                aria-label="Toggle password"
-                                                size="2xs"
-                                                variant="ghost"
-                                                onClick={togglePasswordVisibility}
-                                            >
-                                                {showPassword ? <FaEyeSlash size={12} /> : <FaEye size={12} />}
-                                            </IconButton>
-                                        </Flex>
+                                        </Box>
                                     </Box>
+
+                                    {/* EMPLOYEE CODE DISPLAY (Read-only) */}
+                                    {form.EMP_CODE && (
+                                        <Box display="flex" alignItems="center" gap={2}>
+                                            <Box minW="120px" fontSize="2xs">
+                                                EMP CODE :
+                                            </Box>
+                                            <Box fontSize="2xs" fontWeight="bold" color="blue.600">
+                                                {form.EMP_CODE}
+                                            </Box>
+                                        </Box>
+                                    )}
+
+                                    {/* PASSWORD - Only show for new operators */}
+                                    {!editCode && (
+                                        <Box display="flex" alignItems="center" gap={2}>
+                                            <Box minW="120px" fontSize="2xs">
+                                                PASSWORD :
+                                            </Box>
+                                            <Flex flex={1} align="center" gap={1}>
+                                                <CapitalizedInput
+                                                    field="PASSWORD"
+                                                    value={form.PASSWORD}
+                                                    onChange={handleChange}
+                                                    type={showPassword ? "text" : "password"}
+                                                    size="2xs"
+                                                    placeholder="Enter password (min 6 chars)"
+                                                />
+                                                <IconButton
+                                                    aria-label="Toggle password"
+                                                    size="2xs"
+                                                    variant="ghost"
+                                                    onClick={togglePasswordVisibility}
+                                                >
+                                                    {showPassword ? <FaEyeSlash size={12} /> : <FaEye size={12} />}
+                                                </IconButton>
+                                            </Flex>
+                                        </Box>
+                                    )}
 
                                     {/* ACTIVE STATUS */}
                                     <Box display="flex" alignItems="center" gap={2}>
@@ -394,8 +526,8 @@ export default function OperatorMaster() {
                                         </Box>
                                         <Box flex={1}>
                                             <ActiveSelect
-                                                value={String(form.isActive)}
-                                                onChange={(val) => handleChange("isActive", val === "true")}
+                                                value={form.ACTIVE}
+                                                onChange={(val) => handleChange("ACTIVE", val as "Y" | "N")}
                                                 items={activeStatus}
                                             />
                                         </Box>
@@ -408,11 +540,11 @@ export default function OperatorMaster() {
                             <Button
                                 size="xs"
                                 colorPalette="blue"
-                                loading={isSubmitting}
+                                loading={isSubmitting || registerOperator.isPending}
                                 onClick={handleSave}
                                 flex={1}
                             >
-                                <AiOutlineSave /> {editId ? "Update" : "Save"}
+                                <AiOutlineSave /> {editCode ? "Update" : "Save"}
                             </Button>
                             <Button size="xs" colorPalette="blue" onClick={resetForm} flex={1}>
                                 <IoIosExit /> Exit
@@ -437,7 +569,7 @@ export default function OperatorMaster() {
                             gap={2}
                         >
                             <Text fontWeight="semibold" fontSize="small">
-                                OPERATOR LIST
+                                OPERATOR LIST ({filteredOperators.length})
                             </Text>
 
                             <Flex gap={2} align="center">
@@ -448,7 +580,6 @@ export default function OperatorMaster() {
                                     onChange={(_, val) => setSearchTerm(val as string)}
                                     placeholder="Search..."
                                     size="2xs"
-                                    
                                 />
 
                                 {/* Export Buttons */}
@@ -483,34 +614,45 @@ export default function OperatorMaster() {
                             renderRow={(operator: Operator, index: number) => (
                                 <>
                                     <Table.Cell>{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</Table.Cell>
-                                    <Table.Cell>{operator.operatorName}</Table.Cell>
-                                    <Table.Cell>{operator.employeeName}</Table.Cell>
+                                    <Table.Cell>{operator.OPER_NAME}</Table.Cell>
+                                    <Table.Cell>{operator.EMP_CODE}</Table.Cell>
+                                    <Table.Cell>{operator.employeeName || '-'}</Table.Cell>
                                     <Table.Cell>
                                         <Badge
-                                            colorPalette={operator.isActive ? "green" : "red"}
-                                            fontSize="2xs"
+                                            colorScheme={operator.ACTIVE === "Y" ? "green" : "red"}
+                                            fontSize="xs"
                                             px={2}
                                             py={0.5}
                                             borderRadius="full"
                                         >
-                                            {operator.isActive ? "Active" : "Inactive"}
+                                            {operator.ACTIVE === "Y" ? "Active" : "Inactive"}
                                         </Badge>
                                     </Table.Cell>
-                                    <Table.Cell>{formatDate(operator.createdAt)}</Table.Cell>
-                                    <Table.Cell>{formatTime(operator.createdAt)}</Table.Cell>
+                                    <Table.Cell>{formatDate(operator.CREATED_DATE)}</Table.Cell>
+                                    <Table.Cell>{formatTime(operator.CREATED_TIME)}</Table.Cell>
                                     <Table.Cell>
                                         <Box display="flex" justifyContent="center" gap={2}>
-                                            <FaEdit
+                                            {/* <FaEdit
                                                 onClick={() => handleEdit(operator)}
                                                 cursor="pointer"
                                                 color={theme.colors.primaryText}
                                                 size={14}
-                                            />
+                                                title="Edit"
+                                            /> */}
                                             <FaTrash
-                                                onClick={() => handleDelete(operator.id)}
+                                                onClick={() => handleDelete(operator.OPER_CODE)}
                                                 cursor="pointer"
                                                 color="red.500"
                                                 size={14}
+                                                title="Delete"
+                                            />
+                                            <IconButton
+                                                aria-label="Update Password"
+                                                size="2xs"
+                                                variant="ghost"
+                                                onClick={() => handleUpdatePassword(operator)}
+                                                title="Update Password"
+                                                icon={<FaEye size={12} />}
                                             />
                                         </Box>
                                     </Table.Cell>
@@ -520,8 +662,8 @@ export default function OperatorMaster() {
                             headerColor="white"
                             borderColor="white"
                             bodyBg={theme.colors.primary}
-                            highlightRowId={highlightedId}
-                            rowIdKey="id"
+                            highlightRowId={highlightedCode?.toString()}
+                            rowIdKey="OPER_CODE"
                             emptyText="No operators available"
                         />
 
@@ -560,25 +702,3 @@ export default function OperatorMaster() {
         </Box>
     );
 }
-
-// Badge component helper
-const Badge = ({ children, colorPalette, fontSize, px, py, borderRadius }: any) => {
-    const bgColor = colorPalette === "green" ? "green.100" : "red.100";
-    const textColor = colorPalette === "green" ? "green.800" : "red.800";
-
-    return (
-        <Box
-            as="span"
-            bg={bgColor}
-            color={textColor}
-            fontSize={fontSize}
-            px={px}
-            py={py}
-            borderRadius={borderRadius}
-            display="inline-block"
-            fontWeight="medium"
-        >
-            {children}
-        </Box>
-    );
-};
