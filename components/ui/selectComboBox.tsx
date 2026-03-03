@@ -173,10 +173,10 @@ export const SelectCombobox = forwardRef<HTMLInputElement, SelectComboboxProps>(
                         }}
                     />
                     <Combobox.IndicatorGroup>
-                        <Combobox.ClearTrigger onClick={() => {
+                        {/* <Combobox.ClearTrigger onClick={() => {
                             onChange("");
                             setTypedInput("");
-                        }} />
+                        }} /> */}
                         <Combobox.Trigger />
                     </Combobox.IndicatorGroup>
                 </Combobox.Control>
