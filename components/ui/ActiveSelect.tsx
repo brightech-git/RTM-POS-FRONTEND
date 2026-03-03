@@ -23,11 +23,11 @@ export default function ActiveSelect({
   isDisabled = false,
 }: ActiveSelectProps) {
   return (
-    <NativeSelect.Root size={size} width={width}>
+    <NativeSelect.Root size={size} width={width} disabled={isDisabled}>
       <NativeSelect.Field
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}
-        disabled={isDisabled}
+   
         bg="gray.100"
         border="1px solid"
         borderColor="gray.200"
