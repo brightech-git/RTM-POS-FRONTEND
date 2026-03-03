@@ -126,31 +126,55 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     }, []);
 
     // Filter menu data based on search
-    const filteredMenuData = useMemo(() => {
-        if (!searchQuery) return menuData;
+const filteredMenuData = useMemo(() => {
+  if (!searchQuery) return menuData;
 
-        const filtered: typeof menuData = {};
+  const filtered: typeof menuData = {};
 
-        Object.entries(menuData).forEach(([sectionName, sectionGroups]) => {
-            const filteredSection: SectionData = {};
+  Object.entries(menuData).forEach(([sectionName, sectionData]) => {
+    // ✅ FLAT SECTION
+    if (sectionData.type === "flat") {
+      const filteredItems = filterMenuItems(sectionData.items, searchQuery);
 
-            Object.entries(sectionGroups).forEach(([groupName, groupData]) => {
-                const filteredItems = filterMenuItems(groupData.items, searchQuery);
-                if (filteredItems.length > 0) {
-                    filteredSection[groupName] = {
-                        ...groupData,
-                        items: filteredItems
-                    };
-                }
-            });
+      if (filteredItems.length > 0) {
+        filtered[sectionName] = {
+          type: "flat",
+          items: filteredItems,
+        };
+      }
+    }
 
-            if (Object.keys(filteredSection).length > 0) {
-                filtered[sectionName] = filteredSection;
-            }
-        });
+    // ✅ GROUPED SECTION
+    if (sectionData.type === "grouped") {
+      const filteredGroups: Record<string, MenuGroup> = {};
 
-        return filtered;
-    }, [menuData, searchQuery, filterMenuItems]);
+      Object.entries(sectionData.groups).forEach(
+        ([groupName, groupData]) => {
+          const filteredItems = filterMenuItems(
+            groupData.items,
+            searchQuery
+          );
+
+          if (filteredItems.length > 0) {
+            filteredGroups[groupName] = {
+              ...groupData,
+              items: filteredItems,
+            };
+          }
+        }
+      );
+
+      if (Object.keys(filteredGroups).length > 0) {
+        filtered[sectionName] = {
+          type: "grouped",
+          groups: filteredGroups,
+        };
+      }
+    }
+  });
+
+  return filtered;
+}, [menuData, searchQuery, filterMenuItems]);
 
     // Render menu item
     const renderMenuItem = useCallback((item: MenuItem) => {
@@ -419,7 +443,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
             >
                 <VStack align="stretch" gap={2} p={3}>
                     {Object.entries(filteredMenuData).length > 0 ? (
-                        Object.entries(filteredMenuData).map(([sectionName, sectionGroups]) => {
+Object.entries(filteredMenuData).map(([sectionName, sectionData]) => {
                             const isSectionExpanded = expandedSections[sectionName];
 
                             return (
@@ -457,113 +481,54 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                                     )}
 
                                     {/* Groups */}
-                                    {(isExpanded ? isSectionExpanded : true) && (
-                                        <VStack align="stretch" gap={1} mt={1}>
-                                            {Object.entries(sectionGroups).map(([groupName, groupData]) => {
-                                                const GroupIcon = groupData.icon;
-                                                const groupKey = `${sectionName}-${groupName}`;
-                                                const isGroupExpanded = expandedGroups[groupKey];
-                                                const activeCount = getActiveCount(groupData.items);
+                                   {(isExpanded ? isSectionExpanded : true) && (
+  <VStack align="stretch" gap={1} mt={1}>
+    {/* ✅ FLAT SECTION */}
+    {sectionData.type === "flat" &&
+      sectionData.items.map((item) => renderMenuItem(item))}
 
-                                                return (
-                                                    <Box key={groupName} width="100%">
-                                                        {/* Group Header */}
-                                                        <Tooltip
-                                                            content={groupName}
-                                                            disabled={isExpanded}
-                                                            showArrow
-                                                            positioning={{ placement: "right" }}
-                                                        >
-                                                            <MotionHStack
-                                                                px={3}
-                                                                py={2.5}
-                                                                cursor="pointer"
-                                                                borderRadius="lg"
-                                                                justify={isExpanded ? "space-between" : "center"}
-                                                                bg={isGroupActive(groupData.items as MenuItem[]) ? `${theme.colors.primary}10` : "transparent"}
-                                                                color={isGroupActive(groupData.items as MenuItem[]) ? theme.colors.primary : "gray.500"}
-                                                                 _hover={{ bg: 'gray.100', color: theme.colors.primaryText }}
-                                                                onClick={() => isExpanded && toggleGroup(groupKey)}
-                                                                whileHover={{ x: 2 }}
-                                                                whileTap={{ scale: 0.98 }}
-                                                                width="100%"
-                                                            >
-                                                                <HStack gap={2} w={isExpanded ? "auto" : "100%"} justify="center" >
-                                                                    <Box position="relative">
-                                                                        <Icon
-                                                                            as={GroupIcon as React.ElementType}
-                                                                            boxSize={4.5}
-                                                                         
+    {/* ✅ GROUPED SECTION */}
+    {sectionData.type === "grouped" &&
+      Object.entries(sectionData.groups).map(([groupName, groupData]) => {
+        const GroupIcon = groupData.icon;
+        const groupKey = `${sectionName}-${groupName}`;
+        const isGroupExpanded = expandedGroups[groupKey];
 
-                                                                        />
-                                                                        {activeCount > 0 && !isExpanded && (
-                                                                            <Badge
-                                                                                position="absolute"
-                                                                                top="-2"
-                                                                                right="-2"
-                                                                                color="white"
-                                                                                fontSize="2xs"
-                                                                                boxSize={3}
-                                                                                borderRadius="full"
-                                                                                p={0}
-                                                                            />
-                                                                        )}
-                                                                    </Box>
+        return (
+          <Box key={groupName}>
+            {/* Group Header */}
+            <MotionHStack
+              px={3}
+              py={2.5}
+              cursor="pointer"
+              borderRadius="lg"
+              justify="space-between"
+              onClick={() => toggleGroup(groupKey)}
+            >
+              <HStack gap={2}>
+                <Icon as={GroupIcon} boxSize={4.5} />
+                <Text fontWeight="600" fontSize="sm">
+                  {groupName}
+                </Text>
+              </HStack>
 
-                                                                    {isExpanded && (
-                                                                        <>
-                                                                            <Text
-                                                                                fontWeight="600"
-                                                                                fontSize="sm"
-                                                                                flex={1}
-                                                                            >
-                                                                                {groupName}
-                                                                            </Text>
+              <Icon
+                as={ChevronDown}
+                boxSize={3.5}
+                transform={isGroupExpanded ? "rotate(0deg)" : "rotate(-90deg)"}
+              />
+            </MotionHStack>
 
-                                                                            {activeCount > 0 && (
-                                                                                <Badge
-                                                                                    fontSize="2xs"
-                                                                                    borderRadius="full"
-                                                                                    px={1.5}
-                                                                                    py={0.5}
-                                                                                    bg={theme.colors.sideBarFont}
-                                                                                >
-                                                                                    {activeCount}
-                                                                                </Badge>
-                                                                            )}
-
-                                                                            <Icon
-                                                                                as={ChevronDown}
-                                                                                boxSize={3.5}
-                                                                                transform={isGroupExpanded ? "rotate(0deg)" : "rotate(-90deg)"}
-                                                                                transition="transform 0.2s"
-                                                                            />
-                                                                        </>
-                                                                    )}
-                                                                </HStack>
-                                                            </MotionHStack>
-                                                        </Tooltip>
-
-                                                        {/* Group Items */}
-                                                        {isExpanded && isGroupExpanded && (
-                                                            <MotionVStack
-                                                                align="stretch"
-                                                                pl={4}
-                                                                mt={1}
-                                                                gap={1}
-                                                                initial={{ opacity: 0, y: -10 }}
-                                                                animate={{ opacity: 1, y: 0 }}
-                                                                exit={{ opacity: 0, y: -10 }}
-                                                                transition={{ duration: 0.2 }}
-                                                            >
-                                                                {groupData.items.map(item => renderMenuItem(item))}
-                                                            </MotionVStack>
-                                                        )}
-                                                    </Box>
-                                                );
-                                            })}
-                                        </VStack>
-                                    )}
+            {isGroupExpanded && (
+              <VStack align="stretch" pl={4} mt={1} gap={1}>
+                {groupData.items.map((item) => renderMenuItem(item))}
+              </VStack>
+            )}
+          </Box>
+        );
+      })}
+  </VStack>
+)}
                                 </Box>
                             );
                         })

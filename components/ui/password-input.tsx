@@ -31,15 +31,11 @@ export const PasswordInput = React.forwardRef<
                 pr="3rem"
                 textTransform="uppercase"   // visual
                 onChange={(e) => {
-                    const upperValue = e.target.value.toUpperCase();
-                    onChange?.({
-                        ...e,
-                        target: { ...e.target, value: upperValue },
-                    });
+                    e.target.value = e.target.value.toUpperCase();
+                    onChange?.(e);   // pass the original event
                 }}
                 {...props}
             />
-
             <IconButton
                 aria-label={show ? "Hide password" : "Show password"}
                 size="sm"
