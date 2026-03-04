@@ -29,12 +29,18 @@ import { CustomTable } from "@/component/table/CustomTable";
 import { CapitalizedInput } from "@/component/form/CapitalizedInput";
 import { usePrint } from "@/context/print/usePrintContext";
 import { useRouter } from "next/navigation";
+import {
+    useAllHSN,
+    useCreateHSN,
+    useUpdateHSN,
+    useDeleteHSN,
+} from "@/hooks/HSN/useHSN";
 
-// Types
+// Types based on API response
 interface HSN {
-    HSNCODE?: number;
-    HSNNUMBER: string;
-    HSDESCRIPTION: string;
+    SNO?: number;
+    HSNCODE: string;
+    HSNDESCRIPTION: string;
     ACTIVE: "Y" | "N";
     CREATEDBY?: number;
     CREATEDDATE?: string;
@@ -42,91 +48,34 @@ interface HSN {
 }
 
 interface CreateHSNPayload {
-    HSNNUMBER: string;
-    HSDESCRIPTION: string;
+    HSNCODE: string;
+    HSNDESCRIPTION: string;
     ACTIVE: "Y" | "N";
 }
-
-// Mock data for development
-const MOCK_HSN: HSN[] = [
-    {
-        HSNCODE: 1,
-        HSNNUMBER: "1001",
-        HSDESCRIPTION: "Live animals",
-        ACTIVE: "Y",
-        CREATEDDATE: "2024-01-15",
-        CREATEDTIME: "10:30:00"
-    },
-    {
-        HSNCODE: 2,
-        HSNNUMBER: "1002",
-        HSDESCRIPTION: "Meat and edible meat offal",
-        ACTIVE: "Y",
-        CREATEDDATE: "2024-01-15",
-        CREATEDTIME: "11:45:00"
-    },
-    {
-        HSNCODE: 3,
-        HSNNUMBER: "1003",
-        HSDESCRIPTION: "Fish and crustaceans, molluscs and other aquatic invertebrates",
-        ACTIVE: "Y",
-        CREATEDDATE: "2024-01-16",
-        CREATEDTIME: "09:15:00"
-    },
-    {
-        HSNCODE: 4,
-        HSNNUMBER: "1004",
-        HSDESCRIPTION: "Dairy produce; birds' eggs; natural honey; edible products of animal origin",
-        ACTIVE: "N",
-        CREATEDDATE: "2024-01-16",
-        CREATEDTIME: "14:20:00"
-    },
-    {
-        HSNCODE: 5,
-        HSNNUMBER: "1005",
-        HSDESCRIPTION: "Products of animal origin",
-        ACTIVE: "Y",
-        CREATEDDATE: "2024-01-17",
-        CREATEDTIME: "16:00:00"
-    },
-    {
-        HSNCODE: 6,
-        HSNNUMBER: "2001",
-        HSDESCRIPTION: "Vegetables and certain roots and tubers",
-        ACTIVE: "Y",
-        CREATEDDATE: "2024-01-18",
-        CREATEDTIME: "10:00:00"
-    },
-    {
-        HSNCODE: 7,
-        HSNNUMBER: "2002",
-        HSDESCRIPTION: "Edible vegetables and certain roots and tubers",
-        ACTIVE: "Y",
-        CREATEDDATE: "2024-01-18",
-        CREATEDTIME: "11:30:00"
-    }
-];
 
 export default function HSNMaster() {
     const { theme } = useTheme();
     const router = useRouter();
     const { setData, setColumns, setShowSno, title } = usePrint();
 
-    /* -------------------- API HOOKS (with mock fallback) -------------------- */
-    // Mock data state
-    const [hsnList, setHsnList] = useState<HSN[]>(MOCK_HSN);
+    /* -------------------- API HOOKS -------------------- */
+    const { data: hsnList = [], isLoading: isApiLoading, refetch: hsnRefetch } = useAllHSN();
+    const createMutation = useCreateHSN();
+    const updateMutation = useUpdateHSN();
+    const deleteMutation = useDeleteHSN();
+
     const [isLoading, setIsLoading] = useState(false);
 
     /* -------------------- FORM STATE -------------------- */
     const emptyForm: CreateHSNPayload = {
-        HSNNUMBER: "",
-        HSDESCRIPTION: "",
+        HSNCODE: "",
+        HSNDESCRIPTION: "",
         ACTIVE: "Y",
     };
 
     const [form, setForm] = useState<CreateHSNPayload>(emptyForm);
-    const [editId, setEditId] = useState<number | null>(null);
-    const [highlightedId, setHighlightedId] = useState<number | null>(null);
+    const [editCode, setEditCode] = useState<string | null>(null);
+    const [highlightedCode, setHighlightedCode] = useState<string | null>(null);
 
     /* -------------------- SELECT OPTIONS -------------------- */
     const activeStatus = [
@@ -136,31 +85,31 @@ export default function HSNMaster() {
 
     /* -------------------- EFFECTS -------------------- */
     useEffect(() => {
-        if (editId) {
+        if (editCode) {
             const hsnToEdit = hsnList.find(
-                (hsn: HSN) => hsn.HSNCODE === editId
+                (hsn: HSN) => hsn.HSNCODE === editCode
             );
             if (hsnToEdit) {
                 setForm({
-                    HSNNUMBER: hsnToEdit.HSNNUMBER,
-                    HSDESCRIPTION: hsnToEdit.HSDESCRIPTION,
+                    HSNCODE: hsnToEdit.HSNCODE,
+                    HSNDESCRIPTION: hsnToEdit.HSNDESCRIPTION,
                     ACTIVE: hsnToEdit.ACTIVE,
                 });
                 toastLoaded("HSN");
                 ScrollToTop();
             }
         }
-    }, [editId, hsnList]);
+    }, [editCode, hsnList]);
 
     useEffect(() => {
-        if (!highlightedId) return;
+        if (!highlightedCode) return;
 
         const timer = setTimeout(() => {
-            setHighlightedId(null);
+            setHighlightedCode(null);
         }, 3000);
 
         return () => clearTimeout(timer);
-    }, [highlightedId]);
+    }, [highlightedCode]);
 
     /* -------------------- HANDLERS -------------------- */
     const handleChange = (field: keyof CreateHSNPayload, value: any) => {
@@ -168,34 +117,34 @@ export default function HSNMaster() {
     };
 
     const resetForm = () => {
-        setEditId(null);
+        setEditCode(null);
         setForm(emptyForm);
     };
 
     const validateForm = () => {
-        if (!form.HSNNUMBER?.trim()) {
+        if (!form.HSNCODE?.trim()) {
             toastError("HSN code is required");
             return false;
         }
-        if (form.HSNNUMBER.length > 20) {
+        if (form.HSNCODE.length > 20) {
             toastError("HSN code must be at most 20 characters");
             return false;
         }
         // Check if HSN code already exists (for new entries)
-        if (!editId) {
+        if (!editCode) {
             const existingHSN = hsnList.find(
-                hsn => hsn.HSNNUMBER.toLowerCase() === form.HSNNUMBER.toLowerCase()
+                hsn => hsn.HSNCODE.toLowerCase() === form.HSNCODE.toLowerCase()
             );
             if (existingHSN) {
                 toastError("HSN code already exists");
                 return false;
             }
         }
-        if (!form.HSDESCRIPTION?.trim()) {
+        if (!form.HSNDESCRIPTION?.trim()) {
             toastError("HSN description is required");
             return false;
         }
-        if (form.HSDESCRIPTION.length > 500) {
+        if (form.HSNDESCRIPTION.length > 500) {
             toastError("Description must be at most 500 characters");
             return false;
         }
@@ -207,47 +156,44 @@ export default function HSNMaster() {
 
         try {
             setIsLoading(true);
-            
-            if (editId) {
-                // Update existing HSN
-                setHsnList(prev => prev.map(hsn => 
-                    hsn.HSNCODE === editId 
-                        ? { 
-                            ...hsn, 
-                            ...form,
-                            HSNCODE: editId,
-                            CREATEDDATE: hsn.CREATEDDATE,
-                            CREATEDTIME: hsn.CREATEDTIME
-                          }
-                        : hsn
-                ));
 
-                toaster.success({ 
-                    title: "Success", 
-                    description: "HSN updated successfully" 
+            const payload = {
+                HSNCODE: form.HSNCODE.trim(),
+                HSNDESCRIPTION: form.HSNDESCRIPTION.trim(),
+                ACTIVE: form.ACTIVE,
+            };
+
+            if (editCode) {
+                // UPDATE
+                await updateMutation.mutateAsync({
+                    code: editCode,
+                    payload,
                 });
-                setHighlightedId(editId);
-            } else {
-                // Create new HSN
-                const newHSN: HSN = {
-                    ...form,
-                    HSNCODE: Math.max(...hsnList.map(h => h.HSNCODE || 0), 0) + 1,
-                    CREATEDDATE: new Date().toISOString().split('T')[0],
-                    CREATEDTIME: new Date().toTimeString().split(' ')[0]
-                };
-                setHsnList(prev => [...prev, newHSN]);
 
-                toaster.success({ 
-                    title: "Success", 
-                    description: "HSN created successfully" 
+                toaster.success({
+                    title: "Success",
+                    description: "HSN updated successfully",
+                });
+
+                setHighlightedCode(editCode);
+            } else {
+                // CREATE
+                await createMutation.mutateAsync(payload);
+
+                toaster.success({
+                    title: "Success",
+                    description: "HSN created successfully",
                 });
             }
+
+            await hsnRefetch();
             resetForm();
-        } catch (error) {
+
+        } catch (error: any) {
             console.error("Form submission error:", error);
-            toaster.error({ 
-                title: "Error", 
-                description: "Operation failed" 
+            toaster.error({
+                title: "Error",
+                description: error?.message || "Operation failed",
             });
         } finally {
             setIsLoading(false);
@@ -255,24 +201,35 @@ export default function HSNMaster() {
     };
 
     const handleEdit = (hsn: HSN) => {
-        setEditId(hsn.HSNCODE!);
+        setEditCode(hsn.HSNCODE);
+        setForm({
+            HSNCODE: hsn.HSNCODE,
+            HSNDESCRIPTION: hsn.HSNDESCRIPTION,
+            ACTIVE: hsn.ACTIVE,
+        });
+        ScrollToTop();
     };
 
-    const handleDelete = async (code: number) => {
+    const handleDelete = async (code: string) => {
         if (window.confirm("Are you sure you want to delete this HSN?")) {
             try {
                 setIsLoading(true);
-                setHsnList(prev => prev.filter(hsn => hsn.HSNCODE !== code));
+                await deleteMutation.mutateAsync(code);
 
-                toaster.success({ 
-                    title: "Success", 
-                    description: "HSN deleted successfully" 
+                toaster.success({
+                    title: "Success",
+                    description: "HSN deleted successfully"
                 });
-            } catch (error) {
+                await hsnRefetch();
+
+                if (editCode === code) {
+                    resetForm();
+                }
+            } catch (error: any) {
                 console.error("Delete error:", error);
-                toaster.error({ 
-                    title: "Error", 
-                    description: "Delete failed" 
+                toaster.error({
+                    title: "Error",
+                    description: error?.message || "Delete failed"
                 });
             } finally {
                 setIsLoading(false);
@@ -283,9 +240,10 @@ export default function HSNMaster() {
     /* -------------------- TABLE COLUMNS -------------------- */
     const hsnColumns = [
         { key: 'SNO', label: 'S.No' },
-        { key: 'HSNNUMBER', label: 'HSN Code' },
-        { key: 'HSDESCRIPTION', label: 'Description' },
+        { key: 'HSNCODE', label: 'HSN Code' },
+        { key: 'HSNDESCRIPTION', label: 'Description' },
         { key: 'ACTIVE', label: 'Status' },
+        { key: 'CREATEDDATE', label: 'Created Date' },
         { key: 'actions', label: 'Actions' },
     ];
 
@@ -303,8 +261,8 @@ export default function HSNMaster() {
     const handleExport = (option: string) => {
         setData(hsnList);
         setColumns([
-            { key: "HSNNUMBER", label: "HSN Code" },
-            { key: "HSDESCRIPTION", label: "Description" },
+            { key: "HSNCODE", label: "HSN Code" },
+            { key: "HSNDESCRIPTION", label: "Description" },
             { key: "ACTIVE", label: "Status" },
         ]);
         setShowSno(true);
@@ -335,13 +293,14 @@ export default function HSNMaster() {
                                     <Box display="flex" alignItems="center" gap={2}>
                                         <Box minW="110px" fontSize="2xs">HSN CODE :</Box>
                                         <Input
-                                            value={form.HSNNUMBER}
-                                            onChange={(e) => handleChange("HSNNUMBER", e.target.value)}
+                                            value={form.HSNCODE}
+                                            onChange={(e) => handleChange("HSNCODE", e.target.value)}
                                             size="2xs"
                                             placeholder="Enter HSN code"
                                             maxLength={20}
+                                            isReadOnly={!!editCode}
                                             css={{
-                                                backgroundColor: "#eee",
+                                                backgroundColor: editCode ? "#f5f5f5" : "#eee",
                                                 color: "#111827",
                                                 border: "1px solid #e5e7eb",
                                                 borderRadius: "20px",
@@ -357,8 +316,8 @@ export default function HSNMaster() {
                                     <Box display="flex" alignItems="flex-start" gap={2}>
                                         <Box minW="110px" fontSize="2xs">DESCRIPTION :</Box>
                                         <Textarea
-                                            value={form.HSDESCRIPTION}
-                                            onChange={(e) => handleChange("HSDESCRIPTION", e.target.value)}
+                                            value={form.HSNDESCRIPTION}
+                                            onChange={(e) => handleChange("HSNDESCRIPTION", e.target.value)}
                                             size="xs"
                                             placeholder="Enter HSN description"
                                             maxLength={500}
@@ -392,13 +351,11 @@ export default function HSNMaster() {
                                                     fontSize: "10px",
                                                 }}
                                             >
-                                                <For each={activeStatus}>
-                                                    {(item) => (
-                                                        <option key={item.value} value={item.value}>
-                                                            {item.label}
-                                                        </option>
-                                                    )}
-                                                </For>
+                                                {activeStatus.map((item) => (
+                                                    <option key={item.value} value={item.value}>
+                                                        {item.label}
+                                                    </option>
+                                                ))}
                                             </NativeSelect.Field>
                                             <NativeSelect.Indicator />
                                         </NativeSelect.Root>
@@ -411,11 +368,11 @@ export default function HSNMaster() {
                             <Button
                                 size="xs"
                                 colorPalette="blue"
-                                loading={isLoading}
+                                loading={isLoading || createMutation.isPending || updateMutation.isPending}
                                 onClick={handleSave}
                                 flex={1}
                             >
-                                <AiOutlineSave /> {editId ? "Update" : "Save"}
+                                <AiOutlineSave /> {editCode ? "Update" : "Save"}
                             </Button>
                             <Button size="xs" colorPalette="blue" onClick={resetForm} flex={1}>
                                 <IoIosExit /> Exit
@@ -460,16 +417,16 @@ export default function HSNMaster() {
                         <CustomTable
                             columns={hsnColumns}
                             data={hsnList}
-                            isLoading={isLoading}
+                            isLoading={isApiLoading || isLoading}
                             renderRow={(hsn: HSN, index: number) => (
                                 <>
-                                    <Table.Cell>{index + 1}</Table.Cell>
+                                    <Table.Cell>{hsn.SNO || index + 1}</Table.Cell>
                                     <Table.Cell>
-                                        <Text fontWeight="medium">{hsn.HSNNUMBER}</Text>
+                                        <Text fontWeight="medium">{hsn.HSNCODE}</Text>
                                     </Table.Cell>
                                     <Table.Cell>
                                         <Text maxW="300px" whiteSpace="normal" wordBreak="break-word">
-                                            {hsn.HSDESCRIPTION}
+                                            {hsn.HSNDESCRIPTION}
                                         </Text>
                                     </Table.Cell>
                                     <Table.Cell>
@@ -484,6 +441,9 @@ export default function HSNMaster() {
                                         </Badge>
                                     </Table.Cell>
                                     <Table.Cell>
+                                        {formatDate(hsn.CREATEDDATE)}
+                                    </Table.Cell>
+                                    <Table.Cell>
                                         <Box display="flex" justifyContent="center" gap={2}>
                                             <FaEdit 
                                                 onClick={() => handleEdit(hsn)} 
@@ -492,7 +452,7 @@ export default function HSNMaster() {
                                                 size={14}
                                             />
                                             <FaTrash 
-                                                onClick={() => handleDelete(hsn.HSNCODE!)} 
+                                                onClick={() => handleDelete(hsn.HSNCODE)} 
                                                 cursor="pointer"
                                                 color="red.500"
                                                 size={14}
@@ -505,7 +465,7 @@ export default function HSNMaster() {
                             headerColor="white"
                             borderColor="white"
                             bodyBg={theme.colors.primary}
-                            highlightRowId={highlightedId ? Number(highlightedId) : null}
+                            highlightRowId={highlightedCode ? highlightedCode : null}
                             rowIdKey="HSNCODE"
                             emptyText="No HSN codes available"
                         />

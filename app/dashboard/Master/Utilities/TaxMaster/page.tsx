@@ -42,7 +42,7 @@ interface GST {
     SHOTNAME: string;
     TAXPER: number;
     TAXTYPE: string; // "P" for Percentage, might be other values
-    CREATEDBY?: number;
+  
     CREATEDDATE?: string;
     CREATEDTIME?: string;
     SNO?: number;
@@ -103,14 +103,7 @@ const gstTypes = [
     { label: "OTHER", value: "OT" },
 ];
 
-    // For display purposes in the table
-    const displayTypes = [
-        { label: "SGST", value: "SGST" },
-        { label: "CGST", value: "CGST" },
-        { label: "IGST", value: "IGST" },
-        { label: "UGST", value: "UGST" },
-        { label: "OTHER", value: "OTHER" },
-    ];
+
 
     /* -------------------- EFFECTS -------------------- */
     useEffect(() => {
@@ -186,23 +179,18 @@ const handleSave = async () => {
     try {
         setIsLoading(true);
 
-       const payload = {
-    TAXNAME: form.TAXNAME,
-    SHOTNAME: form.SHOTNAME,
-    TAXPER: Number(form.TAXPER),
-    TAXTYPE: form.TAXTYPE,
-};
-
-        const createdBy = 1; 
+        const payload = {
+            TAXNAME: form.TAXNAME.trim(),
+            SHOTNAME: form.SHOTNAME.trim(),
+            TAXPER: Number(form.TAXPER),
+            TAXTYPE: form.TAXTYPE,
+        };
 
         if (editId) {
-            // ✅ UPDATE (Correct structure)
-            console.log("Updating GST with payload:", { id: editId, payload });
             await updateMutation.mutateAsync({
                 id: editId,
                 payload,
             });
-
 
             toaster.success({
                 title: "Success",
@@ -211,11 +199,7 @@ const handleSave = async () => {
 
             setHighlightedId(editId);
         } else {
-            // ✅ CREATE (Correct structure)
-            await createMutation.mutateAsync({
-                payload,
-                createdBy,
-            });
+            await createMutation.mutateAsync(payload);
 
             toaster.success({
                 title: "Success",
@@ -229,7 +213,7 @@ const handleSave = async () => {
     } catch (error: any) {
         toaster.error({
             title: "Error",
-            description: error.message || "Operation failed",
+            description: error?.message || "Operation failed",
         });
     } finally {
         setIsLoading(false);

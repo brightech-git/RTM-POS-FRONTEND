@@ -25,13 +25,8 @@ export const useCreateTax = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: ({
-            payload,
-            createdBy,
-        }: {
-            payload: CreateTaxPayload;
-            createdBy: number;
-        }) => TaxService.create(payload, createdBy),
+        mutationFn: (payload: CreateTaxPayload) =>
+            TaxService.create(payload),
 
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["taxes"] });
@@ -39,7 +34,7 @@ export const useCreateTax = () => {
         },
 
         onError: (error: any) => {
-            toastError("Tax", error.message);
+            toastError("Tax", error?.message || "Failed to create tax");
         },
     });
 };
