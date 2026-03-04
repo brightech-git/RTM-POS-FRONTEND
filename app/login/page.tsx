@@ -54,8 +54,8 @@ export default function LoginPage() {
     // Handle submit
     const onSubmit = async (formData: any) => {
         const success = await login({
-            username: formData.username,
-            password: formData.password,
+            OPER_NAME: formData.username,
+            PASSWORD: formData.password,
         });
         console.log(success,'success');
 

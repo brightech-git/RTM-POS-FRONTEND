@@ -17,7 +17,7 @@ export interface AuthContextType {
     userId: number |string | null;
     login: (payload: LoginPayload) => Promise<ApiResponse>;
     logout: () => void;
-    refreshUser: (uid: number) => Promise<void>;
+    refreshUser?: (uid: number) => Promise<void>;
     company: () => Promise<void>;
     companiesData: Company[];
 }

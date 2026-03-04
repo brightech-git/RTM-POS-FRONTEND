@@ -9,8 +9,8 @@ export interface ApiResponse<T = any> {
 }
 
 export interface LoginPayload {
-    username: string;
-    password: string;
+   OPER_NAME:string,
+   PASSWORD:string
 }
 
 export interface RegisterPayload {
@@ -40,9 +40,9 @@ export const authService = {
     // 🔐 LOGIN (FIXED)
     login : async (payload: LoginPayload) => {
         try {
-            const response = await axiosInstance.post("/user/login", payload);
+            const response = await axiosInstance.post("/operator/login", payload);
 
-            console.log("Login successful:", response);
+            console.log("Login successful:", response.data);
             return response.data;
         } catch (error: any) {
          
@@ -68,7 +68,7 @@ export const authService = {
     me: async (userId: number): Promise<ApiResponse> => {
         console.log("Fetching user with ID:", userId);
         try {
-            const res = await axiosInstance.get(`/user/${userId}`);
+            const res = await axiosInstance.get(`/operator/${userId}`);
             console.log(res ,'response for fetch data')
             return { success: true, data: res.data };
         } catch {

@@ -1,10 +1,10 @@
 
 
 export const sellingUnit = [
-    { value: "PCS", label: "PIECES" },
-    { value: "WT", label: "WEIGHT" },
-    {value:"KG", label: "KILOGRAM"},
-    {value:"LTR", label: "LITER"},
+    { value: "1" , label: "PIECES" },
+    { value: "2", label: "WEIGHT" },
+    {value:"3", label: "KILOGRAM"},
+    {value:"4", label: "LITER"},
 ]
 
 export const TaggedOrNonTagged = [

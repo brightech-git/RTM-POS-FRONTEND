@@ -60,17 +60,18 @@ function ProductMaster() {
  
         PRODUCTNAME: "",
         SHORTNAME: "",
-        SUBPRODUCT: "",
-        UNITCODE: "",
+        SUBPRODUCT: "Y",
+        UNITCODE: "1",
         ACTIVE: "Y",
-        ALLOWDISCOUNT: "Y",
-        PURUNITCODE: "",
-        PRODUCTTYPE: "M",
-        TAGTYPE: "G",
+        ALLOWDISCOUNT: "N",
+        PURUNITCODE: "1",
+        PRODUCTTYPE: "T",
+        TAGTYPE: "S",
         ORIONBARCODE: "",
         EXPIRYDAYS: "",
     });
 
+    const [formErrors, setFormErrors] = useState<Record<string, string>>({});
     /* -------------------- USE EFFECTS -------------------- */
     useEffect(() => {
         if (!product) return;
@@ -102,49 +103,82 @@ function ProductMaster() {
     }, [highlightedId]);
 
     /* -------------------- HANDLERS -------------------- */
-    const handleChange = (field: keyof ProductForm, value: any) => {
-        setForm((prev) => ({ ...prev, [field]: value }));
-    };
+      const handleChange = (field: keyof ProductForm, value: any) => {
+            setForm((prev) => ({
+                ...prev,
+                [field]: value,
+            }));
+        };
+   
 
     const resetForm = () => {
         setEditId(null);
         setForm({
             PRODUCTNAME: "",
             SHORTNAME: "",
-            SUBPRODUCT: "",
-            UNITCODE: "",
+            SUBPRODUCT: "Y",
+            UNITCODE: "1",
             ACTIVE: "Y",
             ALLOWDISCOUNT: "Y",
-            PURUNITCODE: "",
-            PRODUCTTYPE: "M",
-            TAGTYPE: "G",
+            PURUNITCODE: "1",
+            PRODUCTTYPE: "T",
+            TAGTYPE: "S",
             ORIONBARCODE: "",
             EXPIRYDAYS: "",
         });
     };
 
     const handleSave = () => {
-        if (!form.PRODUCTNAME?.trim()) return toastError("Product Name is required");
-        if (!form.SUBPRODUCT?.trim()) return toastError("Subproduct is required");
-        if (!form.UNITCODE) return toastError("Unit code is required");
+        const errors: Record<string, string> = {};
 
+        if (!form.PRODUCTNAME?.trim()) errors.PRODUCTNAME = "Product Name is required";
+        if (!form.SUBPRODUCT?.trim()) errors.SUBPRODUCT = "Subproduct is required";
+        if (!form.UNITCODE) errors.UNITCODE = "Selling Unit is required";
+        if (!form.PURUNITCODE) errors.PURUNITCODE = "Purchase Unit is required";
+        if (!form.PRODUCTTYPE?.trim()) errors.PRODUCTTYPE = "Product Type is required";
+
+        if (form.PRODUCTTYPE === "NT") {
+            // auto-set for NT
+            form.TAGTYPE = "S";
+            form.ORIONBARCODE = "Y";
+            if (!form.ORIONBARCODE?.trim()) errors.ORIONBARCODE = "Orion Barcode selection is required for tagged products";
+        } else {
+            if (!form.TAGTYPE?.trim()) errors.TAGTYPE = "Tag Type is required for tagged products";
+        
+        }
+
+        if (!form.ALLOWDISCOUNT?.trim()) errors.ALLOWDISCOUNT = "Allow Discount selection is required";
+        if (!form.ACTIVE?.trim()) errors.ACTIVE = "Active selection is required";
+        if (!form.EXPIRYDAYS) errors.EXPIRYDAYS = "Expiry Days is required";
+
+        setFormErrors(errors);
+
+        if (Object.keys(errors).length > 0) return; // stop saving if errors exist
+        // ✅ Build final values safely (NO MUTATION)
+        const finalTagType =
+            form.PRODUCTTYPE === "NT" ? "S" : form.TAGTYPE;
+
+        const finalOrionBarcode =
+            form.PRODUCTTYPE === "NT" ? "Y" : form.ORIONBARCODE;
+
+        const payload: Product = {
+            PRODUCTNAME: form.PRODUCTNAME,
+            SHORTNAME: form.SHORTNAME,
+            SUBPRODUCT: form.SUBPRODUCT,
+            UNITCODE: Number(form.UNITCODE),
+            PURUNITCODE: Number(form.PURUNITCODE),
+            PRODUCTTYPE: form.PRODUCTTYPE,
+            TAGTYPE: finalTagType,
+            ORIONBARCODE: finalOrionBarcode,
+            ALLOWDISCOUNT: form.ALLOWDISCOUNT,
+            ACTIVE: form.ACTIVE,
+            EXPIRYDAYS: Number(form.EXPIRYDAYS),
+        };
+
+        // ✅ EDIT
         if (editId) {
-            const payload: Product = {
-                PRODUCTCODE:Number(editId),
-                PRODUCTNAME: form.PRODUCTNAME,
-                SHORTNAME: form.SHORTNAME,
-                SUBPRODUCT: form.SUBPRODUCT,
-                UNITCODE: Number(form.UNITCODE),
-                ACTIVE: form.ACTIVE,
-                ALLOWDISCOUNT: form.ALLOWDISCOUNT,
-                PURUNITCODE: Number(form.PURUNITCODE),
-                PRODUCTTYPE: form.PRODUCTTYPE,
-                TAGTYPE: form.TAGTYPE,
-                ORIONBARCODE: form.ORIONBARCODE,
-                EXPIRYDAYS: Number(form.EXPIRYDAYS),
-            };
             updateProduct(
-                { payload },
+                { payload: { ...payload, PRODUCTCODE: Number(editId) } },
                 {
                     onSuccess: () => {
                         refetchProducts();
@@ -154,31 +188,16 @@ function ProductMaster() {
                     },
                 }
             );
-        } else {
-            const payload: Product = {
-                PRODUCTNAME: form.PRODUCTNAME,
-                SHORTNAME: form.SHORTNAME,
-                SUBPRODUCT: form.SUBPRODUCT,
-                UNITCODE: Number(form.UNITCODE),
-                ACTIVE: form.ACTIVE,
-                ALLOWDISCOUNT: form.ALLOWDISCOUNT,
-                PURUNITCODE: Number(form.PURUNITCODE),
-                PRODUCTTYPE: form.PRODUCTTYPE,
-                TAGTYPE: form.TAGTYPE,
-                ORIONBARCODE: form.ORIONBARCODE,
-                EXPIRYDAYS: Number(form.EXPIRYDAYS),
-            };
-
-
-            createProduct(payload,
-                {
-                    onSuccess: () => {
-                        refetchProducts();
-                        resetForm();
-                        toastCreated("Product");
-                    },
-                }
-            );
+        }
+        // ✅ CREATE (NO PRODUCTCODE)
+        else {
+            createProduct(payload, {
+                onSuccess: () => {
+                    refetchProducts();
+                    resetForm();
+                    toastCreated("Product");
+                },
+            });
         }
     };
 
@@ -228,129 +247,179 @@ function ProductMaster() {
                                 <Grid css={{ gridTemplateColumns: "repeat(1, 1fr)" }} gap={4}>
 
                                     {/* PRODUCT NAME */}
-                                    <Box display="flex" alignItems="center" gap={2}>
-                                        <Box minW="120px" fontSize="xs">PRODUCT NAME :</Box>
-                                        <CapitalizedInput
-                                            field="PRODUCTNAME"
-                                            value={form.PRODUCTNAME}
-                                            onChange={handleChange}
-                                            size="2xs"
-                                        />
+                                    <Box>
+                                        <Box display="flex" alignItems="center" gap={2}>
+                                            <Box minW="120px" fontSize="xs">PRODUCT NAME :</Box>
+                                            <CapitalizedInput
+                                                field="PRODUCTNAME"
+                                                value={form.PRODUCTNAME}
+                                                onChange={handleChange}
+                                                size="2xs"
+                                            />
+                                        </Box>
+                                        {formErrors.PRODUCTNAME && (
+                                            <Text fontSize="xx-small" color="red.500">{formErrors.PRODUCTNAME}</Text>
+                                        )}
                                     </Box>
 
                                     {/* SHORT NAME */}
-                                    <Box display="flex" alignItems="center" gap={2}>
-                                        <Box minW="120px" fontSize="xs">SHORT NAME :</Box>
-                                        <CapitalizedInput
-                                            field="SHORTNAME"
-                                            value={form.SHORTNAME}
-                                            onChange={handleChange}
-                                            size="2xs"
-                                        />
+                                    <Box>
+                                        <Box display="flex" alignItems="center" gap={2}>
+                                            <Box minW="120px" fontSize="xs">SHORT NAME :</Box>
+                                            <CapitalizedInput
+                                                field="SHORTNAME"
+                                                value={form.SHORTNAME}
+                                                onChange={handleChange}
+                                                size="2xs"
+                                            />
+                                        </Box>
                                     </Box>
 
                                     {/* SUBPRODUCT */}
-                                    <Box display="flex" alignItems="center" gap={2}>
-                                        <Box minW="120px" fontSize="xs">SUBPRODUCT :</Box>
-                                        <ActiveSelect
-                                            items={YesOrNo}
-                                            value={form.SUBPRODUCT}
-                                            onChange={(val) => handleChange("SUBPRODUCT", val)}
-                                            size="xs"
-                                        />
+                                    <Box>
+                                        <Box display="flex" alignItems="center" gap={2}>
+                                            <Box minW="120px" fontSize="xs">SUBPRODUCT :</Box>
+                                            <ActiveSelect
+                                                items={YesOrNo}
+                                                value={form.SUBPRODUCT}
+                                                onChange={(val) => handleChange("SUBPRODUCT", val)}
+                                                size="xs"
+                                            />
+                                        </Box>
+                                        {formErrors.SUBPRODUCT && (
+                                            <Text fontSize="xx-small" color="red.500">{formErrors.SUBPRODUCT}</Text>
+                                        )}
                                     </Box>
 
                                     {/* SELLING UNIT */}
-                                    <Box display="flex" alignItems="center" gap={2}>
-                                        <Box minW="120px" fontSize="xs">SELLING UNIT :</Box>
-                                        <ActiveSelect
-                                            items={sellingUnit}
-                                            value={form.UNITCODE}
-                                            onChange={(val) => handleChange("UNITCODE", val)}
-                                            size="xs"
-                                        />
+                                    <Box>
+                                        <Box display="flex" alignItems="center" gap={2}>
+                                            <Box minW="120px" fontSize="xs">SELLING UNIT :</Box>
+                                            <ActiveSelect
+                                                items={sellingUnit}
+                                                value={form.UNITCODE}
+                                                onChange={(val) => handleChange("UNITCODE", val)}
+                                                size="xs"
+                                            />
+                                        </Box>
+                                        {formErrors.UNITCODE && (
+                                            <Text fontSize="xx-small" color="red.500">{formErrors.UNITCODE}</Text>
+                                        )}
                                     </Box>
 
                                     {/* PURCHASE UNIT */}
-                                    <Box display="flex" alignItems="center" gap={2}>
-                                        <Box minW="120px" fontSize="xs">PURCHASE UNIT :</Box>
-                                        <ActiveSelect
-                                            items={sellingUnit}
-                                            value={form.PURUNITCODE}
-                                            onChange={(val) => handleChange("PURUNITCODE", val)}
-                                            size="xs"
-                                        />
+                                    <Box>
+                                        <Box display="flex" alignItems="center" gap={2}>
+                                            <Box minW="120px" fontSize="xs">PURCHASE UNIT :</Box>
+                                            <ActiveSelect
+                                                items={sellingUnit}
+                                                value={form.PURUNITCODE}
+                                                onChange={(val) => handleChange("PURUNITCODE", val)}
+                                                size="xs"
+                                            />
+                                        </Box>
+                                        {formErrors.PURUNITCODE && (
+                                            <Text fontSize="xx-small" color="red.500">{formErrors.PURUNITCODE}</Text>
+                                        )}
                                     </Box>
 
                                     {/* PRODUCT TYPE */}
-                                    <Box display="flex" alignItems="center" gap={2}>
-                                        <Box minW="120px" fontSize="xs">PRODUCT TYPE :</Box>
-                                        <ActiveSelect
-                                            items={TaggedOrNonTagged}
-                                            value={form.PRODUCTTYPE}
-                                            onChange={(val) => handleChange("PRODUCTTYPE", val)}
-                                            size="xs"
-                                        />
+                                    <Box>
+                                        <Box display="flex" alignItems="center" gap={2}>
+                                            <Box minW="120px" fontSize="xs">PRODUCT TYPE :</Box>
+                                            <ActiveSelect
+                                                items={TaggedOrNonTagged}
+                                                value={form.PRODUCTTYPE}
+                                                onChange={(val) => handleChange("PRODUCTTYPE", val)}
+                                                size="xs"
+                                            />
+                                        </Box>
+                                        {formErrors.PRODUCTTYPE && (
+                                            <Text fontSize="xx-small" color="red.500">{formErrors.PRODUCTTYPE}</Text>
+                                        )}
                                     </Box>
 
                                     {/* TAG TYPE */}
-                                    <Box display="flex" alignItems="center" gap={2}>
-                                        <Box minW="120px" fontSize="xs">TAG TYPE :</Box>
-                                        <ActiveSelect
-                                            items={TagType}
-                                            value={form.TAGTYPE}
-                                            onChange={(val) => handleChange("TAGTYPE", val)}
-                                            size="xs"
-                                            isDisabled={form.PRODUCTTYPE === "NT"} // Only enable if tagged
-                                        />
+                                    <Box>
+                                        <Box display="flex" alignItems="center" gap={2}>
+                                            <Box minW="120px" fontSize="xs">TAG TYPE :</Box>
+                                            <ActiveSelect
+                                                items={TagType}
+                                                value={form.TAGTYPE}
+                                                onChange={(val) => handleChange("TAGTYPE", val)}
+                                                size="xs"
+                                                isDisabled={form.PRODUCTTYPE === "NT"}
+                                            />
+                                        </Box>
+                                        {formErrors.TAGTYPE && (
+                                            <Text fontSize="xx-small" color="red.500">{formErrors.TAGTYPE}</Text>
+                                        )}
                                     </Box>
 
                                     {/* ORION BARCODE */}
-                                    <Box display="flex" alignItems="center" gap={2}>
-                                        <Box minW="120px" fontSize="xs">ORION BARCODE :</Box>
-                                        <ActiveSelect
-                                            items={YesOrNo}
-                                            value={form.ORIONBARCODE}
-                                            onChange={(val) => handleChange("ORIONBARCODE", val)}
-                                            size="xs"
-                                            isDisabled={form.PRODUCTTYPE !== "NT"} // Only enable if non-tagged
-                                        />
+                                    <Box>
+                                        <Box display="flex" alignItems="center" gap={2}>
+                                            <Box minW="120px" fontSize="xs">ORION BARCODE :</Box>
+                                            <ActiveSelect
+                                                items={YesOrNo}
+                                                value={form.ORIONBARCODE}
+                                                onChange={(val) => handleChange("ORIONBARCODE", val)}
+                                                size="xs"
+                                                isDisabled={form.PRODUCTTYPE !== "NT"}
+                                            />
+                                        </Box>
+                                        {formErrors.ORIONBARCODE && (
+                                            <Text fontSize="xx-small" color="red.500">{formErrors.ORIONBARCODE}</Text>
+                                        )}
                                     </Box>
 
                                     {/* ALLOW DISCOUNT */}
-                                    <Box display="flex" alignItems="center" gap={2}>
-                                        <Box minW="120px" fontSize="xs">ALLOW DISCOUNT :</Box>
-                                        <ActiveSelect
-                                            items={YesOrNo}
-                                            value={form.ALLOWDISCOUNT}
-                                            onChange={(val) => handleChange("ALLOWDISCOUNT", val)}
-                                            size="xs"
-                                        />
+                                    <Box>
+                                        <Box display="flex" alignItems="center" gap={2}>
+                                            <Box minW="120px" fontSize="xs">ALLOW DISCOUNT :</Box>
+                                            <ActiveSelect
+                                                items={YesOrNo}
+                                                value={form.ALLOWDISCOUNT}
+                                                onChange={(val) => handleChange("ALLOWDISCOUNT", val)}
+                                                size="xs"
+                                            />
+                                        </Box>
+                                        {formErrors.ALLOWDISCOUNT && (
+                                            <Text fontSize="xx-small" color="red.500">{formErrors.ALLOWDISCOUNT}</Text>
+                                        )}
                                     </Box>
 
                                     {/* EXPIRY DAYS */}
-                                    <Box display="flex" alignItems="center" gap={2}>
-                                        <Box minW="120px" fontSize="xs">EXPIRY DAYS :</Box>
-                                        <CapitalizedInput
-                                            field="EXPIRYDAYS"
-                                            value={form.EXPIRYDAYS}
-                                            onChange={handleChange}
-                                            size="2xs"
-                                            type="number"
-                                        />
+                                    <Box>
+                                        <Box display="flex" alignItems="center" gap={2}>
+                                            <Box minW="120px" fontSize="xs">EXPIRY DAYS :</Box>
+                                            <CapitalizedInput
+                                                field="EXPIRYDAYS"
+                                                value={form.EXPIRYDAYS}
+                                                onChange={handleChange}
+                                                size="2xs"
+                                                type="number"
+                                            />
+                                        </Box>
+                                        {formErrors.EXPIRYDAYS && (
+                                            <Text fontSize="xx-small" color="red.500">{formErrors.EXPIRYDAYS}</Text>
+                                        )}
                                     </Box>
 
                                     {/* ACTIVE */}
-                                    <Box display="flex" alignItems="center" gap={2}>
-                                        <Box minW="120px" fontSize="xs">ACTIVE :</Box>
-                                        <ActiveSelect
-                                            items={YesOrNo}
-                                            value={form.ACTIVE}
-                                            onChange={(val) => handleChange("ACTIVE", val)}
-                                            size="xs"
-                                            fontSize="xs"
-                                            
-                                        />
+                                    <Box>
+                                        <Box display="flex" alignItems="center" gap={2}>
+                                            <Box minW="120px" fontSize="xs">ACTIVE :</Box>
+                                            <ActiveSelect
+                                                items={YesOrNo}
+                                                value={form.ACTIVE}
+                                                onChange={(val) => handleChange("ACTIVE", val)}
+                                                size="xs"
+                                            />
+                                        </Box>
+                                        {formErrors.ACTIVE && (
+                                            <Text fontSize="xx-small" color="red.500">{formErrors.ACTIVE}</Text>
+                                        )}
                                     </Box>
 
                                 </Grid>
