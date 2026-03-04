@@ -19,10 +19,10 @@ export interface Operator {
 }
 
 export interface OperatorDTO {
-  operCode?: number; // optional for register
-  operName: string;
-  password: string;
-  active?: "Y" | "N";
+  OPER_CODE?: number; // optional for register
+  OPER_NAME: string;
+  PASSWORD: string;
+  ACTIVE?: "Y" | "N";
 }
 
 export interface LoginRequest {
