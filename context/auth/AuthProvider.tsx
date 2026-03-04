@@ -13,19 +13,19 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     const [companiesData, setCompaniesData] = useState<Company[]>([]);
 
     // 🔄 fetch user
-    const refreshUser = async (uid: number) => {
-        setLoading(true);
-        const res = await authService.me(uid);
-        console.log(res, 'fetching user data')
+    // const refreshUser = async (uid: number) => {
+    //     setLoading(true);
+    //     const res = await authService.me(uid);
+    //     console.log(res, 'fetching user data')
 
-        if (res.success) {
-            setUser(res.data);
-        }
-        //  else {
-        //     logout();
-        // }
-        setLoading(false);
-    };
+    //     if (res.success) {
+    //         setUser(res.data);
+    //     }
+    //     //  else {
+    //     //     logout();
+    //     // }
+    //     setLoading(false);
+    // };
 
     // 🏢 company list
     const company = async () => {
@@ -46,10 +46,10 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         setLoading(true);
         
         const res = await authService.login(payload);
-        console.log("Login result", res);
-
+      
+        console.log(res,'resres')
         // ❌ LOGIN FAILED
-        if (res.status !== "success" || !res.data) {
+        if (!res.data) {
             setLoading(false);
             return {
                 success: false,
@@ -58,14 +58,15 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         }
 
         // ✅ SAFE ACCESS
-        const userId = res.data.USERID;
+        const userId = res.data.OPER_CODE;
         const isAdmin = res.data.ISADMIN;
 
         setStorage("userId", String(userId));
-        setStorage("admin" ,isAdmin)
+        setStorage("admin" ,isAdmin);
         setUserId(userId);
+        setUser(res.data);
 
-        await refreshUser(userId);
+        // await refreshUser(userId);
 
         setLoading(false);
         return {
@@ -91,7 +92,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         if (storedUserId) {
             const uid = Number(storedUserId);
             setUserId(uid);
-            refreshUser(uid);
+            // refreshUser(uid);
         } else {
             setLoading(false);
         }
@@ -105,7 +106,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
                 loading,
                 login,
                 logout,
-                refreshUser,
+                // refreshUser,
                 company,
                 companiesData,
             }}

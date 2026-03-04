@@ -30,6 +30,10 @@ import {
   BarChart2,
   Clock,
 } from "lucide-react";
+import useProtected from "@/hooks/auth/useProtected";
+import Loader from "@/component/loader/Loader";
+import { useRouter } from "next/navigation";
+
 
 // --- Mock Data ---
 const stats = [
@@ -114,6 +118,18 @@ const CountUp = ({ target, prefix = "" }: { target: number; prefix?: string }) =
 };
 
 export default function DashBoard() {
+
+  const { user, loading } = useProtected();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (loading) return;
+    if (!user) router.replace("/login/");
+  }, [loading, user, router]);
+
+  if (loading) return <Loader isLoading fullscreen />;
+
+
   const now = new Date();
   const timeStr = now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
   const dateStr = now.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" });

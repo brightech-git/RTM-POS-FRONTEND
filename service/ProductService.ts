@@ -43,6 +43,7 @@ export const getProductById = async (id:number) => {
 
 export const createProduct = async (product:Product) => {
     try {
+        console.log('product in service', product);
         const { data } = await axiosInstance.post('/product/create' ,product);
         return data;
 

@@ -19,9 +19,8 @@ axiosInstance.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {
     const userId = getStorage("userId");
 
-
     if (userId) {
-      config.headers["USERID"] = userId; // ✅ custom header
+      config.headers["CREATEDBY"] = userId; // ✅ custom header
     }
   }
   return config;
