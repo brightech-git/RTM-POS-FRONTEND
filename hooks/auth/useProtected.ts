@@ -9,6 +9,8 @@ const normalizePath = (path?: string) =>
 
 const useProtected = () => {
     const { user, loading } = useAuth();
+
+    console.log(user,'user')
     const router = useRouter();
     const pathname = usePathname();
 
