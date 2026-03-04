@@ -86,6 +86,7 @@ export default function OperatorMaster() {
 
     /* -------------------- API HOOKS -------------------- */
     const { data: operators = [], isLoading, refetch: refetchOperators } = useAllOperators();
+    console.log("Fetched operators:", operators); // Debug log for operators data
     const { data: employees = [], isLoading: isLoadingEmployees } = useAllEmployees();
     
     const registerOperator = useRegisterOperator();
@@ -136,7 +137,7 @@ export default function OperatorMaster() {
     ];
 
     /* -------------------- ENRICH OPERATORS WITH EMPLOYEE NAMES -------------------- */
-    const enrichedOperators = operators.map((op: Operator) => {
+    const enrichedOperators = (Array.isArray(operators) ? operators : []).map((op: Operator) => {
         // Find matching employee
         const employee = employees.find((emp: Employee) => {
             // Try to match using various possible code fields
@@ -177,7 +178,8 @@ export default function OperatorMaster() {
 
     useEffect(() => {
         if (editCode) {
-            const operatorToEdit = operators.find((op: Operator) => op.OPER_CODE === editCode);
+            const operatorList = Array.isArray(operators) ? operators : operators?.data || [];
+            const operatorToEdit = operatorList.find((op: Operator) => op.OPER_CODE === editCode);
             if (operatorToEdit) {
                 setForm({
                     OPER_NAME: operatorToEdit.OPER_NAME,
@@ -399,7 +401,7 @@ export default function OperatorMaster() {
             { key: "CREATED_TIME", label: "Created Time" },
         ]);
         setShowSno(true);
-        title("Operator Master");
+      title?.("Employee Master");
         router.push(`/print?export=${option}`);
     };
 
@@ -461,7 +463,7 @@ export default function OperatorMaster() {
                                             onChange={handleChange}
                                             size="2xs"
                                             placeholder="Enter operator name"
-                                            maxLength={50}
+                                            
                                         />
                                     </Box>
 
@@ -652,8 +654,8 @@ export default function OperatorMaster() {
                                                 variant="ghost"
                                                 onClick={() => handleUpdatePassword(operator)}
                                                 title="Update Password"
-                                                icon={<FaEye size={12} />}
-                                            />
+                                               
+                                            > {<FaEye size={12} />}</IconButton>
                                         </Box>
                                     </Table.Cell>
                                 </>

@@ -52,7 +52,7 @@ interface StateResponse {
 
 // Interface for designation
 interface Designation {
-    DESIGNATIONCODE: number;
+    DESIGNATIONCODE?: number; // allow undefined
     DESCRIPTION: string;
     ACTIVE: string;
 }
@@ -101,12 +101,12 @@ function EmployeeMaster() {
     // Update designation options when designations data changes
     useEffect(() => {
         if (designationList.length > 0) {
-            const options = designationList
-                .filter((des: Designation) => des.ACTIVE === "Y") // Only show active designations
-                .map((des: Designation) => ({
-                    label: des.DESCRIPTION,
-                    value: des.DESIGNATIONCODE,
-                }));
+           const options = designationList
+    .filter((des) => des.ACTIVE === "Y" && des.DESIGNATIONCODE !== undefined)
+    .map((des) => ({
+        label: des.DESCRIPTION,
+        value: des.DESIGNATIONCODE!, // safe because of the filter
+    }));
             setDesignationOptions(options);
         }
     }, [designationList]);
@@ -188,7 +188,7 @@ function EmployeeMaster() {
                 EMPSURNAME: employeeToEdit.EMPSURNAME || "",
                 EMPFATHERNAME: employeeToEdit.EMPFATHERNAME || "",
                 SALUTATION: employeeToEdit.SALUTATION || "",
-                DESIGNATIONCODE: employeeToEdit.DESIGNATIONCODE || "", // Add designation from edit
+               DESIGNATIONCODE: employeeToEdit.DESIGNATIONCODE ?? "",
                 DOORNO: employeeToEdit.DOORNO || "",
                 STREET: employeeToEdit.STREET || "",
                 ADDRESS: employeeToEdit.ADDRESS || "",
@@ -354,10 +354,12 @@ function EmployeeMaster() {
     ];
 
     // Helper function to get designation name by code
-    const getDesignationName = (code: number) => {
-        const designation = designationList.find((d: Designation) => d.DESIGNATIONCODE === code);
-        return designation ? designation.DESCRIPTION : '-';
-    };
+const getDesignationName = (code?: number | string) => {
+    if (code === undefined || code === "") return "-";
+    const numCode = Number(code);
+    const designation = designationList.find(d => d.DESIGNATIONCODE === numCode);
+    return designation ? designation.DESCRIPTION : "-";
+};
 
     /* -------------------- EXPORT -------------------- */
     const handleExport = (option: string) => {
