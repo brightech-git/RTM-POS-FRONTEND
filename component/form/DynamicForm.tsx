@@ -24,10 +24,12 @@ interface DynamicFormProps {
     fields: FormField[];
     formData: Record<string, any>;
     onChange: (field: string | number, value: any) => void;
+    onBlur?: (field: string) => void;
     register: (name: string) => (el: any) => void;
     focusNext: (name: string) => void;
     disabled?: Record<string, boolean | undefined>;
-    errors?: Record<string, string>; // Add errors prop
+    errors?: Record<string, string>;
+    touchedFields?: Record<string, boolean>;
 }
 
 export const DynamicForm: React.FC<DynamicFormProps> = ({

@@ -149,11 +149,13 @@ const createMenuData = (): SidebarMenu => ({
         icon: Package,
         items: [
           { label: "Product", route: "/dashboard/Master/Objects/Product", icon: Package },
-          // { label: "CreditCard", route: "/dashboard/Master/Object/CreditCard", icon: CreditCard },
+         
           // { label: "OrionBarCode", route: "/dashboard/Master/Object/OrionBarCode", icon: Barcode },
-          // { label: "RateUpdation", route: "/dashboard/Master/Object/RateUpdation", icon: TrendingUp },
-          // { label: "SubProduct", route: "/dashboard/Master/Object/SubProducts", icon: PackageCheck },
-          // { label: "Vendor", route: "/dashboard/Master/Object/Vendor", icon: Truck },
+       
+          { label: "SubProduct", route: "/dashboard/Master/Objects/SubProduct", icon: PackageCheck },
+             { label: "RateUpdation", route: "/dashboard/Master/Objects/RateUpdation", icon: TrendingUp },
+          { label: "Vendor", route: "/dashboard/Master/Objects/Vendor", icon: Truck },
+           { label: "CreditCard", route: "/dashboard/Master/Objects/CreditCard", icon: CreditCard },
         ],
       },
       Utility: {
