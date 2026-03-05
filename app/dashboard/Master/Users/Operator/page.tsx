@@ -22,11 +22,11 @@ import { Toaster, toaster } from "@/components/ui/toaster";
 import { useTheme } from "@/context/theme/themeContext";
 import ScrollToTop from "@/component/scroll/ScrollToTop";
 import { CustomTable } from "@/component/table/CustomTable";
-import { CapitalizedInput } from "@/component/form/CapitalizedInput";
+import { CapitalizedInput } from "@/components/ui/CapitalizedInput";
 import { usePrint } from "@/context/print/usePrintContext";
 import { useRouter } from "next/navigation";
 import { FaPrint, FaFileExcel } from "react-icons/fa";
-import  ActiveSelect  from "@/components/ui/ActiveSelect";
+import ActiveSelect from "@/components/ui/ActiveSelect";
 
 /* ================= TYPES ================= */
 interface Operator {
@@ -210,10 +210,10 @@ export default function OperatorMaster() {
                 prev.map((op) =>
                     op.id === editId
                         ? {
-                              ...op,
-                              ...form,
-                              updatedAt: new Date().toISOString(),
-                          }
+                            ...op,
+                            ...form,
+                            updatedAt: new Date().toISOString(),
+                        }
                         : op
                 )
             );
@@ -448,7 +448,7 @@ export default function OperatorMaster() {
                                     onChange={(_, val) => setSearchTerm(val as string)}
                                     placeholder="Search..."
                                     size="2xs"
-                                    
+
                                 />
 
                                 {/* Export Buttons */}

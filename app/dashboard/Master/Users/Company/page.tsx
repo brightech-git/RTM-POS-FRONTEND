@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState ,useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
     Box,
     Button,
@@ -35,17 +35,17 @@ import {
     useAllCompanies,
     useCompanyById,
     useCreateCompany,
-    useUpdateCompany,  
+    useUpdateCompany,
 } from "@/hooks/company/useCompany";
 import { useAllStates } from "@/hooks/state/useStates";
 import ScrollToTop from "@/component/scroll/ScrollToTop";
 import { CreateCompanyPayload, Company } from "@/service/CompanyService";
 import { toastCreated, toastError, toastLoaded, toastUpdated, toastUploaded } from "@/component/toast/toast";
 import { CustomTable } from "@/component/table/CustomTable";
-import { CapitalizedInput } from "@/component/form/CapitalizedInput";
+import { CapitalizedInput } from "@/components/ui/CapitalizedInput";
 import { usePrint } from "@/context/print/usePrintContext";
 import { useRouter } from "next/navigation";
-import { FaPrint ,FaFileExcel } from "react-icons/fa";
+import { FaPrint, FaFileExcel } from "react-icons/fa";
 import { SelectCombobox } from "@/components/ui/selectComboBox";
 
 
@@ -53,12 +53,12 @@ import { SelectCombobox } from "@/components/ui/selectComboBox";
 function CompanyMaster() {
     const { theme } = useTheme();
     /* -------------------- API HOOKS -------------------- */
-    const { data, isLoading , refetch:companyRefetch } = useAllCompanies();
+    const { data, isLoading, refetch: companyRefetch } = useAllCompanies();
     const router = useRouter();
-    const {setData ,setColumns ,setShowSno , title } =usePrint();
+    const { setData, setColumns, setShowSno, title } = usePrint();
     const companies = data?.data ?? [];
     const [inputValue, setInputValue] = useState("")
-    const {data:allStates ,isLoading:stateLoading ,isError:stateError} = useAllStates();
+    const { data: allStates, isLoading: stateLoading, isError: stateError } = useAllStates();
 
 
     const { mutate: createCompany, isPending } = useCreateCompany();
@@ -69,7 +69,7 @@ function CompanyMaster() {
         value: String(s.stateId), // ALWAYS string
     }))
 
-   
+
 
     /* -------------------- FORM STATE -------------------- */
     const [form, setForm] = useState<CreateCompanyPayload>({
@@ -77,8 +77,8 @@ function CompanyMaster() {
         COMPANYNAME: "",
         // costid: "",
         ADDRESS1: "",
-        ADDRESS2:"",
-        ADDRESS3:"",
+        ADDRESS2: "",
+        ADDRESS3: "",
         AREACODE: "",
         PHONE: "",
         EMAIL: "",
@@ -86,7 +86,7 @@ function CompanyMaster() {
         ACTIVE: "Y",
         STATEID: "24",
     });
-    const [highlightedId ,setHighlightedId] = useState<Number>()
+    const [highlightedId, setHighlightedId] = useState<Number>()
 
     const [logoFile, setLogoFile] = useState<File>();
     const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -107,20 +107,20 @@ function CompanyMaster() {
 
     useEffect(() => {
         if (!company) return;
-          
+
         setForm({
             COMPANYID: company.COMPANYID,
             COMPANYNAME: company.COMPANYNAME,
             // costid: company.COSTID ?? "",
             ADDRESS1: company.ADDRESS1 ?? "",
-            ADDRESS2: company.ADDRESS2?? "",
+            ADDRESS2: company.ADDRESS2 ?? "",
             ADDRESS3: company.ADDRESS3 ?? "",
             AREACODE: company.AREACODE ?? "",
             PHONE: company.PHONE ?? "",
             EMAIL: company.EMAIL ?? "",
             GSTNO: company.GSTNO ?? "",
             ACTIVE: company.ACTIVE ?? "Y",
-            STATEID: String(company.STATEID)?? "",
+            STATEID: String(company.STATEID) ?? "",
         });
     }, [company]);
 
@@ -142,7 +142,7 @@ function CompanyMaster() {
 
         // ✅ AFTER render is fully committed
         const timer = setTimeout(() => {
-            
+
             setHighlightedId(undefined);
         }, 3000);
 
@@ -155,7 +155,7 @@ function CompanyMaster() {
     const handleChange = (field: keyof CreateCompanyPayload, value: any) => {
         setForm((prev) => ({ ...prev, [field]: value }));
     };
-    
+
     const resetForm = () => {
         setEditId(null);
         setLogoFile(undefined);
@@ -200,15 +200,15 @@ function CompanyMaster() {
             toastError("Company Name is required");
             return;
         }
-        if(!form.ADDRESS1?.trim()){
+        if (!form.ADDRESS1?.trim()) {
             toastError("Address is required");
             return;
         }
-        if(!form.ADDRESS2?.trim()){
+        if (!form.ADDRESS2?.trim()) {
             toastError("Area is required");
             return;
         }
-        if(!form.ADDRESS3?.trim()){
+        if (!form.ADDRESS3?.trim()) {
             toastError("City is required");
             return;
         }
@@ -216,48 +216,48 @@ function CompanyMaster() {
             toastError("State is required");
             return;
         }
-        if(!form.AREACODE?.trim()){
+        if (!form.AREACODE?.trim()) {
             toastError("Pincode is required");
             return;
         }
-       
-        if(form.AREACODE){
+
+        if (form.AREACODE) {
             const pinRegex = /^[0-9]{6}$/;
             if (!pinRegex.test(form.AREACODE)) {
                 toastError("Pincode must be exactly 6 digits");
                 return;
             }
         }
-        if(!form.PHONE?.trim()){
+        if (!form.PHONE?.trim()) {
             toastError("Mobile Number is required");
             return;
         }
-        if(!form.EMAIL?.trim()){
+        if (!form.EMAIL?.trim()) {
             toastError("Email is required");
             return;
         }
 
-       
+
         if (editId) {
             updateCompany({
                 id: editId,
                 payload: form,
                 logo: logoFile,
-            } ,{
-                onSuccess : () =>{
+            }, {
+                onSuccess: () => {
                     companyRefetch();
                     resetForm;
                     setHighlightedId(Number(editId));
                 }
-            }) 
-            ;
-          
+            })
+                ;
+
         } else {
             createCompany({
                 payload: form,
                 logo: logoFile,
             });
-            
+
         }
 
         resetForm();
@@ -270,21 +270,21 @@ function CompanyMaster() {
 
     const CompanyColumn = [
 
-        { key:'COMPANYID' , label:'Sno' },
-        {key:'companyId' , label:'Company Id' },
-        {key:'companyName' , label:'Company Name' },
+        { key: 'COMPANYID', label: 'Sno' },
+        { key: 'companyId', label: 'Company Id' },
+        { key: 'companyName', label: 'Company Name' },
         // {key:'state' , label:'State' },
-        {key:'active', label:'Active'},
-        {key:'actions', label:'Actions'},
+        { key: 'active', label: 'Active' },
+        { key: 'actions', label: 'Actions' },
     ];
- 
+
     /* -------------------- Export -------------------- */
     const handleExport = (option: string) => {
         setData(companies);
         setColumns([
             { key: "COMPANYID", label: "Company Id" },
             { key: "COMPANYNAME", label: "Company Name" },
-               {key:'ACTIVE', label:'Active'},
+            { key: 'ACTIVE', label: 'Active' },
             { key: "ADDRESS1", label: "Address" },
             { key: "itemName", label: "Item Name" },
             { key: "touch", label: "Touch", align: 'end' as const, allowTotal: true },
@@ -299,7 +299,7 @@ function CompanyMaster() {
             fontWeight="semibold"
             bg={theme.colors.primary}
             color={theme.colors.secondary}
-        
+
         >
             <Toaster />
             <Grid templateColumns={{ base: "1fr", lg: "1fr 1.5fr" }} gap={2}>
@@ -307,7 +307,7 @@ function CompanyMaster() {
                 <GridItem>
                     <VStack bg={theme.colors.formColor} p={4} borderRadius="xl" border="1px solid #eef">
                         <Text fontSize="small" fontWeight="600" >
-                                COMPANY CREATION
+                            COMPANY CREATION
                         </Text>
 
                         <Fieldset.Root size="sm" width="100%">
@@ -416,7 +416,7 @@ function CompanyMaster() {
                                     <Box display="flex" alignItems="center" gap={2}>
                                         <Box minW="90px" fontSize="2xs">EMAIL :</Box>
                                         <CapitalizedInput
-                                            field="EMAIL"           
+                                            field="EMAIL"
                                             size="2xs"
                                             value={form.EMAIL}
                                             onChange={handleChange}
@@ -434,7 +434,7 @@ function CompanyMaster() {
                                             size="2xs"
                                             type="text"
                                             inputModeType="gst"
-                                           
+
                                         />
                                     </Box>
 
@@ -490,9 +490,9 @@ function CompanyMaster() {
                 {/* ---------------- TABLE ---------------- */}
                 <GridItem minW={0}>
                     <Box bg={theme.colors.formColor} p={2} borderRadius="xl" border="1px solid #eef">
-                        <Box display='flex'  mb={2} gap={2} justifyContent='space-between' alignItems='center'>
+                        <Box display='flex' mb={2} gap={2} justifyContent='space-between' alignItems='center'>
                             <Text fontWeight="semibold" fontSize="small" >
-                                COMPANY DETAILS 
+                                COMPANY DETAILS
                             </Text>
 
                             <Flex>
@@ -519,14 +519,14 @@ function CompanyMaster() {
                                 </Button>
                             </Flex>
                         </Box>
-                       
 
-                     <CustomTable 
+
+                        <CustomTable
                             columns={CompanyColumn}
                             data={companies}
-                            renderRow={(company , index) => (
+                            renderRow={(company, index) => (
                                 <>
-                                    <Table.Cell>{index+1}</Table.Cell>
+                                    <Table.Cell>{index + 1}</Table.Cell>
                                     <Table.Cell>{company.COMPANYID}</Table.Cell>
                                     <Table.Cell>{company.COMPANYNAME}</Table.Cell>
                                     {/* <Table.Cell>{company.STATE}</Table.Cell> */}
@@ -542,11 +542,11 @@ function CompanyMaster() {
                             headerColor="white"
                             borderColor="white"
                             bodyBg={theme.colors.primary}
-                            highlightRowId={highlightedId ? Number(highlightedId) : null} 
+                            highlightRowId={highlightedId ? Number(highlightedId) : null}
                             rowIdKey="COMPANYID"
                             emptyText="No companies available"
 
-                     />
+                        />
                     </Box>
                 </GridItem>
             </Grid>

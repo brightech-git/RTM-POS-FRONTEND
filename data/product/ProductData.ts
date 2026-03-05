@@ -1,5 +1,4 @@
 
-
 export const sellingUnit = [
     { value: "1" , label: "PIECES" },
     { value: "2", label: "WEIGHT" },

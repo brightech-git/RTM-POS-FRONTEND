@@ -29,7 +29,7 @@ import {
 import ScrollToTop from "@/component/scroll/ScrollToTop";
 import { toastError, toastLoaded, toastCreated, toastUpdated, toastDeleted } from "@/component/toast/toast";
 import { CustomTable } from "@/component/table/CustomTable";
-import { CapitalizedInput } from "@/component/form/CapitalizedInput";
+import { CapitalizedInput } from "@/components/ui/CapitalizedInput";
 import { usePrint } from "@/context/print/usePrintContext";
 import { useRouter } from "next/navigation";
 import { FaPrint, FaFileExcel } from "react-icons/fa";
@@ -39,7 +39,7 @@ interface Designation {
     DESIGNATIONCODE?: number;
     DESCRIPTION: string;
     ACTIVE: "Y" | "N";
-   CREATEDBY?: number; 
+    CREATEDBY?: number;
     CREATEDDATE?: string;
     CREATEDTIME?: string;
 }
@@ -136,26 +136,26 @@ export default function DesignationMaster() {
                     DESIGNATIONCODE: editId,
                     ...form,
                 });
-                toaster.success({ 
-                    title: "Success", 
-                    description: "Designation updated successfully" 
+                toaster.success({
+                    title: "Success",
+                    description: "Designation updated successfully"
                 });
                 await designationRefetch();
                 setHighlightedId(editId);
             } else {
                 await createMutation.mutateAsync(form);
-                toaster.success({ 
-                    title: "Success", 
-                    description: "Designation created successfully" 
+                toaster.success({
+                    title: "Success",
+                    description: "Designation created successfully"
                 });
                 await designationRefetch();
             }
             resetForm();
         } catch (error) {
             console.error("Form submission error:", error);
-            toaster.error({ 
-                title: "Error", 
-                description: "Operation failed" 
+            toaster.error({
+                title: "Error",
+                description: "Operation failed"
             });
         }
     };
@@ -168,16 +168,16 @@ export default function DesignationMaster() {
         if (window.confirm("Are you sure you want to delete this designation?")) {
             try {
                 await deleteMutation.mutateAsync(code);
-                toaster.success({ 
-                    title: "Success", 
-                    description: "Designation deleted successfully" 
+                toaster.success({
+                    title: "Success",
+                    description: "Designation deleted successfully"
                 });
                 await designationRefetch();
             } catch (error) {
                 console.error("Delete error:", error);
-                toaster.error({ 
-                    title: "Error", 
-                    description: "Delete failed" 
+                toaster.error({
+                    title: "Error",
+                    description: "Delete failed"
                 });
             }
         }
@@ -189,7 +189,7 @@ export default function DesignationMaster() {
         { key: 'DESIGNATIONCODE', label: 'Code' },
         { key: 'DESCRIPTION', label: 'Description' },
         { key: 'ACTIVE', label: 'Status' },
-        
+
         { key: 'CREATEDDATE', label: 'Created Date' },
         { key: 'actions', label: 'Actions' },
     ];
@@ -349,7 +349,7 @@ export default function DesignationMaster() {
                                     <Table.Cell>{designation.DESIGNATIONCODE}</Table.Cell>
                                     <Table.Cell>{designation.DESCRIPTION}</Table.Cell>
                                     <Table.Cell>
-                                        <Badge 
+                                        <Badge
                                             colorPalette={designation.ACTIVE === "Y" ? "green" : "red"}
                                             fontSize="2xs"
                                             px={2}
@@ -359,13 +359,13 @@ export default function DesignationMaster() {
                                             {designation.ACTIVE === "Y" ? "Active" : "Inactive"}
                                         </Badge>
                                     </Table.Cell>
-                                  
+
                                     <Table.Cell>{formatDate(designation.CREATEDDATE)}</Table.Cell>
-                                  
+
                                     <Table.Cell>
                                         <Box display="flex" justifyContent="center" gap={2}>
-                                            <FaEdit 
-                                                onClick={() => handleEdit(designation)} 
+                                            <FaEdit
+                                                onClick={() => handleEdit(designation)}
                                                 cursor="pointer"
                                                 color={theme.colors.primaryText}
                                                 size={14}
@@ -399,7 +399,7 @@ export default function DesignationMaster() {
 const Badge = ({ children, colorPalette, fontSize, px, py, borderRadius }: any) => {
     const bgColor = colorPalette === "green" ? "green.100" : "red.100";
     const textColor = colorPalette === "green" ? "green.800" : "red.800";
-    
+
     return (
         <Box
             as="span"

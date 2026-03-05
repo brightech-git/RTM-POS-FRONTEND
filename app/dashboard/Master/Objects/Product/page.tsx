@@ -21,21 +21,24 @@ import { usePrint } from "@/context/print/usePrintContext";
 import { useRouter } from "next/navigation";
 
 import { CustomTable } from "@/component/table/CustomTable";
-import { CapitalizedInput } from "@/component/form/CapitalizedInput";
+import { CapitalizedInput } from "@/components/ui/CapitalizedInput";
 import { SelectCombobox } from "@/components/ui/selectComboBox";
-import ActiveSelect from "@/components/ui/ActiveSelect";
 import {
     useAllProducts,
     useProductById,
     useCreateProduct,
     useUpdateProduct,
 } from "@/hooks/product/useProducts";
-import { Product, ProductForm ,AllProducts } from "@/types/product/Product";
+import { Product, ProductForm, AllProducts } from "@/types/product/Product";
 
 import { toastCreated, toastError, toastLoaded, toastUpdated } from "@/component/toast/toast";
 import ScrollToTop from "@/component/scroll/ScrollToTop";
 import { sellingUnit, TaggedOrNonTagged, TagType } from "@/data/product/ProductData";
 import { YesOrNo } from "@/data/YesOrNo/YesOrNoTypes";
+import { ProductConfig } from "@/config/Master/Object/Product";
+import { DynamicForm } from "@/component/form/DynamicForm";
+import { useEnterNavigation } from "@/component/form/useEnterNavigation";
+
 
 function ProductMaster() {
     const { theme } = useTheme();
@@ -46,7 +49,7 @@ function ProductMaster() {
     const { data: productsData, refetch: refetchProducts } = useAllProducts();
     const products = productsData ?? [];
 
-    const [editId, setEditId] = useState<string| number | null>(null);
+    const [editId, setEditId] = useState<string | number | null>(null);
     const [highlightedId, setHighlightedId] = useState<number | null>(null);
 
     const { data: productById } = useProductById(Number(editId) || 0) ?? "";
@@ -57,7 +60,7 @@ function ProductMaster() {
 
     /* -------------------- FORM STATE -------------------- */
     const [form, setForm] = useState<ProductForm>({
- 
+
         PRODUCTNAME: "",
         SHORTNAME: "",
         SUBPRODUCT: "Y",
@@ -103,13 +106,9 @@ function ProductMaster() {
     }, [highlightedId]);
 
     /* -------------------- HANDLERS -------------------- */
-      const handleChange = (field: keyof ProductForm, value: any) => {
-            setForm((prev) => ({
-                ...prev,
-                [field]: value,
-            }));
-        };
-   
+    const handleChange = (field: any, value: any) => {
+        setForm((prev) => ({ ...prev, [field]: value }));
+    };
 
     const resetForm = () => {
         setEditId(null);
@@ -144,7 +143,7 @@ function ProductMaster() {
             if (!form.ORIONBARCODE?.trim()) errors.ORIONBARCODE = "Orion Barcode selection is required for tagged products";
         } else {
             if (!form.TAGTYPE?.trim()) errors.TAGTYPE = "Tag Type is required for tagged products";
-        
+
         }
 
         if (!form.ALLOWDISCOUNT?.trim()) errors.ALLOWDISCOUNT = "Allow Discount selection is required";
@@ -230,6 +229,15 @@ function ProductMaster() {
         router.push(`/print?export=${option}`);
     };
 
+    /* -------------------- FORM CONFIG -------------------- */
+    const productFormFields = ProductConfig(form.PRODUCTTYPE ,editId);
+    const fieldSequence = productFormFields.map(f => f.name);
+
+    const { register, focusNext, focusFirst } = useEnterNavigation(fieldSequence, () => {
+        handleSave();
+    });
+
+
     /* -------------------- UI -------------------- */
     return (
         <Box fontWeight="semibold" bg={theme.colors.primary} color={theme.colors.secondary}>
@@ -244,185 +252,15 @@ function ProductMaster() {
 
                         <Fieldset.Root size="sm" width="100%">
                             <Fieldset.Content>
-                                <Grid css={{ gridTemplateColumns: "repeat(1, 1fr)" }} gap={4}>
-
-                                    {/* PRODUCT NAME */}
-                                    <Box>
-                                        <Box display="flex" alignItems="center" gap={2}>
-                                            <Box minW="120px" fontSize="xs">PRODUCT NAME :</Box>
-                                            <CapitalizedInput
-                                                field="PRODUCTNAME"
-                                                value={form.PRODUCTNAME}
-                                                onChange={handleChange}
-                                                size="2xs"
-                                            />
-                                        </Box>
-                                        {formErrors.PRODUCTNAME && (
-                                            <Text fontSize="xx-small" color="red.500">{formErrors.PRODUCTNAME}</Text>
-                                        )}
-                                    </Box>
-
-                                    {/* SHORT NAME */}
-                                    <Box>
-                                        <Box display="flex" alignItems="center" gap={2}>
-                                            <Box minW="120px" fontSize="xs">SHORT NAME :</Box>
-                                            <CapitalizedInput
-                                                field="SHORTNAME"
-                                                value={form.SHORTNAME}
-                                                onChange={handleChange}
-                                                size="2xs"
-                                            />
-                                        </Box>
-                                    </Box>
-
-                                    {/* SUBPRODUCT */}
-                                    <Box>
-                                        <Box display="flex" alignItems="center" gap={2}>
-                                            <Box minW="120px" fontSize="xs">SUBPRODUCT :</Box>
-                                            <ActiveSelect
-                                                items={YesOrNo}
-                                                value={form.SUBPRODUCT}
-                                                onChange={(val) => handleChange("SUBPRODUCT", val)}
-                                                size="xs"
-                                            />
-                                        </Box>
-                                        {formErrors.SUBPRODUCT && (
-                                            <Text fontSize="xx-small" color="red.500">{formErrors.SUBPRODUCT}</Text>
-                                        )}
-                                    </Box>
-
-                                    {/* SELLING UNIT */}
-                                    <Box>
-                                        <Box display="flex" alignItems="center" gap={2}>
-                                            <Box minW="120px" fontSize="xs">SELLING UNIT :</Box>
-                                            <ActiveSelect
-                                                items={sellingUnit}
-                                                value={form.UNITCODE}
-                                                onChange={(val) => handleChange("UNITCODE", val)}
-                                                size="xs"
-                                            />
-                                        </Box>
-                                        {formErrors.UNITCODE && (
-                                            <Text fontSize="xx-small" color="red.500">{formErrors.UNITCODE}</Text>
-                                        )}
-                                    </Box>
-
-                                    {/* PURCHASE UNIT */}
-                                    <Box>
-                                        <Box display="flex" alignItems="center" gap={2}>
-                                            <Box minW="120px" fontSize="xs">PURCHASE UNIT :</Box>
-                                            <ActiveSelect
-                                                items={sellingUnit}
-                                                value={form.PURUNITCODE}
-                                                onChange={(val) => handleChange("PURUNITCODE", val)}
-                                                size="xs"
-                                            />
-                                        </Box>
-                                        {formErrors.PURUNITCODE && (
-                                            <Text fontSize="xx-small" color="red.500">{formErrors.PURUNITCODE}</Text>
-                                        )}
-                                    </Box>
-
-                                    {/* PRODUCT TYPE */}
-                                    <Box>
-                                        <Box display="flex" alignItems="center" gap={2}>
-                                            <Box minW="120px" fontSize="xs">PRODUCT TYPE :</Box>
-                                            <ActiveSelect
-                                                items={TaggedOrNonTagged}
-                                                value={form.PRODUCTTYPE}
-                                                onChange={(val) => handleChange("PRODUCTTYPE", val)}
-                                                size="xs"
-                                            />
-                                        </Box>
-                                        {formErrors.PRODUCTTYPE && (
-                                            <Text fontSize="xx-small" color="red.500">{formErrors.PRODUCTTYPE}</Text>
-                                        )}
-                                    </Box>
-
-                                    {/* TAG TYPE */}
-                                    <Box>
-                                        <Box display="flex" alignItems="center" gap={2}>
-                                            <Box minW="120px" fontSize="xs">TAG TYPE :</Box>
-                                            <ActiveSelect
-                                                items={TagType}
-                                                value={form.TAGTYPE}
-                                                onChange={(val) => handleChange("TAGTYPE", val)}
-                                                size="xs"
-                                                isDisabled={form.PRODUCTTYPE === "NT"}
-                                            />
-                                        </Box>
-                                        {formErrors.TAGTYPE && (
-                                            <Text fontSize="xx-small" color="red.500">{formErrors.TAGTYPE}</Text>
-                                        )}
-                                    </Box>
-
-                                    {/* ORION BARCODE */}
-                                    <Box>
-                                        <Box display="flex" alignItems="center" gap={2}>
-                                            <Box minW="120px" fontSize="xs">ORION BARCODE :</Box>
-                                            <ActiveSelect
-                                                items={YesOrNo}
-                                                value={form.ORIONBARCODE}
-                                                onChange={(val) => handleChange("ORIONBARCODE", val)}
-                                                size="xs"
-                                                isDisabled={form.PRODUCTTYPE !== "NT"}
-                                            />
-                                        </Box>
-                                        {formErrors.ORIONBARCODE && (
-                                            <Text fontSize="xx-small" color="red.500">{formErrors.ORIONBARCODE}</Text>
-                                        )}
-                                    </Box>
-
-                                    {/* ALLOW DISCOUNT */}
-                                    <Box>
-                                        <Box display="flex" alignItems="center" gap={2}>
-                                            <Box minW="120px" fontSize="xs">ALLOW DISCOUNT :</Box>
-                                            <ActiveSelect
-                                                items={YesOrNo}
-                                                value={form.ALLOWDISCOUNT}
-                                                onChange={(val) => handleChange("ALLOWDISCOUNT", val)}
-                                                size="xs"
-                                            />
-                                        </Box>
-                                        {formErrors.ALLOWDISCOUNT && (
-                                            <Text fontSize="xx-small" color="red.500">{formErrors.ALLOWDISCOUNT}</Text>
-                                        )}
-                                    </Box>
-
-                                    {/* EXPIRY DAYS */}
-                                    <Box>
-                                        <Box display="flex" alignItems="center" gap={2}>
-                                            <Box minW="120px" fontSize="xs">EXPIRY DAYS :</Box>
-                                            <CapitalizedInput
-                                                field="EXPIRYDAYS"
-                                                value={form.EXPIRYDAYS}
-                                                onChange={handleChange}
-                                                size="2xs"
-                                                type="number"
-                                            />
-                                        </Box>
-                                        {formErrors.EXPIRYDAYS && (
-                                            <Text fontSize="xx-small" color="red.500">{formErrors.EXPIRYDAYS}</Text>
-                                        )}
-                                    </Box>
-
-                                    {/* ACTIVE */}
-                                    <Box>
-                                        <Box display="flex" alignItems="center" gap={2}>
-                                            <Box minW="120px" fontSize="xs">ACTIVE :</Box>
-                                            <ActiveSelect
-                                                items={YesOrNo}
-                                                value={form.ACTIVE}
-                                                onChange={(val) => handleChange("ACTIVE", val)}
-                                                size="xs"
-                                            />
-                                        </Box>
-                                        {formErrors.ACTIVE && (
-                                            <Text fontSize="xx-small" color="red.500">{formErrors.ACTIVE}</Text>
-                                        )}
-                                    </Box>
-
-                                </Grid>
+                                <DynamicForm
+                                    fields={productFormFields}
+                                    formData={form}
+                                    onChange={handleChange}
+                                    register={register}
+                                    focusNext={focusNext}
+                                    disabled={{ COMPANYID: !!editId }}
+                                    // errors={errors}
+                                />
                             </Fieldset.Content>
                         </Fieldset.Root>
 
@@ -463,10 +301,10 @@ function ProductMaster() {
                                 <>
                                     <Table.Cell >
                                         <Box display="flex" justifyContent="center" alignItems='center' gap={1}>
-                                                {index + 1}
-                                           
-                                                <FaEdit onClick={() => handleEdit(product)} cursor="pointer" />
-                                            </Box>
+                                            {index + 1}
+
+                                            <FaEdit onClick={() => handleEdit(product)} cursor="pointer" />
+                                        </Box>
                                     </Table.Cell>
 
                                     <Table.Cell>{product.PRODUCTNAME}</Table.Cell>
@@ -480,9 +318,9 @@ function ProductMaster() {
                                     <Table.Cell>{product.TAGTYPE}</Table.Cell>
                                     <Table.Cell>{product.ORIONBARCODE}</Table.Cell>
                                     <Table.Cell>{product.EXPIRYDAYS}</Table.Cell>
-                                
-                                        
-                                    
+
+
+
                                 </>
                             )}
                             highlightRowId={highlightedId}
