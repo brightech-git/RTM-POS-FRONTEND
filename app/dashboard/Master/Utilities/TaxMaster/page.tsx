@@ -25,7 +25,7 @@ import { useTheme } from "@/context/theme/themeContext";
 import ScrollToTop from "@/component/scroll/ScrollToTop";
 import { toastError, toastLoaded, toastCreated, toastUpdated, toastDeleted } from "@/component/toast/toast";
 import { CustomTable } from "@/component/table/CustomTable";
-import { CapitalizedInput } from "@/component/form/CapitalizedInput";
+import { CapitalizedInput } from "@/components/ui/CapitalizedInput";
 import { usePrint } from "@/context/print/usePrintContext";
 import { useRouter } from "next/navigation";
 import {

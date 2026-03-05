@@ -26,7 +26,7 @@ import { useTheme } from "@/context/theme/themeContext";
 import ScrollToTop from "@/component/scroll/ScrollToTop";
 import { toastError, toastLoaded } from "@/component/toast/toast";
 import { CustomTable } from "@/component/table/CustomTable";
-import { CapitalizedInput } from "@/component/form/CapitalizedInput";
+import { CapitalizedInput } from "@/components/ui/CapitalizedInput";
 import { usePrint } from "@/context/print/usePrintContext";
 import { useRouter } from "next/navigation";
 import {
@@ -35,23 +35,7 @@ import {
     useUpdateHSN,
     useDeleteHSN,
 } from "@/hooks/HSN/useHSN";
-
-// Types based on API response
-interface HSN {
-    SNO?: number;
-    HSNCODE: string;
-    HSNDESCRIPTION: string;
-    ACTIVE: "Y" | "N";
-    CREATEDBY?: number;
-    CREATEDDATE?: string;
-    CREATEDTIME?: string;
-}
-
-interface CreateHSNPayload {
-    HSNCODE: string;
-    HSNDESCRIPTION: string;
-    ACTIVE: "Y" | "N";
-}
+import { HSN, CreateHSNPayload } from "@/service/HSNService";
 
 export default function HSNMaster() {
     const { theme } = useTheme();
@@ -87,14 +71,15 @@ export default function HSNMaster() {
     useEffect(() => {
         if (editCode) {
             const hsnToEdit = hsnList.find(
-                (hsn: HSN) => hsn.HSNCODE === editCode
+                (hsn: HSN) => String(hsn.HSNCODE)=== editCode
             );
             if (hsnToEdit) {
                 setForm({
-                    HSNCODE: hsnToEdit.HSNCODE,
+                    HSNCODE: String(hsnToEdit.HSNCODE),
                     HSNDESCRIPTION: hsnToEdit.HSNDESCRIPTION,
                     ACTIVE: hsnToEdit.ACTIVE,
-                });
+                    
+               });
                 toastLoaded("HSN");
                 ScrollToTop();
             }
@@ -133,7 +118,7 @@ export default function HSNMaster() {
         // Check if HSN code already exists (for new entries)
         if (!editCode) {
             const existingHSN = hsnList.find(
-                hsn => hsn.HSNCODE.toLowerCase() === form.HSNCODE.toLowerCase()
+                (hsn: HSN) =>String(hsn.HSNCODE) === form.HSNCODE.toLowerCase()
             );
             if (existingHSN) {
                 toastError("HSN code already exists");
@@ -158,9 +143,10 @@ export default function HSNMaster() {
             setIsLoading(true);
 
             const payload = {
-                HSNCODE: form.HSNCODE.trim(),
+                HSNCODE: Number(form.HSNCODE.trim()),
                 HSNDESCRIPTION: form.HSNDESCRIPTION.trim(),
                 ACTIVE: form.ACTIVE,
+                
             };
 
             if (editCode) {
@@ -201,11 +187,11 @@ export default function HSNMaster() {
     };
 
     const handleEdit = (hsn: HSN) => {
-        setEditCode(hsn.HSNCODE);
+        setEditCode(String(hsn.HSNCODE));
         setForm({
-            HSNCODE: hsn.HSNCODE,
+            HSNCODE: String(hsn.HSNCODE),
             HSNDESCRIPTION: hsn.HSNDESCRIPTION,
-            ACTIVE: hsn.ACTIVE,
+            ACTIVE:hsn.ACTIVE
         });
         ScrollToTop();
     };
@@ -239,11 +225,11 @@ export default function HSNMaster() {
 
     /* -------------------- TABLE COLUMNS -------------------- */
     const hsnColumns = [
-        { key: 'SNO', label: 'S.No' },
-        { key: 'HSNCODE', label: 'HSN Code' },
-        { key: 'HSNDESCRIPTION', label: 'Description' },
-        { key: 'ACTIVE', label: 'Status' },
-        { key: 'CREATEDDATE', label: 'Created Date' },
+        { key: 'sno', label: 'S.No' },
+        { key: 'code', label: 'HSN Code' },
+        { key: 'description', label: 'Description' },
+        { key: 'taxPercentage', label: 'Tax %' },
+        { key: 'createdDate', label: 'Created Date' },
         { key: 'actions', label: 'Actions' },
     ];
 
@@ -261,9 +247,9 @@ export default function HSNMaster() {
     const handleExport = (option: string) => {
         setData(hsnList);
         setColumns([
-            { key: "HSNCODE", label: "HSN Code" },
-            { key: "HSNDESCRIPTION", label: "Description" },
-            { key: "ACTIVE", label: "Status" },
+            { key: "code", label: "HSN Code" },
+            { key: "description", label: "Description" },
+            { key: "taxPercentage", label: "Tax %" },
         ]);
         setShowSno(true);
         title?.("HSN Master");
@@ -298,7 +284,7 @@ export default function HSNMaster() {
                                             size="2xs"
                                             placeholder="Enter HSN code"
                                             maxLength={20}
-                                            isReadOnly={!!editCode}
+
                                             css={{
                                                 backgroundColor: editCode ? "#f5f5f5" : "#eee",
                                                 color: "#111827",
@@ -452,7 +438,7 @@ export default function HSNMaster() {
                                                 size={14}
                                             />
                                             <FaTrash 
-                                                onClick={() => handleDelete(hsn.HSNCODE)} 
+                                                onClick={() => handleDelete(String(hsn.HSNCODE))} 
                                                 cursor="pointer"
                                                 color="red.500"
                                                 size={14}

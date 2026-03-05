@@ -1,6 +1,6 @@
 // hooks/hsn/useHSN.ts
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { HSNService, HSN, CreateHSNPayload } from "@/service/HSNService";
+import { HSNService, HSN, CreateHSNPayload, HsnPayload } from "@/service/HSNService";
 import { toastCreated, toastUpdated, toastError } from "@/component/toast/toast";
 
 
@@ -28,7 +28,7 @@ export const useCreateHSN = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: (payload: CreateHSNPayload) =>
+        mutationFn: (payload: HsnPayload) =>
             HSNService.create(payload),
 
         onSuccess: () => {
@@ -53,7 +53,7 @@ export const useUpdateHSN = () => {
             payload,
         }: {
             code: string;
-            payload: CreateHSNPayload;
+            payload: HsnPayload;
         }) =>
             HSNService.updateByCode(code, payload),
 

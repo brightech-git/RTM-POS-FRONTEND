@@ -2,19 +2,34 @@
 import { axiosInstance } from "@/api/axiosInstance";
 
 export interface HSN {
-    code: string;
-    description: string;
-    taxPercentage: number;
-    createdDate?: string;
-    createdTime?: string;
-    sno?: number;
+
+    HSNCODE: number;
+    HSNDESCRIPTION: string;
+    ACTIVE?: "Y" | "N";
+    SNO?:number;
+    CREATEDBY?:number;
+    CREATEDDATE?:string;
+    CREATEDTIME?:string;
+
+
 }
 
 export interface CreateHSNPayload {
-    code: string;
-    description: string;
-    taxPercentage: number;
+
+    HSNCODE: string;
+    HSNDESCRIPTION: string;
+    ACTIVE?: "Y" | "N";
+
 }
+
+export interface HsnPayload {
+
+    HSNCODE: number;
+    HSNDESCRIPTION: string;
+    ACTIVE?: "Y" | "N";
+
+}
+
 
 export const HSNService = {
     // GET ALL
@@ -30,7 +45,7 @@ export const HSNService = {
     },
 
     // CREATE (CREATEDBY comes from axiosInstance header)
-    create: async (payload: CreateHSNPayload): Promise<HSN> => {
+    create: async (payload: HsnPayload): Promise<HSN> => {
         const { data } = await axiosInstance.post(
             "/hsn/create",
             payload
@@ -41,7 +56,7 @@ export const HSNService = {
     // UPDATE
     updateByCode: async (
         code: string,
-        payload: CreateHSNPayload
+        payload: HsnPayload
     ): Promise<HSN> => {
         const { data } = await axiosInstance.put(
             `/hsn/update/${code}`,

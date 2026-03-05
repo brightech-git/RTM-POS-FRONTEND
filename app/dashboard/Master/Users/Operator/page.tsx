@@ -27,7 +27,7 @@ import { CustomTable } from "@/component/table/CustomTable";
 import { CapitalizedInput } from "@/components/ui/CapitalizedInput";
 import { usePrint } from "@/context/print/usePrintContext";
 import { useRouter } from "next/navigation";
-import ActiveSelect from "@/components/ui/ActiveSelect";
+import { NativeSelectWrapper } from "@/components/ui/NativeSelectWrapper";
 import { SelectCombobox } from "@/components/ui/selectComboBox";
 import { useAllEmployees } from "@/hooks/Employee/useEmployee";
 import { 
@@ -527,9 +527,9 @@ export default function OperatorMaster() {
                                             STATUS :
                                         </Box>
                                         <Box flex={1}>
-                                            <ActiveSelect
+                                            <NativeSelectWrapper
                                                 value={form.ACTIVE}
-                                                onChange={(val) => handleChange("ACTIVE", val as "Y" | "N")}
+                                                onChange={(val) => handleChange("ACTIVE", val )}
                                                 items={activeStatus}
                                             />
                                         </Box>

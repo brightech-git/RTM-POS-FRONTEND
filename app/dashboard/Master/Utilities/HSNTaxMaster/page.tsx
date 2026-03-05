@@ -292,7 +292,7 @@ export default function HSNTaxMaster() {
             const hsn = hsnList.find((h: any) => h.code === item.HSNCODE);
             return {
                 ...item,
-                HSNDESCRIPTION: hsn?.description || 'N/A',
+                HSNDESCRIPTION: hsn?.HSNDESCRIPTION || 'N/A',
             };
         });
     }, [filteredData, hsnList]);
