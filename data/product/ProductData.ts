@@ -8,7 +8,7 @@ export const sellingUnit = [
 
 export const TaggedOrNonTagged = [
     {value:"T", label: "TAGGED"},
-    {value:"NT" , label:'NON TAGGED'}
+    {value:"N" , label:'NON TAGGED'}
 ]
 
 export const TagType = [
