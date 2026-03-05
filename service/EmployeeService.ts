@@ -8,11 +8,11 @@ export interface ApiResponse<T = any> {
 
 // This interface matches your actual API response
 export interface Employee {
-          // This is the actual field name from API
     EMPNAME: string;
     EMPSURNAME: string;
     EMPFATHERNAME: string;
     SALUTATION: string;
+    DESIGNATIONCODE?: number; // <-- add this line
     DOORNO: string;
     STREET: string;
     ADDRESS: string;
@@ -22,10 +22,9 @@ export interface Employee {
     PINCODE: string;
     PHONENO: string;
     MOBILENO: string;
-    ACTIVE: "Y" | "N";
+    ACTIVE: string;
     CREATEDBY: number;
-    CREATEDDATE?: string;
-    CREATEDTIME?: string;
+    // Add EMPUID or other fields if needed
 }
 
 // For create/update payload - you can use the same interface

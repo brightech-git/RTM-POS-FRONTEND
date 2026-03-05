@@ -27,6 +27,7 @@ import {
     useCreateEmployee,
     useUpdateEmployee,
 } from "@/hooks/Employee/useEmployee";
+import { useAllDesignations } from "@/hooks/Designation/useDesignation"; // Add this import
 import ScrollToTop from "@/component/scroll/ScrollToTop";
 import { Employee } from "@/service/EmployeeService";
 import { toastError, toastLoaded } from "@/component/toast/toast";
@@ -49,12 +50,20 @@ interface StateResponse {
     STATENAME: string;
 }
 
+// Interface for designation
+interface Designation {
+    DESIGNATIONCODE?: number; // allow undefined
+    DESCRIPTION: string;
+    ACTIVE: string;
+}
+
 // Interface for employee form
 interface EmployeeFormData {
     EMPNAME: string;
     EMPSURNAME: string;
     EMPFATHERNAME: string;
     SALUTATION: string;
+    DESIGNATIONCODE: number | string; // Add designation field
     DOORNO: string;
     STREET: string;
     ADDRESS: string;
@@ -75,14 +84,32 @@ function EmployeeMaster() {
 
     /* -------------------- API HOOKS -------------------- */
     const { data: employees, isLoading, refetch: employeeRefetch } = useAllEmployees();
+    const { data: designations, isLoading: isLoadingDesignations } = useAllDesignations(); // Add designations hook
     const createEmployee = useCreateEmployee();
     const updateEmployee = useUpdateEmployee();
 
     const employeeList = employees ?? [];
+    const designationList = designations ?? [];
 
     /* -------------------- STATES FROM API -------------------- */
     const [stateOptions, setStateOptions] = useState<{ label: string; value: string }[]>([]);
     const [isLoadingStates, setIsLoadingStates] = useState(false);
+    
+    // Create designation options for dropdown
+    const [designationOptions, setDesignationOptions] = useState<{ label: string; value: number }[]>([]);
+
+    // Update designation options when designations data changes
+    useEffect(() => {
+        if (designationList.length > 0) {
+           const options = designationList
+    .filter((des) => des.ACTIVE === "Y" && des.DESIGNATIONCODE !== undefined)
+    .map((des) => ({
+        label: des.DESCRIPTION,
+        value: des.DESIGNATIONCODE!, // safe because of the filter
+    }));
+            setDesignationOptions(options);
+        }
+    }, [designationList]);
 
     // Fetch states from API
     useEffect(() => {
@@ -134,6 +161,7 @@ function EmployeeMaster() {
         EMPSURNAME: "",
         EMPFATHERNAME: "",
         SALUTATION: "",
+        DESIGNATIONCODE: "", // Add empty designation
         DOORNO: "",
         STREET: "",
         ADDRESS: "",
@@ -160,6 +188,7 @@ function EmployeeMaster() {
                 EMPSURNAME: employeeToEdit.EMPSURNAME || "",
                 EMPFATHERNAME: employeeToEdit.EMPFATHERNAME || "",
                 SALUTATION: employeeToEdit.SALUTATION || "",
+               DESIGNATIONCODE: employeeToEdit.DESIGNATIONCODE ?? "",
                 DOORNO: employeeToEdit.DOORNO || "",
                 STREET: employeeToEdit.STREET || "",
                 ADDRESS: employeeToEdit.ADDRESS || "",
@@ -210,6 +239,10 @@ function EmployeeMaster() {
             toastError("Father Name is required");
             return false;
         }
+        if (!form.DESIGNATIONCODE) {
+            toastError("Designation is required");
+            return false;
+        }
         if (!form.MOBILENO?.trim()) {
             toastError("Mobile Number is required");
             return false;
@@ -251,6 +284,7 @@ function EmployeeMaster() {
             EMPSURNAME: String(form.EMPSURNAME).trim(),
             EMPFATHERNAME: String(form.EMPFATHERNAME).trim(),
             SALUTATION: String(form.SALUTATION || ""),
+            DESIGNATIONCODE: Number(form.DESIGNATIONCODE), // Convert to number for API
             DOORNO: String(form.DOORNO || ""),
             STREET: String(form.STREET || ""),
             ADDRESS: String(form.ADDRESS || ""),
@@ -265,13 +299,10 @@ function EmployeeMaster() {
         };
 
         if (editIndex !== null) {
-            // For update, we need to send the full employee object
-            // The API will identify which employee to update based on some identifier
-            // You may need to include EMPUID or other identifier here if your API requires it
             const updatePayload = {
                 ...payload,
-                // If your API requires an ID for update, you'll need to include it here
-                // EMPUID: employeeList[editIndex].EMPUID // Uncomment if your API has EMPUID
+                // Include EMPUID if your API requires it
+                // EMPUID: employeeList[editIndex].EMPUID
             };
             updateEmployee.mutate(updatePayload as Employee, {
                 onSuccess: () => {
@@ -285,7 +316,6 @@ function EmployeeMaster() {
                 }
             });
         } else {
-            // For create
             createEmployee.mutate(payload as any, {
                 onSuccess: () => {
                     employeeRefetch();
@@ -310,6 +340,7 @@ function EmployeeMaster() {
         { key: 'EMPSURNAME', label: 'Surname' },
         { key: 'EMPFATHERNAME', label: 'Father Name' },
         { key: 'SALUTATION', label: 'Salutation' },
+        { key: 'DESIGNATION', label: 'Designation' }, // Add designation column
         { key: 'DOORNO', label: 'Door No' },
         { key: 'STREET', label: 'Street' },
         { key: 'ADDRESS', label: 'Address' },
@@ -322,14 +353,29 @@ function EmployeeMaster() {
         { key: 'ACTIVE', label: 'Active' },
     ];
 
+    // Helper function to get designation name by code
+const getDesignationName = (code?: number | string) => {
+    if (code === undefined || code === "") return "-";
+    const numCode = Number(code);
+    const designation = designationList.find(d => d.DESIGNATIONCODE === numCode);
+    return designation ? designation.DESCRIPTION : "-";
+};
+
     /* -------------------- EXPORT -------------------- */
     const handleExport = (option: string) => {
-        setData(employeeList);
+        // Enhance employee data with designation names for export
+        const enhancedData = employeeList.map((emp: any) => ({
+            ...emp,
+            DESIGNATIONNAME: getDesignationName(emp.DESIGNATIONCODE)
+        }));
+
+        setData(enhancedData);
         setColumns([
             { key: "EMPNAME", label: "First Name" },
             { key: "EMPSURNAME", label: "Surname" },
             { key: "EMPFATHERNAME", label: "Father Name" },
             { key: "SALUTATION", label: "Salutation" },
+            { key: "DESIGNATIONNAME", label: "Designation" },
             { key: "DOORNO", label: "Door No" },
             { key: "STREET", label: "Street" },
             { key: "ADDRESS", label: "Address" },
@@ -365,6 +411,39 @@ function EmployeeMaster() {
                         <Fieldset.Root size="sm" width="100%">
                             <Fieldset.Content>
                                 <Grid gap={2}>
+                                    {/* DESIGNATION - Add this before SALUTATION */}
+                                    <Box display="flex" alignItems="center" gap={2}>
+                                        <Box minW="100px" fontSize="2xs">DESIGNATION :</Box>
+                                        {isLoadingDesignations ? (
+                                            <Spinner size="xs" />
+                                        ) : (
+                                            <NativeSelect.Root size="xs" maxW="150px" fontSize="2xs">
+                                                <NativeSelect.Field
+                                                    value={form.DESIGNATIONCODE}
+                                                    onChange={(e) => handleChange("DESIGNATIONCODE", e.target.value)}
+                                                    css={{
+                                                        backgroundColor: "#eee",
+                                                        color: "#111827",
+                                                        border: "1px solid #e5e7eb",
+                                                        borderRadius: "20px",
+                                                        height: "30px",
+                                                        fontSize: "10px",
+                                                    }}
+                                                >
+                                                    <option value="">Select Designation</option>
+                                                    <For each={designationOptions}>
+                                                        {(item) => (
+                                                            <option key={item.value} value={item.value}>
+                                                                {item.label}
+                                                            </option>
+                                                        )}
+                                                    </For>
+                                                </NativeSelect.Field>
+                                                <NativeSelect.Indicator />
+                                            </NativeSelect.Root>
+                                        )}
+                                    </Box>
+
                                     {/* SALUTATION */}
                                     <Box display="flex" alignItems="center" gap={2}>
                                         <Box minW="100px" fontSize="2xs">SALUTATION :</Box>
@@ -654,6 +733,7 @@ function EmployeeMaster() {
                                     <Table.Cell>{employee.EMPSURNAME}</Table.Cell>
                                     <Table.Cell>{employee.EMPFATHERNAME}</Table.Cell>
                                     <Table.Cell>{employee.SALUTATION}</Table.Cell>
+                                    <Table.Cell>{getDesignationName(employee.DESIGNATIONCODE)}</Table.Cell> {/* Display designation name */}
                                     <Table.Cell>{employee.DOORNO}</Table.Cell>
                                     <Table.Cell>{employee.STREET}</Table.Cell>
                                     <Table.Cell>{employee.ADDRESS}</Table.Cell>
