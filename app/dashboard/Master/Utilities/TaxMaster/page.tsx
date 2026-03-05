@@ -42,7 +42,7 @@ interface GST {
     SHOTNAME: string;
     TAXPER: number;
     TAXTYPE: string; // "P" for Percentage, might be other values
-    CREATEDBY?: number;
+
     CREATEDDATE?: string;
     CREATEDTIME?: string;
     SNO?: number;
@@ -84,34 +84,36 @@ export default function GSTMaster() {
     const [isLoading, setIsLoading] = useState(false);
 
     /* -------------------- FORM STATE -------------------- */
-const emptyForm: CreateGSTPayload = {
-    TAXNAME: "",
-    SHOTNAME: "",
-    TAXPER: 0,
-    TAXTYPE: "SG",
-};
+    const emptyForm: CreateGSTPayload = {
+        TAXNAME: "",
+        SHOTNAME: "",
+        TAXPER: 0,
+        TAXTYPE: "SG",
+    };
     const [form, setForm] = useState<CreateGSTPayload>(emptyForm);
     const [editId, setEditId] = useState<number | null>(null);
     const [highlightedId, setHighlightedId] = useState<number | null>(null);
 
     /* -------------------- SELECT OPTIONS -------------------- */
-const gstTypes = [
-    { label: "SGST", value: "SG" },
-    { label: "CGST", value: "CG" },
-    { label: "IGST", value: "IG" },
-    { label: "UGST", value: "UG" },
-    { label: "OTHER", value: "OT" },
-];
-
-    // For display purposes in the table
-    const displayTypes = [
-        { label: "SGST", value: "SGST" },
-        { label: "CGST", value: "CGST" },
-        { label: "IGST", value: "IGST" },
-        { label: "UGST", value: "UGST" },
-        { label: "OTHER", value: "OTHER" },
+    const gstTypes = [
+        { label: "SGST", value: "SG" },
+        { label: "CGST", value: "CG" },
+        { label: "IGST", value: "IG" },
+        { label: "UGST", value: "UG" },
+        { label: "OTHER", value: "OT" },
     ];
 
+
+    const getTaxTypeLabel = (type: string) => {
+        switch (type) {
+            case "SG": return { label: "SGST", color: "blue" };
+            case "CG": return { label: "CGST", color: "green" };
+            case "IG": return { label: "IGST", color: "purple" };
+            case "UG": return { label: "UGST", color: "orange" };
+            case "OT": return { label: "OTHER", color: "gray" };
+            default: return { label: type, color: "gray" };
+        }
+    };
     /* -------------------- EFFECTS -------------------- */
     useEffect(() => {
         if (editId) {
@@ -168,7 +170,7 @@ const gstTypes = [
             toastError("Short name must be at most 10 characters");
             return false;
         }
-        
+
         if (!form.TAXPER || form.TAXPER <= 0) {
             toastError("GST percentage must be greater than 0");
             return false;
@@ -180,63 +182,57 @@ const gstTypes = [
         return true;
     };
 
-const handleSave = async () => {
-    if (!validateForm()) return;
+    const handleSave = async () => {
+        if (!validateForm()) return;
+        console.log("EDIT ID:", editId);
 
-    try {
-        setIsLoading(true);
+        try {
+            setIsLoading(true);
 
-       const payload = {
-    TAXNAME: form.TAXNAME,
-    SHOTNAME: form.SHOTNAME,
-    TAXPER: Number(form.TAXPER),
-    TAXTYPE: form.TAXTYPE,
-};
+            const payload = {
+                TAXNAME: form.TAXNAME.trim(),
+                SHOTNAME: form.SHOTNAME.trim(),
+                TAXPER: Number(form.TAXPER),
+                TAXTYPE: form.TAXTYPE,
+            };
 
-        const createdBy = 1; 
+            if (editId !== null) {
+                await updateMutation.mutateAsync({
+                    id: editId,
+                    payload,
+                });
 
-        if (editId) {
-            // ✅ UPDATE (Correct structure)
-            console.log("Updating GST with payload:", { id: editId, payload });
-            await updateMutation.mutateAsync({
-                id: editId,
-                payload,
+                toaster.success({
+                    title: "Success",
+                    description: "GST updated successfully",
+                });
+
+                setHighlightedId(editId);
+            } else {
+                await createMutation.mutateAsync(payload);
+
+                toaster.success({
+                    title: "Success",
+                    description: "GST created successfully",
+                });
+            }
+
+            await taxRefetch();
+            resetForm();
+
+        } catch (error: any) {
+            toaster.error({
+                title: "Error",
+                description: error?.message || "Operation failed",
             });
-
-
-            toaster.success({
-                title: "Success",
-                description: "GST updated successfully",
-            });
-
-            setHighlightedId(editId);
-        } else {
-            // ✅ CREATE (Correct structure)
-            await createMutation.mutateAsync({
-                payload,
-                createdBy,
-            });
-
-            toaster.success({
-                title: "Success",
-                description: "GST created successfully",
-            });
+        } finally {
+            setIsLoading(false);
         }
-
-        await taxRefetch();
-        resetForm();
-
-    } catch (error: any) {
-        toaster.error({
-            title: "Error",
-            description: error.message || "Operation failed",
-        });
-    } finally {
-        setIsLoading(false);
-    }
-};
+    };
     const handleEdit = (gst: GST) => {
-        setEditId(gst.TAXCODE!);
+        if (gst.TAXCODE === undefined || gst.TAXCODE === null) return;
+
+        setEditId(gst.TAXCODE);
     };
 
     const handleDelete = async (code: number) => {
@@ -245,16 +241,16 @@ const handleSave = async () => {
                 setIsLoading(true);
                 await deleteMutation.mutateAsync(code);
 
-                toaster.success({ 
-                    title: "Success", 
-                    description: "GST deleted successfully" 
+                toaster.success({
+                    title: "Success",
+                    description: "GST deleted successfully"
                 });
                 await taxRefetch();
             } catch (error: any) {
                 console.error("Delete error:", error);
-                toaster.error({ 
-                    title: "Error", 
-                    description: error?.response?.data?.message || "Delete failed" 
+                toaster.error({
+                    title: "Error",
+                    description: error?.response?.data?.message || "Delete failed"
                 });
             } finally {
                 setIsLoading(false);
@@ -386,18 +382,18 @@ const handleSave = async () => {
                                     <Box display="flex" alignItems="center" gap={2}>
                                         <Box minW="110px" fontSize="2xs">GST TYPE :</Box>
                                         <NativeSelect.Root size="xs" maxW="150px" fontSize="2xs">
-                                           <NativeSelect.Field
-    value={form.TAXTYPE}
-    onChange={(e) => {
-        handleChange("TAXTYPE", e.target.value);
-    }}
->
-    {gstTypes.map((item) => (
-        <option key={item.value} value={item.value}>
-            {item.label}
-        </option>
-    ))}
-</NativeSelect.Field>
+                                            <NativeSelect.Field
+                                                value={form.TAXTYPE}
+                                                onChange={(e) => {
+                                                    handleChange("TAXTYPE", e.target.value);
+                                                }}
+                                            >
+                                                {gstTypes.map((item) => (
+                                                    <option key={item.value} value={item.value}>
+                                                        {item.label}
+                                                    </option>
+                                                ))}
+                                            </NativeSelect.Field>
                                             <NativeSelect.Indicator />
                                         </NativeSelect.Root>
                                     </Box>
@@ -466,22 +462,26 @@ const handleSave = async () => {
                                     <Table.Cell>{gst.SHOTNAME}</Table.Cell>
                                     <Table.Cell>{gst.TAXPER}%</Table.Cell>
                                     <Table.Cell>
-                                        <Badge 
+                                        <Badge
                                             colorPalette={
-                                                gst.TAXNAME?.includes("SGST") ? "blue" :
-                                                gst.TAXNAME?.includes("CGST") ? "green" :
-                                                gst.TAXNAME?.includes("IGST") ? "purple" :
-                                                gst.TAXNAME?.includes("UGST") ? "orange" : "gray"
+                                                gst.TAXTYPE === "SG" ? "blue" :
+                                                    gst.TAXTYPE === "CG" ? "green" :
+                                                        gst.TAXTYPE === "IG" ? "purple" :
+                                                            gst.TAXTYPE === "UG" ? "orange" : "gray"
                                             }
                                             fontSize="2xs"
                                             px={2}
                                             py={0.5}
                                             borderRadius="full"
                                         >
-                                            {gst.TAXNAME?.includes("SGST") ? "SGST" :
-                                             gst.TAXNAME?.includes("CGST") ? "CGST" :
-                                             gst.TAXNAME?.includes("IGST") ? "IGST" :
-                                             gst.TAXNAME?.includes("UGST") ? "UGST" : "OTHER"}
+                                            {
+                                                gst.TAXTYPE === "SG" ? "SGST" :
+                                                    gst.TAXTYPE === "CG" ? "CGST" :
+                                                        gst.TAXTYPE === "IG" ? "IGST" :
+                                                            gst.TAXTYPE === "UG" ? "UGST" :
+                                                                gst.TAXTYPE === "OT" ? "OTHER" :
+                                                                    gst.TAXTYPE // fallback (like "D")
+                                            }
                                         </Badge>
                                     </Table.Cell>
                                     <Table.Cell>
@@ -489,14 +489,14 @@ const handleSave = async () => {
                                     </Table.Cell>
                                     <Table.Cell>
                                         <Box display="flex" justifyContent="center" gap={2}>
-                                            <FaEdit 
-                                                onClick={() => handleEdit(gst)} 
+                                            <FaEdit
+                                                onClick={() => handleEdit(gst)}
                                                 cursor="pointer"
                                                 color={theme.colors.primaryText}
                                                 size={14}
                                             />
-                                            <FaTrash 
-                                                onClick={() => handleDelete(gst.TAXCODE!)} 
+                                            <FaTrash
+                                                onClick={() => handleDelete(gst.TAXCODE!)}
                                                 cursor="pointer"
                                                 color="red.500"
                                                 size={14}
@@ -522,20 +522,20 @@ const handleSave = async () => {
 
 // Badge component helper
 const Badge = ({ children, colorPalette, fontSize, px, py, borderRadius }: any) => {
-    const bgColor = 
-        colorPalette === "green" ? "green.100" : 
-        colorPalette === "red" ? "red.100" :
-        colorPalette === "blue" ? "blue.100" : 
-        colorPalette === "purple" ? "purple.100" :
-        colorPalette === "orange" ? "orange.100" : "gray.100";
-    
-    const textColor = 
-        colorPalette === "green" ? "green.800" : 
-        colorPalette === "red" ? "red.800" :
-        colorPalette === "blue" ? "blue.800" : 
-        colorPalette === "purple" ? "purple.800" :
-        colorPalette === "orange" ? "orange.800" : "gray.800";
-    
+    const bgColor =
+        colorPalette === "green" ? "green.100" :
+            colorPalette === "red" ? "red.100" :
+                colorPalette === "blue" ? "blue.100" :
+                    colorPalette === "purple" ? "purple.100" :
+                        colorPalette === "orange" ? "orange.100" : "gray.100";
+
+    const textColor =
+        colorPalette === "green" ? "green.800" :
+            colorPalette === "red" ? "red.800" :
+                colorPalette === "blue" ? "blue.800" :
+                    colorPalette === "purple" ? "purple.800" :
+                        colorPalette === "orange" ? "orange.800" : "gray.800";
+
     return (
         <Box
             as="span"

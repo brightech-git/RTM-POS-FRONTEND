@@ -163,7 +163,7 @@ const createMenuData = (): SidebarMenu => ({
           { label: "HSN Master", route: "/dashboard/Master/Utilities/HSNMaster", icon: Hash },
           { label: "HSN TAX Master", route: "/dashboard/Master/Utilities/HSNTaxMaster", icon: Calculator },
           { label: "HSN Link Product", route: "/dashboard/Master/Utilities/HSNLinkProduct", icon: Link2 },
-          // { label: "Print Settings", route: "/dashboard/Master/Utilities/PrintSettings", icon: Printer },
+          { label: "Print Settings", route: "/dashboard/Master/Utilities/PrinterSettings", icon: Printer },
         ],
       },
     },

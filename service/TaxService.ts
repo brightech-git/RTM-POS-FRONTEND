@@ -7,7 +7,6 @@ export interface Tax {
     SHOTNAME: string;
     TAXPER: number;
     TAXTYPE: string;
-    CREATEDBY?: number;
     CREATEDDATE?: string;
     CREATEDTIME?: string;
     SNO?: number;
@@ -23,85 +22,45 @@ export interface CreateTaxPayload {
 export const TaxService = {
     // GET ALL
     getAll: async (): Promise<Tax[]> => {
-        try {
-            const { data } = await axiosInstance.get("/tax/all");
-            return data;
-        } catch (error: any) {
-            throw new Error(
-                error?.response?.data?.message || "Failed to fetch taxes"
-            );
-        }
+        const { data } = await axiosInstance.get("/tax/all");
+        return data;
     },
 
     // GET BY ID
     getById: async (id: number): Promise<Tax> => {
-        try {
-            const { data } = await axiosInstance.get(`/tax/${id}`);
-            return data;
-        } catch (error: any) {
-            throw new Error(
-                error?.response?.data?.message || "Failed to fetch tax"
-            );
-        }
+        const { data } = await axiosInstance.get(`/tax/${id}`);
+        return data;
     },
 
-    // CREATE
-    create: async (
-        payload: CreateTaxPayload,
-        createdBy: number
-    ): Promise<Tax> => {
-        try {
-            const { data } = await axiosInstance.post(
-                "/tax/create",
-                payload,
-                {
-                    headers: {
-                        CREATEDBY: createdBy,
-                        "Content-Type": "application/json",
-                    },
-                }
-            );
-            return data;
-        } catch (error: any) {
-            throw new Error(
-                error?.response?.data?.message || "Failed to create tax"
-            );
-        }
+    // CREATE (payload only)
+    create: async (payload: CreateTaxPayload): Promise<Tax> => {
+        const { data } = await axiosInstance.post(
+            "/tax/create",
+            payload
+        );
+        return data;
     },
 
     // UPDATE
-// UPDATE
-updateById: async (
-    id: number,
-    payload: CreateTaxPayload
-): Promise<Tax> => {
-    try {
+    updateById: async (
+        id: number,
+        payload: CreateTaxPayload
+    ): Promise<Tax> => {
         const { data } = await axiosInstance.put(
-            `/tax/update/${id}`,   // ✅ CORRECT
+            `/tax/update/${id}`,
             {
                 TAXCODE: id,
                 ...payload,
             }
         );
         return data;
-    } catch (error: any) {
-        throw new Error(
-            error?.response?.data?.message || "Failed to update tax"
-        );
-    }
-},
+    },
 
     // DELETE
     deleteById: async (id: number): Promise<string> => {
-        try {
-            const { data } = await axiosInstance.delete(
-                `/tax/delete/${id}`
-            );
-            return data;
-        } catch (error: any) {
-            throw new Error(
-                error?.response?.data?.message || "Failed to delete tax"
-            );
-        }
+        const { data } = await axiosInstance.delete(
+            `/tax/delete/${id}`
+        );
+        return data;
     },
 };

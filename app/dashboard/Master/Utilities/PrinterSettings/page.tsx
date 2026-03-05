@@ -11,10 +11,8 @@ import {
     HStack,
     Fieldset,
     NativeSelect,
-    For,
     Flex,
     Input,
-    Textarea,
 } from "@chakra-ui/react";
 import { Table } from "@chakra-ui/react/table";
 import { AiOutlineSave } from "react-icons/ai";
@@ -30,122 +28,124 @@ import { CapitalizedInput } from "@/component/form/CapitalizedInput";
 import { usePrint } from "@/context/print/usePrintContext";
 import { useRouter } from "next/navigation";
 import {
-    useAllHSN,
-    useCreateHSN,
-    useUpdateHSN,
-    useDeleteHSN,
-} from "@/hooks/HSN/useHSN";
+    useAllPrinters,
+    useCreatePrinter,
+    useUpdatePrinter,
+    useDeletePrinter,
+} from "@/hooks/PrinterSettings/usePrinterSettings";
 
 // Types based on API response
-interface HSN {
-    SNO?: number;
-    HSNCODE: string;
-    HSNDESCRIPTION: string;
-    ACTIVE: "Y" | "N";
+interface Printer {
+    IPID?: number;
+    PRINTCODE?: number;
+    PRINTERNAME: string;
+    IPADDRESS: string;
+    EXENAME: string;
     CREATEDBY?: number;
     CREATEDDATE?: string;
     CREATEDTIME?: string;
 }
 
-interface CreateHSNPayload {
-    HSNCODE: string;
-    HSNDESCRIPTION: string;
-    ACTIVE: "Y" | "N";
+interface CreatePrinterPayload {
+    IPADDRESS: string;
+    IPID: number;
+    PRINTERNAME: string;
+    EXENAME: string;
 }
 
-export default function HSNMaster() {
+export default function PrinterSettingsMaster() {
     const { theme } = useTheme();
     const router = useRouter();
     const { setData, setColumns, setShowSno, title } = usePrint();
 
     /* -------------------- API HOOKS -------------------- */
-    const { data: hsnList = [], isLoading: isApiLoading, refetch: hsnRefetch } = useAllHSN();
-    const createMutation = useCreateHSN();
-    const updateMutation = useUpdateHSN();
-    const deleteMutation = useDeleteHSN();
+    const { data: printers = [], isLoading: isApiLoading, refetch: printerRefetch } = useAllPrinters();
+    const createMutation = useCreatePrinter();
+    const updateMutation = useUpdatePrinter();
+    const deleteMutation = useDeletePrinter();
 
     const [isLoading, setIsLoading] = useState(false);
 
     /* -------------------- FORM STATE -------------------- */
-    const emptyForm: CreateHSNPayload = {
-        HSNCODE: "",
-        HSNDESCRIPTION: "",
-        ACTIVE: "Y",
+    const emptyForm: CreatePrinterPayload = {
+        IPADDRESS: "",
+        IPID: 0,
+        PRINTERNAME: "",
+        EXENAME: "",
     };
 
-    const [form, setForm] = useState<CreateHSNPayload>(emptyForm);
-    const [editCode, setEditCode] = useState<string | null>(null);
-    const [highlightedCode, setHighlightedCode] = useState<string | null>(null);
-
-    /* -------------------- SELECT OPTIONS -------------------- */
-    const activeStatus = [
-        { label: "YES", value: "Y" },
-        { label: "NO", value: "N" },
-    ];
+    const [form, setForm] = useState<CreatePrinterPayload>(emptyForm);
+    const [editId, setEditId] = useState<number | null>(null);
+    const [highlightedId, setHighlightedId] = useState<number | null>(null);
 
     /* -------------------- EFFECTS -------------------- */
     useEffect(() => {
-        if (editCode) {
-            const hsnToEdit = hsnList.find(
-                (hsn: HSN) => hsn.HSNCODE === editCode
+        if (editId) {
+            const printerToEdit = printers.find(
+                (printer: Printer) => printer.PRINTCODE === editId
             );
-            if (hsnToEdit) {
+            if (printerToEdit) {
                 setForm({
-                    HSNCODE: hsnToEdit.HSNCODE,
-                    HSNDESCRIPTION: hsnToEdit.HSNDESCRIPTION,
-                    ACTIVE: hsnToEdit.ACTIVE,
+                    IPADDRESS: printerToEdit.IPADDRESS,
+                    IPID: printerToEdit.IPID || 0,
+                    PRINTERNAME: printerToEdit.PRINTERNAME,
+                    EXENAME: printerToEdit.EXENAME,
                 });
-                toastLoaded("HSN");
+                toastLoaded("Printer");
                 ScrollToTop();
             }
         }
-    }, [editCode, hsnList]);
+    }, [editId, printers]);
 
     useEffect(() => {
-        if (!highlightedCode) return;
+        if (!highlightedId) return;
 
         const timer = setTimeout(() => {
-            setHighlightedCode(null);
+            setHighlightedId(null);
         }, 3000);
 
         return () => clearTimeout(timer);
-    }, [highlightedCode]);
+    }, [highlightedId]);
 
     /* -------------------- HANDLERS -------------------- */
-    const handleChange = (field: keyof CreateHSNPayload, value: any) => {
+    const handleChange = (field: keyof CreatePrinterPayload, value: any) => {
         setForm((prev) => ({ ...prev, [field]: value }));
     };
 
     const resetForm = () => {
-        setEditCode(null);
+        setEditId(null);
         setForm(emptyForm);
     };
 
     const validateForm = () => {
-        if (!form.HSNCODE?.trim()) {
-            toastError("HSN code is required");
+        if (!form.IPADDRESS?.trim()) {
+            toastError("IP Address is required");
             return false;
         }
-        if (form.HSNCODE.length > 20) {
-            toastError("HSN code must be at most 20 characters");
+        // Simple IP validation pattern
+        const ipPattern = /^(\d{1,3}\.){3}\d{1,3}$/;
+        if (!ipPattern.test(form.IPADDRESS)) {
+            toastError("Please enter a valid IP address");
             return false;
         }
-        // Check if HSN code already exists (for new entries)
-        if (!editCode) {
-            const existingHSN = hsnList.find(
-                hsn => hsn.HSNCODE.toLowerCase() === form.HSNCODE.toLowerCase()
-            );
-            if (existingHSN) {
-                toastError("HSN code already exists");
-                return false;
-            }
-        }
-        if (!form.HSNDESCRIPTION?.trim()) {
-            toastError("HSN description is required");
+        if (!form.IPID || form.IPID <= 0) {
+            toastError("IP ID must be greater than 0");
             return false;
         }
-        if (form.HSNDESCRIPTION.length > 500) {
-            toastError("Description must be at most 500 characters");
+        if (!form.PRINTERNAME?.trim()) {
+            toastError("Printer name is required");
+            return false;
+        }
+        if (form.PRINTERNAME.length > 100) {
+            toastError("Printer name must be at most 100 characters");
+            return false;
+        }
+        if (!form.EXENAME?.trim()) {
+            toastError("Executable name is required");
+            return false;
+        }
+        if (form.EXENAME.length > 100) {
+            toastError("Executable name must be at most 100 characters");
             return false;
         }
         return true;
@@ -158,39 +158,45 @@ export default function HSNMaster() {
             setIsLoading(true);
 
             const payload = {
-                HSNCODE: form.HSNCODE.trim(),
-                HSNDESCRIPTION: form.HSNDESCRIPTION.trim(),
-                ACTIVE: form.ACTIVE,
+                IPADDRESS: form.IPADDRESS.trim(),
+                IPID: Number(form.IPID),
+                PRINTERNAME: form.PRINTERNAME.trim(),
+                EXENAME: form.EXENAME.trim(),
             };
 
-            if (editCode) {
+            console.log("Saving payload:", payload);
+
+            if (editId !== null) {
                 // UPDATE
                 await updateMutation.mutateAsync({
-                    code: editCode,
-                    payload,
+                    id: editId,
+                    payload: {
+                        ...payload,
+                        PRINTCODE: editId,
+                    },
                 });
 
                 toaster.success({
                     title: "Success",
-                    description: "HSN updated successfully",
+                    description: "Printer updated successfully",
                 });
 
-                setHighlightedCode(editCode);
+                setHighlightedId(editId);
             } else {
                 // CREATE
                 await createMutation.mutateAsync(payload);
 
                 toaster.success({
                     title: "Success",
-                    description: "HSN created successfully",
+                    description: "Printer created successfully",
                 });
             }
 
-            await hsnRefetch();
+            await printerRefetch();
             resetForm();
 
         } catch (error: any) {
-            console.error("Form submission error:", error);
+            console.error("Save error:", error);
             toaster.error({
                 title: "Error",
                 description: error?.message || "Operation failed",
@@ -200,36 +206,38 @@ export default function HSNMaster() {
         }
     };
 
-    const handleEdit = (hsn: HSN) => {
-        setEditCode(hsn.HSNCODE);
+    const handleEdit = (printer: Printer) => {
+        if (printer.PRINTCODE === undefined || printer.PRINTCODE === null) return;
+        setEditId(printer.PRINTCODE);
         setForm({
-            HSNCODE: hsn.HSNCODE,
-            HSNDESCRIPTION: hsn.HSNDESCRIPTION,
-            ACTIVE: hsn.ACTIVE,
+            IPADDRESS: printer.IPADDRESS,
+            IPID: printer.IPID || 0,
+            PRINTERNAME: printer.PRINTERNAME,
+            EXENAME: printer.EXENAME,
         });
         ScrollToTop();
     };
 
-    const handleDelete = async (code: string) => {
-        if (window.confirm("Are you sure you want to delete this HSN?")) {
+    const handleDelete = async (code: number) => {
+        if (window.confirm("Are you sure you want to delete this printer?")) {
             try {
                 setIsLoading(true);
                 await deleteMutation.mutateAsync(code);
 
-                toaster.success({
-                    title: "Success",
-                    description: "HSN deleted successfully"
+                toaster.success({ 
+                    title: "Success", 
+                    description: "Printer deleted successfully" 
                 });
-                await hsnRefetch();
-
-                if (editCode === code) {
+                await printerRefetch();
+                
+                if (editId === code) {
                     resetForm();
                 }
             } catch (error: any) {
                 console.error("Delete error:", error);
-                toaster.error({
-                    title: "Error",
-                    description: error?.message || "Delete failed"
+                toaster.error({ 
+                    title: "Error", 
+                    description: error?.message || "Delete failed" 
                 });
             } finally {
                 setIsLoading(false);
@@ -238,11 +246,13 @@ export default function HSNMaster() {
     };
 
     /* -------------------- TABLE COLUMNS -------------------- */
-    const hsnColumns = [
+    const printerColumns = [
         { key: 'SNO', label: 'S.No' },
-        { key: 'HSNCODE', label: 'HSN Code' },
-        { key: 'HSNDESCRIPTION', label: 'Description' },
-        { key: 'ACTIVE', label: 'Status' },
+        { key: 'PRINTCODE', label: 'Print Code' },
+        { key: 'PRINTERNAME', label: 'Printer Name' },
+        { key: 'IPADDRESS', label: 'IP Address' },
+        { key: 'IPID', label: 'IP ID' },
+        { key: 'EXENAME', label: 'Executable' },
         { key: 'CREATEDDATE', label: 'Created Date' },
         { key: 'actions', label: 'Actions' },
     ];
@@ -259,14 +269,17 @@ export default function HSNMaster() {
 
     /* -------------------- EXPORT -------------------- */
     const handleExport = (option: string) => {
-        setData(hsnList);
+        setData(printers);
         setColumns([
-            { key: "HSNCODE", label: "HSN Code" },
-            { key: "HSNDESCRIPTION", label: "Description" },
-            { key: "ACTIVE", label: "Status" },
+            { key: "PRINTCODE", label: "Print Code" },
+            { key: "PRINTERNAME", label: "Printer Name" },
+            { key: "IPADDRESS", label: "IP Address" },
+            { key: "IPID", label: "IP ID" },
+            { key: "EXENAME", label: "Executable" },
+            { key: "CREATEDDATE", label: "Created Date" },
         ]);
         setShowSno(true);
-        title?.("HSN Master");
+        title?.("Printer Settings");
         router.push(`/print?export=${option}`);
     };
 
@@ -278,29 +291,28 @@ export default function HSNMaster() {
             color={theme.colors.secondary}
         >
             <Toaster />
-            <Grid templateColumns={{ base: "1fr", lg: "500px 1fr" }} gap={2}>
+            <Grid templateColumns={{ base: "1fr", lg: "600px 1fr" }} gap={2}>
                 {/* ---------------- FORM ---------------- */}
                 <GridItem>
                     <VStack bg={theme.colors.formColor} p={4} borderRadius="xl" border="1px solid #eef">
                         <Text fontSize="small" fontWeight="600">
-                            HSN MASTER
+                            PRINTER SETTINGS
                         </Text>
 
                         <Fieldset.Root size="sm" width="100%">
                             <Fieldset.Content>
                                 <Grid gap={3} width="100%">
-                                    {/* HSN CODE */}
+                                    {/* IP ADDRESS */}
                                     <Box display="flex" alignItems="center" gap={2}>
-                                        <Box minW="110px" fontSize="2xs">HSN CODE :</Box>
+                                        <Box minW="110px" fontSize="2xs">IP ADDRESS :</Box>
                                         <Input
-                                            value={form.HSNCODE}
-                                            onChange={(e) => handleChange("HSNCODE", e.target.value)}
+                                            value={form.IPADDRESS}
+                                            onChange={(e) => handleChange("IPADDRESS", e.target.value)}
                                             size="2xs"
-                                            placeholder="Enter HSN code"
-                                            maxLength={20}
-                                            isReadOnly={!!editCode}
+                                            placeholder="Enter IP address (e.g., 192.168.1.100)"
+                                            maxLength={15}
                                             css={{
-                                                backgroundColor: editCode ? "#f5f5f5" : "#eee",
+                                                backgroundColor: "#eee",
                                                 color: "#111827",
                                                 border: "1px solid #e5e7eb",
                                                 borderRadius: "20px",
@@ -312,53 +324,55 @@ export default function HSNMaster() {
                                         />
                                     </Box>
 
-                                    {/* HSN DESCRIPTION */}
-                                    <Box display="flex" alignItems="flex-start" gap={2}>
-                                        <Box minW="110px" fontSize="2xs">DESCRIPTION :</Box>
-                                        <Textarea
-                                            value={form.HSNDESCRIPTION}
-                                            onChange={(e) => handleChange("HSNDESCRIPTION", e.target.value)}
-                                            size="xs"
-                                            placeholder="Enter HSN description"
-                                            maxLength={500}
-                                            rows={3}
+                                    {/* IP ID */}
+                                    <Box display="flex" alignItems="center" gap={2}>
+                                        <Box minW="110px" fontSize="2xs">IP ID :</Box>
+                                        <Input
+                                            type="number"
+                                            value={form.IPID || ""}
+                                            onChange={(e) => handleChange("IPID", parseInt(e.target.value) || 0)}
+                                            size="2xs"
+                                            placeholder="Enter IP ID"
+                                            min="1"
                                             css={{
                                                 backgroundColor: "#eee",
                                                 color: "#111827",
                                                 border: "1px solid #e5e7eb",
-                                                borderRadius: "10px",
+                                                borderRadius: "20px",
+                                                height: "30px",
                                                 fontSize: "10px",
-                                                width: "300px",
-                                                padding: "8px",
-                                                resize: "vertical",
+                                                width: "150px",
+                                                padding: "0 10px",
                                             }}
                                         />
                                     </Box>
 
-                                    {/* ACTIVE STATUS */}
+                                    {/* PRINTER NAME */}
                                     <Box display="flex" alignItems="center" gap={2}>
-                                        <Box minW="110px" fontSize="2xs">STATUS :</Box>
-                                        <NativeSelect.Root size="xs" maxW="100px" fontSize="2xs">
-                                            <NativeSelect.Field
-                                                value={form.ACTIVE}
-                                                onChange={(e) => handleChange("ACTIVE", e.target.value as "Y" | "N")}
-                                                css={{
-                                                    backgroundColor: "#eee",
-                                                    color: "#111827",
-                                                    border: "1px solid #e5e7eb",
-                                                    borderRadius: "20px",
-                                                    height: "30px",
-                                                    fontSize: "10px",
-                                                }}
-                                            >
-                                                {activeStatus.map((item) => (
-                                                    <option key={item.value} value={item.value}>
-                                                        {item.label}
-                                                    </option>
-                                                ))}
-                                            </NativeSelect.Field>
-                                            <NativeSelect.Indicator />
-                                        </NativeSelect.Root>
+                                        <Box minW="110px" fontSize="2xs">PRINTER NAME :</Box>
+                                        <CapitalizedInput
+                                            field="PRINTERNAME"
+                                            value={form.PRINTERNAME}
+                                            onChange={handleChange}
+                                            isCapitalized
+                                            size="2xs"
+                                            placeholder="Enter printer name"
+                                            max={100}
+                                        />
+                                    </Box>
+
+                                    {/* EXECUTABLE NAME */}
+                                    <Box display="flex" alignItems="center" gap={2}>
+                                        <Box minW="110px" fontSize="2xs">EXECUTABLE :</Box>
+                                        <CapitalizedInput
+                                            field="EXENAME"
+                                            value={form.EXENAME}
+                                            onChange={handleChange}
+                                            isCapitalized
+                                            size="2xs"
+                                            placeholder="Enter executable name (e.g., PRINT_APP.EXE)"
+                                            max={100}
+                                        />
                                     </Box>
                                 </Grid>
                             </Fieldset.Content>
@@ -372,7 +386,7 @@ export default function HSNMaster() {
                                 onClick={handleSave}
                                 flex={1}
                             >
-                                <AiOutlineSave /> {editCode ? "Update" : "Save"}
+                                <AiOutlineSave /> {editId ? "Update" : "Save"}
                             </Button>
                             <Button size="xs" colorPalette="blue" onClick={resetForm} flex={1}>
                                 <IoIosExit /> Exit
@@ -386,7 +400,7 @@ export default function HSNMaster() {
                     <Box bg={theme.colors.formColor} p={2} borderRadius="xl" border="1px solid #eef">
                         <Box display='flex' mb={2} gap={2} justifyContent='space-between' alignItems='center'>
                             <Text fontWeight="semibold" fontSize="small">
-                                HSN LIST
+                                PRINTER LIST
                             </Text>
 
                             <Flex>
@@ -415,44 +429,28 @@ export default function HSNMaster() {
                         </Box>
 
                         <CustomTable
-                            columns={hsnColumns}
-                            data={hsnList}
+                            columns={printerColumns}
+                            data={printers}
                             isLoading={isApiLoading || isLoading}
-                            renderRow={(hsn: HSN, index: number) => (
+                            renderRow={(printer: Printer, index: number) => (
                                 <>
-                                    <Table.Cell>{hsn.SNO || index + 1}</Table.Cell>
-                                    <Table.Cell>
-                                        <Text fontWeight="medium">{hsn.HSNCODE}</Text>
-                                    </Table.Cell>
-                                    <Table.Cell>
-                                        <Text maxW="300px" whiteSpace="normal" wordBreak="break-word">
-                                            {hsn.HSNDESCRIPTION}
-                                        </Text>
-                                    </Table.Cell>
-                                    <Table.Cell>
-                                        <Badge 
-                                            colorPalette={hsn.ACTIVE === "Y" ? "green" : "red"}
-                                            fontSize="2xs"
-                                            px={2}
-                                            py={0.5}
-                                            borderRadius="full"
-                                        >
-                                            {hsn.ACTIVE === "Y" ? "Active" : "Inactive"}
-                                        </Badge>
-                                    </Table.Cell>
-                                    <Table.Cell>
-                                        {formatDate(hsn.CREATEDDATE)}
-                                    </Table.Cell>
+                                    <Table.Cell>{index + 1}</Table.Cell>
+                                    <Table.Cell>{printer.PRINTCODE}</Table.Cell>
+                                    <Table.Cell>{printer.PRINTERNAME}</Table.Cell>
+                                    <Table.Cell>{printer.IPADDRESS}</Table.Cell>
+                                    <Table.Cell>{printer.IPID}</Table.Cell>
+                                    <Table.Cell>{printer.EXENAME}</Table.Cell>
+                                    <Table.Cell>{formatDate(printer.CREATEDDATE)}</Table.Cell>
                                     <Table.Cell>
                                         <Box display="flex" justifyContent="center" gap={2}>
                                             <FaEdit 
-                                                onClick={() => handleEdit(hsn)} 
+                                                onClick={() => handleEdit(printer)} 
                                                 cursor="pointer"
                                                 color={theme.colors.primaryText}
                                                 size={14}
                                             />
                                             <FaTrash 
-                                                onClick={() => handleDelete(hsn.HSNCODE)} 
+                                                onClick={() => handleDelete(printer.PRINTCODE!)} 
                                                 cursor="pointer"
                                                 color="red.500"
                                                 size={14}
@@ -465,9 +463,9 @@ export default function HSNMaster() {
                             headerColor="white"
                             borderColor="white"
                             bodyBg={theme.colors.primary}
-                            highlightRowId={highlightedCode ? highlightedCode : null}
-                            rowIdKey="HSNCODE"
-                            emptyText="No HSN codes available"
+                            highlightRowId={highlightedId ? Number(highlightedId) : null}
+                            rowIdKey="PRINTCODE"
+                            emptyText="No printers available"
                         />
                     </Box>
                 </GridItem>
@@ -475,30 +473,3 @@ export default function HSNMaster() {
         </Box>
     );
 }
-
-// Badge component helper
-const Badge = ({ children, colorPalette, fontSize, px, py, borderRadius }: any) => {
-    const bgColor = 
-        colorPalette === "green" ? "green.100" : 
-        colorPalette === "red" ? "red.100" : "gray.100";
-    
-    const textColor = 
-        colorPalette === "green" ? "green.800" : 
-        colorPalette === "red" ? "red.800" : "gray.800";
-    
-    return (
-        <Box
-            as="span"
-            bg={bgColor}
-            color={textColor}
-            fontSize={fontSize}
-            px={px}
-            py={py}
-            borderRadius={borderRadius}
-            display="inline-block"
-            fontWeight="medium"
-        >
-            {children}
-        </Box>
-    );
-};

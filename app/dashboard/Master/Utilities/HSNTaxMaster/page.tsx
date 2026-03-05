@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
     Box,
     Button,
@@ -11,221 +11,114 @@ import {
     HStack,
     Fieldset,
     NativeSelect,
-    For,
     Flex,
-    Input,
     Card,
-    Separator,
-    Badge,
+    Input,
     IconButton,
 } from "@chakra-ui/react";
 import { Table } from "@chakra-ui/react/table";
 import { AiOutlineSave, AiOutlineSearch } from "react-icons/ai";
 import { IoIosExit } from "react-icons/io";
-import { FaEdit, FaTrash, FaPlus, FaMinus, FaTimes } from "react-icons/fa";
+import { FaEdit, FaTrash, FaTimes } from "react-icons/fa";
 import { FaPrint, FaFileExcel } from "react-icons/fa";
 import { Toaster, toaster } from "@/components/ui/toaster";
 import { useTheme } from "@/context/theme/themeContext";
 import ScrollToTop from "@/component/scroll/ScrollToTop";
 import { toastError, toastLoaded } from "@/component/toast/toast";
 import { CustomTable } from "@/component/table/CustomTable";
-import { CapitalizedInput } from "@/component/form/CapitalizedInput";
 import { usePrint } from "@/context/print/usePrintContext";
 import { useRouter } from "next/navigation";
+import {
+    useAllHSNTax,
+    useCreateHSNTax,
+    useUpdateHSNTax,
+    useDeleteHSNTax,
+} from "@/hooks/HSNTax/useHSNTax";
+import { useAllHSN } from "@/hooks/HSN/useHSN";
+import { SelectCombobox, SelectItem } from "@/components/ui/selectComboBox";
 
 // Types
-interface HSN {
-    HSNCODE?: number;
-    HSNNUMBER: string;
-    HSDESCRIPTION: string;
+interface HSNTaxData {
+    HSNTAXCODE?: number;
+    HSNCODE: string;
+    BELOWSALESAMOUNT: number;
+    BELOWSGSTTAXCODE: number;
+    BELOWCGSTTAXCODE: number;
+    BELOWIGSTTAXCODE: number;
+    BELOWSRVTAXCODE: number;
+    ABOVESGSTTAXCODE: number;
+    ABOVECGSTTAXCODE: number;
+    ABOVEIGSTTAXCODE: number;
+    ABOVESRVTAXCODE: number;
+    CREATEDDATE?: string;
+    HSNNAME?: string;
+    HSNDESCRIPTION?: string;
 }
-
-interface HSNSalesData {
-    id?: number;
-    hsnCode: string;
-    hsnDescription: string;
-    salesAmount: number;
-    belowGst: GSTRates;
-    aboveGst: GSTRates;
-    createdDate?: string;
-}
-
-interface GSTRates {
-    stateGST: number;    // SGST
-    centralGST: number;  // CGST
-    interGST: number;    // IGST
-    serviceGST: number;  // Service Tax
-}
-
-// Mock HSN data for search
-const MOCK_HSN_LIST: HSN[] = [
-    { HSNCODE: 1, HSNNUMBER: "1001", HSDESCRIPTION: "Live animals" },
-    { HSNCODE: 2, HSNNUMBER: "1002", HSDESCRIPTION: "Meat and edible meat offal" },
-    { HSNCODE: 3, HSNNUMBER: "1003", HSDESCRIPTION: "Fish and crustaceans" },
-    { HSNCODE: 4, HSNNUMBER: "1004", HSDESCRIPTION: "Dairy produce" },
-    { HSNCODE: 5, HSNNUMBER: "2001", HSDESCRIPTION: "Vegetables and roots" },
-    { HSNCODE: 6, HSNNUMBER: "2002", HSDESCRIPTION: "Edible vegetables" },
-    { HSNCODE: 7, HSNNUMBER: "3001", HSDESCRIPTION: "Pharmaceutical products" },
-    { HSNCODE: 8, HSNNUMBER: "3002", HSDESCRIPTION: "Human blood" },
-    { HSNCODE: 9, HSNNUMBER: "4001", HSDESCRIPTION: "Rubber and articles" },
-    { HSNCODE: 10, HSNNUMBER: "4002", HSDESCRIPTION: "Synthetic rubber" },
-];
-
-// Mock HSN Tax data
-const MOCK_HSNSALES_DATA: HSNSalesData[] = [
-    {
-        id: 1,
-        hsnCode: "1001",
-        hsnDescription: "Live animals",
-        salesAmount: 50000,
-        belowGst: {
-            stateGST: 2.5,
-            centralGST: 2.5,
-            interGST: 5,
-            serviceGST: 0,
-        },
-        aboveGst: {
-            stateGST: 6,
-            centralGST: 6,
-            interGST: 12,
-            serviceGST: 0,
-        },
-        createdDate: "2024-01-15",
-    },
-    {
-        id: 2,
-        hsnCode: "1002",
-        hsnDescription: "Meat and edible meat offal",
-        salesAmount: 75000,
-        belowGst: {
-            stateGST: 2.5,
-            centralGST: 2.5,
-            interGST: 5,
-            serviceGST: 0,
-        },
-        aboveGst: {
-            stateGST: 6,
-            centralGST: 6,
-            interGST: 12,
-            serviceGST: 0,
-        },
-        createdDate: "2024-01-15",
-    },
-    {
-        id: 3,
-        hsnCode: "3001",
-        hsnDescription: "Pharmaceutical products",
-        salesAmount: 120000,
-        belowGst: {
-            stateGST: 6,
-            centralGST: 6,
-            interGST: 12,
-            serviceGST: 0,
-        },
-        aboveGst: {
-            stateGST: 9,
-            centralGST: 9,
-            interGST: 18,
-            serviceGST: 0,
-        },
-        createdDate: "2024-01-16",
-    },
-    {
-        id: 4,
-        hsnCode: "4001",
-        hsnDescription: "Rubber and articles",
-        salesAmount: 250000,
-        belowGst: {
-            stateGST: 9,
-            centralGST: 9,
-            interGST: 18,
-            serviceGST: 0,
-        },
-        aboveGst: {
-            stateGST: 14,
-            centralGST: 14,
-            interGST: 28,
-            serviceGST: 0,
-        },
-        createdDate: "2024-01-16",
-    },
-    {
-        id: 5,
-        hsnCode: "2001",
-        hsnDescription: "Vegetables and roots",
-        salesAmount: 35000,
-        belowGst: {
-            stateGST: 2.5,
-            centralGST: 2.5,
-            interGST: 5,
-            serviceGST: 0,
-        },
-        aboveGst: {
-            stateGST: 6,
-            centralGST: 6,
-            interGST: 12,
-            serviceGST: 0,
-        },
-        createdDate: "2024-01-17",
-    },
-];
 
 export default function HSNTaxMaster() {
     const { theme } = useTheme();
     const router = useRouter();
     const { setData, setColumns, setShowSno, title } = usePrint();
 
-    /* -------------------- STATE -------------------- */
-    const [hsnSalesData, setHsnSalesData] = useState<HSNSalesData[]>(MOCK_HSNSALES_DATA);
-    const [hsnList] = useState<HSN[]>(MOCK_HSN_LIST);
+    // Refs for focus management
+    const hsnRef = useRef<HTMLInputElement>(null);
+    const salesAmountRef = useRef<HTMLInputElement>(null);
+    const belowSgstRef = useRef<HTMLInputElement>(null);
+    const belowCgstRef = useRef<HTMLInputElement>(null);
+    const belowIgstRef = useRef<HTMLInputElement>(null);
+    const belowSrvRef = useRef<HTMLInputElement>(null);
+    const aboveSgstRef = useRef<HTMLInputElement>(null);
+    const aboveCgstRef = useRef<HTMLInputElement>(null);
+    const aboveIgstRef = useRef<HTMLInputElement>(null);
+    const aboveSrvRef = useRef<HTMLInputElement>(null);
+    const saveRef = useRef<HTMLButtonElement>(null);
+
+    /* -------------------- API HOOKS -------------------- */
+    const { data: hsnTaxList = [], isLoading: isApiLoading, refetch: hsnTaxRefetch } = useAllHSNTax();
+    const { data: hsnList = [] } = useAllHSN();
+    const createMutation = useCreateHSNTax();
+    const updateMutation = useUpdateHSNTax();
+    const deleteMutation = useDeleteHSNTax();
+
     const [isLoading, setIsLoading] = useState(false);
-    
-    // Form search state
-    const [formSearchTerm, setFormSearchTerm] = useState("");
-    const [searchResults, setSearchResults] = useState<HSN[]>([]);
-    const [showSearchResults, setShowSearchResults] = useState(false);
-    
-    // Table search state
-    const [tableSearchTerm, setTableSearchTerm] = useState("");
 
     /* -------------------- FORM STATE -------------------- */
-    const emptyForm: HSNSalesData = {
-        hsnCode: "",
-        hsnDescription: "",
-        salesAmount: 0,
-        belowGst: {
-            stateGST: 0,
-            centralGST: 0,
-            interGST: 0,
-            serviceGST: 0,
-        },
-        aboveGst: {
-            stateGST: 0,
-            centralGST: 0,
-            interGST: 0,
-            serviceGST: 0,
-        },
+    const emptyForm: HSNTaxData = {
+        HSNCODE: "",
+        BELOWSALESAMOUNT: 0,
+        BELOWSGSTTAXCODE: 0,
+        BELOWCGSTTAXCODE: 0,
+        BELOWIGSTTAXCODE: 0,
+        BELOWSRVTAXCODE: 0,
+        ABOVESGSTTAXCODE: 0,
+        ABOVECGSTTAXCODE: 0,
+        ABOVEIGSTTAXCODE: 0,
+        ABOVESRVTAXCODE: 0,
     };
 
-    const [form, setForm] = useState<HSNSalesData>(emptyForm);
+    const [form, setForm] = useState<HSNTaxData>(emptyForm);
     const [editId, setEditId] = useState<number | null>(null);
     const [highlightedId, setHighlightedId] = useState<number | null>(null);
 
-    // Filtered data based on table search
-    const filteredData = useMemo(() => {
-        if (!tableSearchTerm.trim()) return hsnSalesData;
-        
-        return hsnSalesData.filter(item => 
-            item.hsnCode.toLowerCase().includes(tableSearchTerm.toLowerCase()) ||
-            item.hsnDescription.toLowerCase().includes(tableSearchTerm.toLowerCase())
-        );
-    }, [hsnSalesData, tableSearchTerm]);
+    // Table search state
+    const [tableSearchTerm, setTableSearchTerm] = useState("");
+
+    /* -------------------- SELECT OPTIONS -------------------- */
+    // Transform HSN to SelectItem format
+    const hsnItems: SelectItem[] = useMemo(() => {
+        return hsnList
+            .filter((h: any) => h.ACTIVE === "Y")
+            .map((hsn: any) => ({
+                label: `${hsn.HSNCODE} - ${hsn.HSNDESCRIPTION}`,
+                value: hsn.HSNCODE,
+            }));
+    }, [hsnList]);
 
     /* -------------------- EFFECTS -------------------- */
     useEffect(() => {
         if (editId) {
-            const dataToEdit = hsnSalesData.find(
-                (data: HSNSalesData) => data.id === editId
+            const dataToEdit = hsnTaxList.find(
+                (item: HSNTaxData) => item.HSNTAXCODE === editId
             );
             if (dataToEdit) {
                 setForm(dataToEdit);
@@ -233,7 +126,7 @@ export default function HSNTaxMaster() {
                 ScrollToTop();
             }
         }
-    }, [editId, hsnSalesData]);
+    }, [editId, hsnTaxList]);
 
     useEffect(() => {
         if (!highlightedId) return;
@@ -245,54 +138,23 @@ export default function HSNTaxMaster() {
         return () => clearTimeout(timer);
     }, [highlightedId]);
 
-    // Form search functionality
-    useEffect(() => {
-        if (formSearchTerm.trim() === "") {
-            setSearchResults([]);
-            setShowSearchResults(false);
-            return;
-        }
-
-        const results = hsnList.filter(
-            hsn => 
-                hsn.HSNNUMBER.toLowerCase().includes(formSearchTerm.toLowerCase()) ||
-                hsn.HSDESCRIPTION.toLowerCase().includes(formSearchTerm.toLowerCase())
+    // Filtered data based on table search
+    const filteredData = useMemo(() => {
+        if (!tableSearchTerm.trim()) return hsnTaxList;
+        
+        return hsnTaxList.filter((item: HSNTaxData) => 
+            item.HSNCODE?.toLowerCase().includes(tableSearchTerm.toLowerCase())
         );
-        setSearchResults(results);
-        setShowSearchResults(results.length > 0);
-    }, [formSearchTerm, hsnList]);
+    }, [hsnTaxList, tableSearchTerm]);
 
     /* -------------------- HANDLERS -------------------- */
-    const handleChange = (field: keyof HSNSalesData, value: any) => {
+    const handleChange = (field: keyof HSNTaxData, value: any) => {
         setForm((prev) => ({ ...prev, [field]: value }));
-    };
-
-    const handleGSTChange = (section: 'belowGst' | 'aboveGst', field: keyof GSTRates, value: string) => {
-        const numValue = parseFloat(value) || 0;
-        setForm((prev) => ({
-            ...prev,
-            [section]: {
-                ...prev[section],
-                [field]: numValue,
-            },
-        }));
-    };
-
-    const selectHSN = (hsn: HSN) => {
-        setForm((prev) => ({
-            ...prev,
-            hsnCode: hsn.HSNNUMBER,
-            hsnDescription: hsn.HSDESCRIPTION,
-        }));
-        setFormSearchTerm("");
-        setShowSearchResults(false);
     };
 
     const resetForm = () => {
         setEditId(null);
         setForm(emptyForm);
-        setFormSearchTerm("");
-        setShowSearchResults(false);
     };
 
     const clearTableSearch = () => {
@@ -300,16 +162,14 @@ export default function HSNTaxMaster() {
     };
 
     const validateForm = () => {
-        if (!form.hsnCode?.trim()) {
-            toastError("HSN code is required");
+        if (!form.HSNCODE) {
+            toastError("Please select HSN code");
+            hsnRef.current?.focus();
             return false;
         }
-        if (!form.hsnDescription?.trim()) {
-            toastError("HSN description is required");
-            return false;
-        }
-        if (form.salesAmount <= 0) {
-            toastError("Sales amount must be greater than 0");
+        if (form.BELOWSALESAMOUNT <= 0) {
+            toastError("Below sales amount must be greater than 0");
+            salesAmountRef.current?.focus();
             return false;
         }
         return true;
@@ -320,71 +180,93 @@ export default function HSNTaxMaster() {
 
         try {
             setIsLoading(true);
-            
-            if (editId) {
-                // Update existing data
-                setHsnSalesData(prev => prev.map(data => 
-                    data.id === editId 
-                        ? { 
-                            ...data, 
-                            ...form,
-                            id: editId,
-                            createdDate: data.createdDate,
-                          }
-                        : data
-                ));
 
-                toaster.success({ 
-                    title: "Success", 
-                    description: "HSN Tax data updated successfully" 
+            if (editId !== null) {
+                // UPDATE
+                const payload = {
+                    HSNTAXCODE: editId,
+                    HSNCODE: form.HSNCODE,
+                    BELOWSALESAMOUNT: Number(form.BELOWSALESAMOUNT),
+                    BELOWSGSTTAXCODE: Number(form.BELOWSGSTTAXCODE),
+                    BELOWCGSTTAXCODE: Number(form.BELOWCGSTTAXCODE),
+                    BELOWIGSTTAXCODE: Number(form.BELOWIGSTTAXCODE),
+                    BELOWSRVTAXCODE: Number(form.BELOWSRVTAXCODE),
+                    ABOVESGSTTAXCODE: Number(form.ABOVESGSTTAXCODE),
+                    ABOVECGSTTAXCODE: Number(form.ABOVECGSTTAXCODE),
+                    ABOVEIGSTTAXCODE: Number(form.ABOVEIGSTTAXCODE),
+                    ABOVESRVTAXCODE: Number(form.ABOVESRVTAXCODE),
+                };
+
+                await updateMutation.mutateAsync(payload);
+
+                toaster.success({
+                    title: "Success",
+                    description: "HSN Tax updated successfully",
                 });
+
                 setHighlightedId(editId);
             } else {
-                // Create new data
-                const newData: HSNSalesData = {
-                    ...form,
-                    id: Math.max(...hsnSalesData.map(d => d.id || 0), 0) + 1,
-                    createdDate: new Date().toISOString().split('T')[0],
+                // CREATE
+                const payload = {
+                    HSNCODE: form.HSNCODE,
+                    BELOWSALESAMOUNT: Number(form.BELOWSALESAMOUNT),
+                    BELOWSGSTTAXCODE: Number(form.BELOWSGSTTAXCODE),
+                    BELOWCGSTTAXCODE: Number(form.BELOWCGSTTAXCODE),
+                    BELOWIGSTTAXCODE: Number(form.BELOWIGSTTAXCODE),
+                    BELOWSRVTAXCODE: Number(form.BELOWSRVTAXCODE),
+                    ABOVESGSTTAXCODE: Number(form.ABOVESGSTTAXCODE),
+                    ABOVECGSTTAXCODE: Number(form.ABOVECGSTTAXCODE),
+                    ABOVEIGSTTAXCODE: Number(form.ABOVEIGSTTAXCODE),
+                    ABOVESRVTAXCODE: Number(form.ABOVESRVTAXCODE),
                 };
-                setHsnSalesData(prev => [...prev, newData]);
 
-                toaster.success({ 
-                    title: "Success", 
-                    description: "HSN Tax data created successfully" 
+                await createMutation.mutateAsync(payload);
+
+                toaster.success({
+                    title: "Success",
+                    description: "HSN Tax created successfully",
                 });
             }
+
+            await hsnTaxRefetch();
             resetForm();
-        } catch (error) {
-            console.error("Form submission error:", error);
-            toaster.error({ 
-                title: "Error", 
-                description: "Operation failed" 
+
+        } catch (error: any) {
+            console.error("Save error:", error);
+            toaster.error({
+                title: "Error",
+                description: error?.message || "Operation failed",
             });
         } finally {
             setIsLoading(false);
         }
     };
 
-    const handleEdit = (data: HSNSalesData) => {
-        setEditId(data.id!);
-        setForm(data);
+    const handleEdit = (item: HSNTaxData) => {
+        setEditId(item.HSNTAXCODE!);
+        setForm(item);
     };
 
     const handleDelete = async (id: number) => {
-        if (window.confirm("Are you sure you want to delete this HSN Tax data?")) {
+        if (window.confirm("Are you sure you want to delete this HSN Tax?")) {
             try {
                 setIsLoading(true);
-                setHsnSalesData(prev => prev.filter(data => data.id !== id));
+                await deleteMutation.mutateAsync(id);
 
                 toaster.success({ 
                     title: "Success", 
-                    description: "HSN Tax data deleted successfully" 
+                    description: "HSN Tax deleted successfully" 
                 });
-            } catch (error) {
+                await hsnTaxRefetch();
+                
+                if (editId === id) {
+                    resetForm();
+                }
+            } catch (error: any) {
                 console.error("Delete error:", error);
                 toaster.error({ 
                     title: "Error", 
-                    description: "Delete failed" 
+                    description: error?.message || "Delete failed" 
                 });
             } finally {
                 setIsLoading(false);
@@ -396,26 +278,33 @@ export default function HSNTaxMaster() {
     const columns = [
         { key: 'SNO', label: 'S.No' },
         { key: 'HSNCODE', label: 'HSN Code' },
-        { key: 'DESCRIPTION', label: 'Description' },
-        { key: 'SALESAMOUNT', label: 'Sales Amount' },
-        { key: 'BELOWGST', label: 'Below GST (%)' },
-        { key: 'ABOVEGST', label: 'Above GST (%)' },
+        { key: 'HSNDESCRIPTION', label: 'Description' },
+        { key: 'BELOWSALESAMOUNT', label: 'Below Sales Amt' },
+        { key: 'BELOWTAXES', label: 'Below GST (%)' },
+        { key: 'ABOVETAXES', label: 'Above GST (%)' },
         { key: 'CREATEDDATE', label: 'Created Date' },
         { key: 'actions', label: 'Actions' },
     ];
+
+    // Enrich data with HSN description
+    const enrichedData = useMemo(() => {
+        return filteredData.map((item: HSNTaxData) => {
+            const hsn = hsnList.find((h: any) => h.code === item.HSNCODE);
+            return {
+                ...item,
+                HSNDESCRIPTION: hsn?.description || 'N/A',
+            };
+        });
+    }, [filteredData, hsnList]);
 
     /* -------------------- FORMAT HELPERS -------------------- */
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-IN', {
             style: 'currency',
             currency: 'INR',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
         }).format(amount);
-    };
-
-    const formatGSTRates = (gst: GSTRates) => {
-        return `S:${gst.stateGST}% C:${gst.centralGST}% I:${gst.interGST}% Ser:${gst.serviceGST}%`;
     };
 
     const formatDate = (dateString?: string) => {
@@ -429,13 +318,13 @@ export default function HSNTaxMaster() {
 
     /* -------------------- EXPORT -------------------- */
     const handleExport = (option: string) => {
-        setData(filteredData);
+        setData(enrichedData);
         setColumns([
-            { key: "hsnCode", label: "HSN Code" },
-            { key: "hsnDescription", label: "Description" },
-            { key: "salesAmount", label: "Sales Amount" },
-            { key: "belowGst", label: "Below GST" },
-            { key: "aboveGst", label: "Above GST" },
+            { key: "HSNCODE", label: "HSN Code" },
+            { key: "HSNDESCRIPTION", label: "Description" },
+            { key: "BELOWSALESAMOUNT", label: "Below Sales Amount" },
+            { key: "BELOWTAXES", label: "Below GST (%)" },
+            { key: "ABOVETAXES", label: "Above GST (%)" },
         ]);
         setShowSno(true);
         title?.("HSN Tax Master");
@@ -458,8 +347,8 @@ export default function HSNTaxMaster() {
                     HSN TAX MASTER
                 </Text>
 
-                <Grid templateColumns={{ base: "1fr", lg: "1fr 1fr" }} gap={4} width="100%">
-                    {/* Left Column - HSN Search and Sales Amount */}
+                <Grid templateColumns={{ base: "1fr", lg: "350px 1fr" }} gap={4} width="100%">
+                    {/* Left Column - HSN and Sales Amount */}
                     <GridItem>
                         <Card.Root border="1px solid #eef" bg={theme.colors.primary}>
                             <Card.Header pb={2}>
@@ -467,114 +356,31 @@ export default function HSNTaxMaster() {
                             </Card.Header>
                             <Card.Body>
                                 <VStack gap={3}>
-                                    {/* HSN Search */}
-                                    <Box width="100%" position="relative">
+                                    {/* HSN Selection */}
+                                    <Box width="100%">
                                         <Box display="flex" alignItems="center" gap={2}>
-                                            <Box minW="100px" fontSize="2xs">SEARCH HSN :</Box>
-                                            <Box position="relative" flex={1}>
-                                                <Input
-                                                    value={formSearchTerm}
-                                                    onChange={(e) => setFormSearchTerm(e.target.value)}
-                                                    placeholder="Search by HSN code or description"
-                                                    size="2xs"
-                                                    css={{
-                                                        backgroundColor: "#eee",
-                                                        color: "#111827",
-                                                        border: "1px solid #e5e7eb",
-                                                        borderRadius: "20px",
-                                                        height: "30px",
-                                                        fontSize: "10px",
-                                                        width: "100%",
-                                                        padding: "0 30px 0 10px",
-                                                    }}
+                                            <Box minW="100px" fontSize="2xs">HSN CODE :</Box>
+                                            <Box flex={1}>
+                                                <SelectCombobox
+                                                    ref={hsnRef}
+                                                    value={form.HSNCODE}
+                                                    onChange={(value) => handleChange("HSNCODE", value)}
+                                                    items={hsnItems}
+                                                    placeholder="Select HSN code"
+                                                    disable={!!editId}
                                                 />
-                                                <Box position="absolute" right="8px" top="6px">
-                                                    <AiOutlineSearch size={14} color="#666" />
-                                                </Box>
                                             </Box>
                                         </Box>
-                                        
-                                        {/* Search Results Dropdown */}
-                                        {showSearchResults && (
-                                            <Box
-                                                position="absolute"
-                                                top="100%"
-                                                left="110px"
-                                                right="0"
-                                                bg="white"
-                                                border="1px solid #eef"
-                                                borderRadius="md"
-                                                mt={1}
-                                                maxH="200px"
-                                                overflowY="auto"
-                                                zIndex={10}
-                                                boxShadow="lg"
-                                            >
-                                                {searchResults.map((hsn) => (
-                                                    <Box
-                                                        key={hsn.HSNCODE}
-                                                        p={2}
-                                                        cursor="pointer"
-                                                        _hover={{ bg: "#f5f5f5" }}
-                                                        onClick={() => selectHSN(hsn)}
-                                                        borderBottom="1px solid #eef"
-                                                        fontSize="2xs"
-                                                    >
-                                                        <Text fontWeight="bold">{hsn.HSNNUMBER}</Text>
-                                                        <Text color="gray.600">{hsn.HSDESCRIPTION}</Text>
-                                                    </Box>
-                                                ))}
-                                            </Box>
-                                        )}
                                     </Box>
 
-                                    {/* HSN Code Display */}
+                                    {/* Below Sales Amount */}
                                     <Box width="100%" display="flex" alignItems="center" gap={2}>
-                                        <Box minW="100px" fontSize="2xs">HSN CODE :</Box>
-                                        <Input
-                                            value={form.hsnCode}
-                                            readOnly
-                                            size="2xs"
-                                            css={{
-                                                backgroundColor: "#f5f5f5",
-                                                color: "#111827",
-                                                border: "1px solid #e5e7eb",
-                                                borderRadius: "20px",
-                                                height: "30px",
-                                                fontSize: "10px",
-                                                width: "200px",
-                                                padding: "0 10px",
-                                            }}
-                                        />
-                                    </Box>
-
-                                    {/* HSN Description */}
-                                    <Box width="100%" display="flex" alignItems="center" gap={2}>
-                                        <Box minW="100px" fontSize="2xs">DESCRIPTION :</Box>
-                                        <Input
-                                            value={form.hsnDescription}
-                                            readOnly
-                                            size="2xs"
-                                            css={{
-                                                backgroundColor: "#f5f5f5",
-                                                color: "#111827",
-                                                border: "1px solid #e5e7eb",
-                                                borderRadius: "20px",
-                                                height: "30px",
-                                                fontSize: "10px",
-                                                width: "300px",
-                                                padding: "0 10px",
-                                            }}
-                                        />
-                                    </Box>
-
-                                    {/* Sales Amount */}
-                                    <Box width="100%" display="flex" alignItems="center" gap={2} mt={2}>
                                         <Box minW="100px" fontSize="2xs">SALES AMOUNT :</Box>
                                         <Input
+                                            ref={salesAmountRef}
                                             type="number"
-                                            value={form.salesAmount || ""}
-                                            onChange={(e) => handleChange("salesAmount", parseFloat(e.target.value) || 0)}
+                                            value={form.BELOWSALESAMOUNT || ""}
+                                            onChange={(e) => handleChange("BELOWSALESAMOUNT", parseFloat(e.target.value) || 0)}
                                             size="2xs"
                                             placeholder="Enter sales amount"
                                             min="0"
@@ -586,7 +392,7 @@ export default function HSNTaxMaster() {
                                                 borderRadius: "20px",
                                                 height: "30px",
                                                 fontSize: "10px",
-                                                width: "200px",
+                                                width: "150px",
                                                 padding: "0 10px",
                                             }}
                                         />
@@ -596,112 +402,116 @@ export default function HSNTaxMaster() {
                         </Card.Root>
                     </GridItem>
 
-                    {/* Right Column - GST Sections */}
+                    {/* Right Column - Tax Sections */}
                     <GridItem>
                         <Grid templateColumns="1fr 1fr" gap={3}>
                             {/* Below GST Section */}
                             <GridItem>
                                 <Card.Root border="1px solid #eef" bg={theme.colors.primary}>
                                     <Card.Header pb={2} bg="blue.50">
-                                        <Text fontSize="xs" fontWeight="600" color="blue.800">BELOW GST</Text>
+                                        <Text fontSize="xs" fontWeight="600" color="blue.800">BELOW GST (%)</Text>
                                     </Card.Header>
                                     <Card.Body>
                                         <VStack gap={2}>
                                             <Box display="flex" alignItems="center" gap={2} width="100%">
-                                                <Box minW="70px" fontSize="2xs">State GST :</Box>
+                                                <Box minW="70px" fontSize="2xs">SGST :</Box>
                                                 <Input
+                                                    ref={belowSgstRef}
                                                     type="number"
-                                                    value={form.belowGst.stateGST || ""}
-                                                    onChange={(e) => handleGSTChange('belowGst', 'stateGST', e.target.value)}
+                                                    value={form.BELOWSGSTTAXCODE || ""}
+                                                    onChange={(e) => handleChange("BELOWSGSTTAXCODE", parseFloat(e.target.value) || 0)}
                                                     size="2xs"
                                                     placeholder="%"
                                                     min="0"
                                                     max="100"
-                                                    step="0.1"
-                                                    width="80px"
+                                                    step="0.01"
+                                                    width="100px"
                                                     css={{
                                                         backgroundColor: "#eee",
                                                         color: "#111827",
                                                         border: "1px solid #e5e7eb",
                                                         borderRadius: "20px",
-                                                        height: "25px",
+                                                        height: "30px",
                                                         fontSize: "10px",
-                                                        padding: "0 8px",
+                                                        padding: "0 10px",
                                                     }}
                                                 />
                                                 <Text fontSize="2xs">%</Text>
                                             </Box>
 
                                             <Box display="flex" alignItems="center" gap={2} width="100%">
-                                                <Box minW="70px" fontSize="2xs">Central GST :</Box>
+                                                <Box minW="70px" fontSize="2xs">CGST :</Box>
                                                 <Input
+                                                    ref={belowCgstRef}
                                                     type="number"
-                                                    value={form.belowGst.centralGST || ""}
-                                                    onChange={(e) => handleGSTChange('belowGst', 'centralGST', e.target.value)}
+                                                    value={form.BELOWCGSTTAXCODE || ""}
+                                                    onChange={(e) => handleChange("BELOWCGSTTAXCODE", parseFloat(e.target.value) || 0)}
                                                     size="2xs"
                                                     placeholder="%"
                                                     min="0"
                                                     max="100"
-                                                    step="0.1"
-                                                    width="80px"
+                                                    step="0.01"
+                                                    width="100px"
                                                     css={{
                                                         backgroundColor: "#eee",
                                                         color: "#111827",
                                                         border: "1px solid #e5e7eb",
                                                         borderRadius: "20px",
-                                                        height: "25px",
+                                                        height: "30px",
                                                         fontSize: "10px",
-                                                        padding: "0 8px",
+                                                        padding: "0 10px",
                                                     }}
                                                 />
                                                 <Text fontSize="2xs">%</Text>
                                             </Box>
 
                                             <Box display="flex" alignItems="center" gap={2} width="100%">
-                                                <Box minW="70px" fontSize="2xs">Inter GST :</Box>
+                                                <Box minW="70px" fontSize="2xs">IGST :</Box>
                                                 <Input
+                                                    ref={belowIgstRef}
                                                     type="number"
-                                                    value={form.belowGst.interGST || ""}
-                                                    onChange={(e) => handleGSTChange('belowGst', 'interGST', e.target.value)}
+                                                    value={form.BELOWIGSTTAXCODE || ""}
+                                                    onChange={(e) => handleChange("BELOWIGSTTAXCODE", parseFloat(e.target.value) || 0)}
                                                     size="2xs"
                                                     placeholder="%"
                                                     min="0"
                                                     max="100"
-                                                    step="0.1"
-                                                    width="80px"
+                                                    step="0.01"
+                                                    width="100px"
                                                     css={{
                                                         backgroundColor: "#eee",
                                                         color: "#111827",
                                                         border: "1px solid #e5e7eb",
                                                         borderRadius: "20px",
-                                                        height: "25px",
+                                                        height: "30px",
                                                         fontSize: "10px",
-                                                        padding: "0 8px",
+                                                        padding: "0 10px",
                                                     }}
                                                 />
                                                 <Text fontSize="2xs">%</Text>
                                             </Box>
 
                                             <Box display="flex" alignItems="center" gap={2} width="100%">
-                                                <Box minW="70px" fontSize="2xs">Service GST :</Box>
+                                                <Box minW="70px" fontSize="2xs">SERVICE :</Box>
                                                 <Input
+                                                    ref={belowSrvRef}
                                                     type="number"
-                                                    value={form.belowGst.serviceGST || ""}
-                                                    onChange={(e) => handleGSTChange('belowGst', 'serviceGST', e.target.value)}
+                                                    value={form.BELOWSRVTAXCODE || ""}
+                                                    onChange={(e) => handleChange("BELOWSRVTAXCODE", parseFloat(e.target.value) || 0)}
                                                     size="2xs"
                                                     placeholder="%"
                                                     min="0"
                                                     max="100"
-                                                    step="0.1"
-                                                    width="80px"
+                                                    step="0.01"
+                                                    width="100px"
                                                     css={{
                                                         backgroundColor: "#eee",
                                                         color: "#111827",
                                                         border: "1px solid #e5e7eb",
                                                         borderRadius: "20px",
-                                                        height: "25px",
+                                                        height: "30px",
                                                         fontSize: "10px",
-                                                        padding: "0 8px",
+                                                        padding: "0 10px",
                                                     }}
                                                 />
                                                 <Text fontSize="2xs">%</Text>
@@ -715,105 +525,109 @@ export default function HSNTaxMaster() {
                             <GridItem>
                                 <Card.Root border="1px solid #eef" bg={theme.colors.primary}>
                                     <Card.Header pb={2} bg="green.50">
-                                        <Text fontSize="xs" fontWeight="600" color="green.800">ABOVE GST</Text>
+                                        <Text fontSize="xs" fontWeight="600" color="green.800">ABOVE GST (%)</Text>
                                     </Card.Header>
                                     <Card.Body>
                                         <VStack gap={2}>
                                             <Box display="flex" alignItems="center" gap={2} width="100%">
-                                                <Box minW="70px" fontSize="2xs">State GST :</Box>
+                                                <Box minW="70px" fontSize="2xs">SGST :</Box>
                                                 <Input
+                                                    ref={aboveSgstRef}
                                                     type="number"
-                                                    value={form.aboveGst.stateGST || ""}
-                                                    onChange={(e) => handleGSTChange('aboveGst', 'stateGST', e.target.value)}
+                                                    value={form.ABOVESGSTTAXCODE || ""}
+                                                    onChange={(e) => handleChange("ABOVESGSTTAXCODE", parseFloat(e.target.value) || 0)}
                                                     size="2xs"
                                                     placeholder="%"
                                                     min="0"
                                                     max="100"
-                                                    step="0.1"
-                                                    width="80px"
+                                                    step="0.01"
+                                                    width="100px"
                                                     css={{
                                                         backgroundColor: "#eee",
                                                         color: "#111827",
                                                         border: "1px solid #e5e7eb",
                                                         borderRadius: "20px",
-                                                        height: "25px",
+                                                        height: "30px",
                                                         fontSize: "10px",
-                                                        padding: "0 8px",
+                                                        padding: "0 10px",
                                                     }}
                                                 />
                                                 <Text fontSize="2xs">%</Text>
                                             </Box>
 
                                             <Box display="flex" alignItems="center" gap={2} width="100%">
-                                                <Box minW="70px" fontSize="2xs">Central GST :</Box>
+                                                <Box minW="70px" fontSize="2xs">CGST :</Box>
                                                 <Input
+                                                    ref={aboveCgstRef}
                                                     type="number"
-                                                    value={form.aboveGst.centralGST || ""}
-                                                    onChange={(e) => handleGSTChange('aboveGst', 'centralGST', e.target.value)}
+                                                    value={form.ABOVECGSTTAXCODE || ""}
+                                                    onChange={(e) => handleChange("ABOVECGSTTAXCODE", parseFloat(e.target.value) || 0)}
                                                     size="2xs"
                                                     placeholder="%"
                                                     min="0"
                                                     max="100"
-                                                    step="0.1"
-                                                    width="80px"
+                                                    step="0.01"
+                                                    width="100px"
                                                     css={{
                                                         backgroundColor: "#eee",
                                                         color: "#111827",
                                                         border: "1px solid #e5e7eb",
                                                         borderRadius: "20px",
-                                                        height: "25px",
+                                                        height: "30px",
                                                         fontSize: "10px",
-                                                        padding: "0 8px",
+                                                        padding: "0 10px",
                                                     }}
                                                 />
                                                 <Text fontSize="2xs">%</Text>
                                             </Box>
 
                                             <Box display="flex" alignItems="center" gap={2} width="100%">
-                                                <Box minW="70px" fontSize="2xs">Inter GST :</Box>
+                                                <Box minW="70px" fontSize="2xs">IGST :</Box>
                                                 <Input
+                                                    ref={aboveIgstRef}
                                                     type="number"
-                                                    value={form.aboveGst.interGST || ""}
-                                                    onChange={(e) => handleGSTChange('aboveGst', 'interGST', e.target.value)}
+                                                    value={form.ABOVEIGSTTAXCODE || ""}
+                                                    onChange={(e) => handleChange("ABOVEIGSTTAXCODE", parseFloat(e.target.value) || 0)}
                                                     size="2xs"
                                                     placeholder="%"
                                                     min="0"
                                                     max="100"
-                                                    step="0.1"
-                                                    width="80px"
+                                                    step="0.01"
+                                                    width="100px"
                                                     css={{
                                                         backgroundColor: "#eee",
                                                         color: "#111827",
                                                         border: "1px solid #e5e7eb",
                                                         borderRadius: "20px",
-                                                        height: "25px",
+                                                        height: "30px",
                                                         fontSize: "10px",
-                                                        padding: "0 8px",
+                                                        padding: "0 10px",
                                                     }}
                                                 />
                                                 <Text fontSize="2xs">%</Text>
                                             </Box>
 
                                             <Box display="flex" alignItems="center" gap={2} width="100%">
-                                                <Box minW="70px" fontSize="2xs">Service GST :</Box>
+                                                <Box minW="70px" fontSize="2xs">SERVICE :</Box>
                                                 <Input
+                                                    ref={aboveSrvRef}
                                                     type="number"
-                                                    value={form.aboveGst.serviceGST || ""}
-                                                    onChange={(e) => handleGSTChange('aboveGst', 'serviceGST', e.target.value)}
+                                                    value={form.ABOVESRVTAXCODE || ""}
+                                                    onChange={(e) => handleChange("ABOVESRVTAXCODE", parseFloat(e.target.value) || 0)}
                                                     size="2xs"
                                                     placeholder="%"
                                                     min="0"
                                                     max="100"
-                                                    step="0.1"
-                                                    width="80px"
+                                                    step="0.01"
+                                                    width="100px"
                                                     css={{
                                                         backgroundColor: "#eee",
                                                         color: "#111827",
                                                         border: "1px solid #e5e7eb",
                                                         borderRadius: "20px",
-                                                        height: "25px",
+                                                        height: "30px",
                                                         fontSize: "10px",
-                                                        padding: "0 8px",
+                                                        padding: "0 10px",
                                                     }}
                                                 />
                                                 <Text fontSize="2xs">%</Text>
@@ -828,9 +642,10 @@ export default function HSNTaxMaster() {
 
                 <HStack width="100%" pt={2} justifyContent="flex-end">
                     <Button
+                        ref={saveRef}
                         size="xs"
                         colorPalette="blue"
-                        loading={isLoading}
+                        loading={isLoading || createMutation.isPending || updateMutation.isPending}
                         onClick={handleSave}
                     >
                         <AiOutlineSave /> {editId ? "Update" : "Save"}
@@ -854,7 +669,7 @@ export default function HSNTaxMaster() {
                             <Input
                                 value={tableSearchTerm}
                                 onChange={(e) => setTableSearchTerm(e.target.value)}
-                                placeholder="Search by HSN code or description..."
+                                placeholder="Search by HSN code..."
                                 size="2xs"
                                 css={{
                                     backgroundColor: "#fff",
@@ -917,43 +732,41 @@ export default function HSNTaxMaster() {
 
                 <CustomTable
                     columns={columns}
-                    data={filteredData}
-                    isLoading={isLoading}
-                    renderRow={(item: HSNSalesData, index: number) => (
+                    data={enrichedData}
+                    isLoading={isApiLoading || isLoading}
+                    renderRow={(item: any, index: number) => (
                         <>
                             <Table.Cell>{index + 1}</Table.Cell>
                             <Table.Cell>
                                 <Badge colorPalette="blue" fontSize="2xs">
-                                    {item.hsnCode}
+                                    {item.HSNCODE}
                                 </Badge>
                             </Table.Cell>
                             <Table.Cell>
-                                <Text maxW="200px" whiteSpace="normal" wordBreak="break-word" fontSize="2xs">
-                                    {item.hsnDescription}
-                                </Text>
+                                <Text fontSize="2xs">{item.HSNDESCRIPTION}</Text>
                             </Table.Cell>
                             <Table.Cell>
                                 <Text fontWeight="bold" color="green.600" fontSize="2xs">
-                                    {formatCurrency(item.salesAmount)}
+                                    {formatCurrency(item.BELOWSALESAMOUNT)}
                                 </Text>
                             </Table.Cell>
                             <Table.Cell>
                                 <VStack gap={0.5} align="start">
-                                    <Badge colorPalette="blue" fontSize="2xs">S:{item.belowGst.stateGST}%</Badge>
-                                    <Badge colorPalette="green" fontSize="2xs">C:{item.belowGst.centralGST}%</Badge>
-                                    <Badge colorPalette="purple" fontSize="2xs">I:{item.belowGst.interGST}%</Badge>
-                                    <Badge colorPalette="orange" fontSize="2xs">Ser:{item.belowGst.serviceGST}%</Badge>
+                                    <Badge colorPalette="blue" fontSize="2xs">SGST: {item.BELOWSGSTTAXCODE}%</Badge>
+                                    <Badge colorPalette="green" fontSize="2xs">CGST: {item.BELOWCGSTTAXCODE}%</Badge>
+                                    <Badge colorPalette="purple" fontSize="2xs">IGST: {item.BELOWIGSTTAXCODE}%</Badge>
+                                    <Badge colorPalette="orange" fontSize="2xs">SRV: {item.BELOWSRVTAXCODE}%</Badge>
                                 </VStack>
                             </Table.Cell>
                             <Table.Cell>
                                 <VStack gap={0.5} align="start">
-                                    <Badge colorPalette="blue" fontSize="2xs">S:{item.aboveGst.stateGST}%</Badge>
-                                    <Badge colorPalette="green" fontSize="2xs">C:{item.aboveGst.centralGST}%</Badge>
-                                    <Badge colorPalette="purple" fontSize="2xs">I:{item.aboveGst.interGST}%</Badge>
-                                    <Badge colorPalette="orange" fontSize="2xs">Ser:{item.aboveGst.serviceGST}%</Badge>
+                                    <Badge colorPalette="blue" fontSize="2xs">SGST: {item.ABOVESGSTTAXCODE}%</Badge>
+                                    <Badge colorPalette="green" fontSize="2xs">CGST: {item.ABOVECGSTTAXCODE}%</Badge>
+                                    <Badge colorPalette="purple" fontSize="2xs">IGST: {item.ABOVEIGSTTAXCODE}%</Badge>
+                                    <Badge colorPalette="orange" fontSize="2xs">SRV: {item.ABOVESRVTAXCODE}%</Badge>
                                 </VStack>
                             </Table.Cell>
-                            <Table.Cell fontSize="2xs">{formatDate(item.createdDate)}</Table.Cell>
+                            <Table.Cell fontSize="2xs">{formatDate(item.CREATEDDATE)}</Table.Cell>
                             <Table.Cell>
                                 <Box display="flex" justifyContent="center" gap={2}>
                                     <FaEdit 
@@ -963,7 +776,7 @@ export default function HSNTaxMaster() {
                                         size={14}
                                     />
                                     <FaTrash 
-                                        onClick={() => handleDelete(item.id!)} 
+                                        onClick={() => handleDelete(item.HSNTAXCODE!)} 
                                         cursor="pointer"
                                         color="red.500"
                                         size={14}
@@ -977,10 +790,43 @@ export default function HSNTaxMaster() {
                     borderColor="white"
                     bodyBg={theme.colors.primary}
                     highlightRowId={highlightedId ? Number(highlightedId) : null}
-                    rowIdKey="id"
+                    rowIdKey="HSNTAXCODE"
                     emptyText={tableSearchTerm ? `No results found for "${tableSearchTerm}"` : "No HSN Tax data available"}
                 />
             </Box>
         </Box>
     );
 }
+
+// Badge component helper
+const Badge = ({ children, colorPalette, fontSize, px, py, borderRadius }: any) => {
+    const bgColor = 
+        colorPalette === "green" ? "green.100" : 
+        colorPalette === "red" ? "red.100" :
+        colorPalette === "blue" ? "blue.100" : 
+        colorPalette === "purple" ? "purple.100" :
+        colorPalette === "orange" ? "orange.100" : "gray.100";
+    
+    const textColor = 
+        colorPalette === "green" ? "green.800" : 
+        colorPalette === "red" ? "red.800" :
+        colorPalette === "blue" ? "blue.800" : 
+        colorPalette === "purple" ? "purple.800" :
+        colorPalette === "orange" ? "orange.800" : "gray.800";
+    
+    return (
+        <Box
+            as="span"
+            bg={bgColor}
+            color={textColor}
+            fontSize={fontSize}
+            px={px}
+            py={py}
+            borderRadius={borderRadius}
+            display="inline-block"
+            fontWeight="medium"
+        >
+            {children}
+        </Box>
+    );
+};
