@@ -44,12 +44,22 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
 
     const [touched, setTouched] = useState<Record<string, boolean>>({});
 
-    const handleKeyDown = (e: React.KeyboardEvent, fieldName: string) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            focusNext(fieldName);
+ const handleKeyDown = (e: React.KeyboardEvent, fieldName: string) => {
+    if (e.key === "Enter") {
+        e.preventDefault();
+
+        // Special handling for barcode scanner
+        if (fieldName === "ORIONBARCODE") {
+            const barcodeValue = formData[fieldName];
+
+            if (barcodeValue) {
+                console.log("Scanned Barcode:", barcodeValue);
+            }
         }
-    };
+
+        focusNext(fieldName);
+    }
+};
 
     const handleBlur = (fieldName: string) => {
         setTouched(prev => ({ ...prev, [fieldName]: true }));
