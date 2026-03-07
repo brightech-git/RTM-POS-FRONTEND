@@ -90,26 +90,39 @@ function RateMaster() {
 
     // Filter subproducts when product changes
     useEffect(() => {
-        if (form.PRODUCTCODE) {
-            const filtered = subProducts.filter(
-                (s: any) => s.product?.PRODUCTCODE?.toString() === form.PRODUCTCODE.toString()
-            );
-            setFilteredSubProducts(filtered);
-            
-            // Clear subproduct if it doesn't belong to selected product
-            if (form.SUBPRODUCTCODE) {
-                const stillValid = filtered.some(
-                    (s: any) => s.SUBPRODUCTCODE?.toString() === String(form.SUBPRODUCTCODE).toString()
-                );
-                if (!stillValid) {
-                    setForm(prev => ({ ...prev, SUBPRODUCTCODE: "" }));
-                }
-            }
-        } else {
-            setFilteredSubProducts([]);
-            setForm(prev => ({ ...prev, SUBPRODUCTCODE: "" }));
+    if (form.PRODUCTCODE) {
+        const filtered = subProducts.filter(
+            (s: any) =>
+                s.product?.PRODUCTCODE?.toString() === form.PRODUCTCODE.toString()
+        );
+
+        setFilteredSubProducts(filtered);
+
+        // AUTO SELECT if only one subproduct exists
+        if (filtered.length === 1) {
+            setForm(prev => ({
+                ...prev,
+                SUBPRODUCTCODE: filtered[0].SUBPRODUCTCODE.toString()
+            }));
         }
-    }, [form.PRODUCTCODE, subProducts]);
+
+        // Clear invalid subproduct
+        if (form.SUBPRODUCTCODE) {
+            const stillValid = filtered.some(
+                (s: any) =>
+                    s.SUBPRODUCTCODE?.toString() ===
+                    form.SUBPRODUCTCODE?.toString()
+            );
+
+            if (!stillValid) {
+                setForm(prev => ({ ...prev, SUBPRODUCTCODE: "" }));
+            }
+        }
+    } else {
+        setFilteredSubProducts([]);
+        setForm(prev => ({ ...prev, SUBPRODUCTCODE: "" }));
+    }
+}, [form.PRODUCTCODE, subProducts]);
 
     // Prepare subproducts with string values for the dropdown
     const subProductsForDropdown = filteredSubProducts.map((s: any) => ({
@@ -193,6 +206,7 @@ function RateMaster() {
     };
 
     const handleSave = () => {
+        console.log("rate form data",form)
         const errors: Record<string, string> = {};
 
         // Validation
@@ -249,7 +263,11 @@ function RateMaster() {
             createRate({
                 rate: payload,
                 productCode: Number(form.PRODUCTCODE),
-                subProductCode: form.SUBPRODUCTCODE ? Number(form.SUBPRODUCTCODE) : undefined,
+              subProductCode:
+    form.SUBPRODUCTCODE ||
+    filteredSubProducts.length === 1
+        ? Number(form.SUBPRODUCTCODE || filteredSubProducts[0]?.SUBPRODUCTCODE)
+        : undefined,
                 createdBy: 1
             }, {
                 onSuccess: () => {

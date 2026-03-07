@@ -176,8 +176,8 @@ const createMenuData = (): SidebarMenu => ({
     icon: Database,
     items: [
       { label: "Invoice", route: "/dashboard/Stock/Invoice", icon: Receipt },
-      // { label: "Non-Tag Generation", route: "/dashboard/Stock/Non-TagGeneration", icon: FileText },
-      // { label: "Tag Generation", route: "/dashboard/Stock/TagGeneration", icon: Tag },
+      { label: "Non-Tag Generation", route: "/dashboard/Stock/Non-TagGeneration", icon: FileText },
+      { label: "Tag Generation", route: "/dashboard/Stock/TagGeneration", icon: Tag },
       // { label: "Tag Print", route: "/dashboard/Stock/TagPrint", icon: PrinterIcon },
     ],
   },

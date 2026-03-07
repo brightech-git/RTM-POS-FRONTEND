@@ -115,10 +115,20 @@ function OrionBarcodeMaster() {
 
         setFilteredSubProducts(filtered);
 
+        // ✅ AUTO SELECT if only one subproduct
+        if (filtered.length === 1) {
+            setForm(prev => ({
+                ...prev,
+                SUBPRODUCTCODE: filtered[0].SUBPRODUCTCODE.toString()
+            }));
+            return;
+        }
+
+        // Clear invalid selection
         if (form.SUBPRODUCTCODE) {
             const stillValid = filtered.some(
                 (s: any) =>
-                    s.SUBPRODUCTCODE?.toString() === String(form.SUBPRODUCTCODE).toString()
+                    s.SUBPRODUCTCODE?.toString() === form.SUBPRODUCTCODE?.toString()
             );
 
             if (!stillValid) {
@@ -254,7 +264,11 @@ const handleChange = (field: string, value: any) => {
         const payload: Barcode = {
             VENDORCODE: Number(form.VENDORCODE),
             PRODUCTCODE: Number(form.PRODUCTCODE),
-            SUBPRODUCTCODE: form.SUBPRODUCTCODE ? Number(form.SUBPRODUCTCODE) : undefined,
+            SUBPRODUCTCODE:
+    form.SUBPRODUCTCODE ||
+    filteredSubProducts.length === 1
+        ? Number(form.SUBPRODUCTCODE || filteredSubProducts[0]?.SUBPRODUCTCODE)
+        : undefined,
             ORIONBARCODE: form.ORIONBARCODE,
             MRP: Number(form.MRP),
             PURRATE: Number(form.PURRATE),
