@@ -30,6 +30,7 @@ interface DynamicFormProps {
     disabled?: Record<string, boolean | undefined>;
     errors?: Record<string, string>;
     touchedFields?: Record<string, boolean>;
+    grid?: boolean; // ✅ New prop
 }
 
 export const DynamicForm: React.FC<DynamicFormProps> = ({
@@ -39,7 +40,8 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
     register,
     focusNext,
     disabled = {},
-    errors = {} // Default to empty object
+    errors = {} ,// Default to empty object
+    grid =false
 }) => {
 
     const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -66,16 +68,18 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
     };
 
     const renderField = (field: FormField) => {
-        const isDisabled = disabled[field.name] || field.disabled;
+        // Disabled by parent, global disabled map, or explicit disabled
+        const isDisabled: boolean = Boolean(
+            disabled[field.name] ||
+            field.disabled ||
+            (field.dependsOn && !formData[field.dependsOn])
+        );
+
         const showError = touched[field.name] && errors[field.name];
 
-        // Register ref function
         const setRef = (el: any) => {
-            if (el) {
-                register(field.name)(el);
-            }
+            if (el) register(field.name)(el);
         };
-
         const fieldComponent = () => {
             switch (field.type) {
 
@@ -134,6 +138,7 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
                         onEnter={() => focusNext(field.name)}
                         onKeyDown={(e) => handleKeyDown(e, field.name)}
                         onBlur={() => handleBlur(field.name)}
+                        maxWidth={field.maxWidth || field.maxW || field.width}
                     />
                 );
                 case 'password':
@@ -289,23 +294,49 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
     }
 
     return (
-        <Grid gap={2}>
-            {fields.map((field) => (
-                <Box
-                    key={field.name}
-                    display="flex"
-                    alignItems="flex-start"
-                    gap={2}
-                    gridColumn={field.colSpan ? `span ${field.colSpan}` : undefined}
-                >
-                    <Box minW="120px" fontSize="2xs" pt={2}>
-                        {field.label} {field.required && <span style={{ color: 'red' }}>*</span>}:
+        <Grid gap={2} templateColumns="repeat(2, 1fr)">
+            {grid ? (
+                (() => {
+                    const half = Math.ceil(fields.length / 2);
+                    const firstColumnFields = fields.slice(0, half);
+                    const secondColumnFields = fields.slice(half);
+
+                    return (
+                        <>
+                            <Box display="flex" flexDirection="column" gap={2}>
+                                {firstColumnFields.map((field) => (
+                                    <Box key={field.name} display="flex" gap={2} alignItems="flex-start">
+                                        <Box minW="120px" fontSize="11px" pt={2} fontWeight="semibold">
+                                            {field.label} {field.required && <span style={{ color: "red", fontSize: '14px' }}>*</span>}
+                                        </Box>
+                                        <Box flex="1">{renderField(field)}</Box>
+                                    </Box>
+                                ))}
+                            </Box>
+
+                            <Box display="flex" flexDirection="column" gap={2}>
+                                {secondColumnFields.map((field) => (
+                                    <Box key={field.name} display="flex" gap={2} alignItems="flex-start">
+                                        <Box minW="120px" fontSize="11px" pt={2} fontWeight="semibold">
+                                            {field.label} {field.required && <span style={{ color: "red", fontSize: '14px' }}>*</span>}
+                                        </Box>
+                                        <Box flex="1">{renderField(field)}</Box>
+                                    </Box>
+                                ))}
+                            </Box>
+                        </>
+                    );
+                })()
+            ) : (
+                fields.map((field) => (
+                    <Box key={field.name} display="flex" gap={2} alignItems="flex-start">
+                        <Box minW="120px" fontSize="11px" pt={2} fontWeight="semibold">
+                            {field.label} {field.required && <span style={{ color: "red" ,fontSize:'14px'}} >*</span>} 
+                        </Box>
+                        <Box flex="1">{renderField(field)}</Box>
                     </Box>
-                    <Box flex="1">
-                        {renderField(field)}
-                    </Box>
-                </Box>
-            ))}
+                ))
+            )}
         </Grid>
     );
 };
