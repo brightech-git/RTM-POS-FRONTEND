@@ -1,96 +1,70 @@
 // service/CompanyService.ts
 import { axiosInstance } from "@/api/axiosInstance";
 
-export interface ApiResponse<T = any> {
-    success: boolean;
-    message: string;
-    data?: T;
-}
-
 export interface Company {
-    COMPANYID: string;
+    COMPANYCODE: string;
     COMPANYNAME: string;
-    COSTID?: string;
+    COMPANYSHORTNAME?: string;
     ADDRESS1?: string;
     ADDRESS2?: string;
     ADDRESS3?: string;
+    AREA?: string;
+    CITY?: string;
     AREACODE?: string;
+    PINCODE?: string;
     PHONE?: string;
+    MOBILENO?: string;
     EMAIL?: string;
     GSTNO?: string;
+    GSTTINNO?: string;
     ACTIVE: "Y" | "N";
     STATEID?: string;
     LOGO?: string;
+    CREATEDDATE?: string;
+    CREATEDTIME?: string;
+    PASSWORD?: string;
+    PORTNO?: string;
+    SERVERNAME?: string;
+    USERID?: string;
+    
 }
 
-export interface CreateCompanyPayload {
-    COMPANYID: string;
-    COMPANYNAME: string;
-    COSTID?: string;
-    ADDRESS1?: string;
-    ADDRESS2?: string;
-    ADDRESS3?: string;
-    AREACODE?: string;
-    PHONE?: string;
-    EMAIL?: string;
-    GSTNO?: string;
-    ACTIVE: "Y" | "N";
-    STATEID?: string;
-    LOGO?: string;
+export interface CompanyResponse {
+    data: Company[];
+    message?: string;
+    status?: string;
 }
 
 export const CompanyService = {
-    getAll: async (): Promise<ApiResponse<Company[]>> => {
-        const { data } = await axiosInstance.get("/company");
+    // Get All Companies
+    getAll: async (): Promise<CompanyResponse> => {
+        const { data } = await axiosInstance.get("/company/all");
+         console.log("Company data",data)
         return data;
-    },
-
-    getById: async (companyId: string): Promise<ApiResponse<Company>> => {
-        const { data } = await axiosInstance.get(`/company/${companyId}`);
-        return data;
-    },
-
-    create: async (payload: CreateCompanyPayload, logo?: File): Promise<ApiResponse<Company>> => {
-        try{
-            const formData = new FormData();
-
-            console.log(payload, 'payload in service')
-
-            formData.append("company", new Blob([JSON.stringify(payload)], { type: "application/json" }));
-
-            if (logo) formData.append("logo", logo);
-
-            const response = await axiosInstance.post("/company", formData, {
-
-                headers: { "Content-Type": "multipart/form-data" },
-
-            });
-            console.log(response, 'data after compan')
-
-            return response.data;
-            
-        }
-        catch(error){
-           return Promise.reject(error);
-        }
        
     },
 
-    updateById: async (companyId: string, payload: CreateCompanyPayload, logo?: File): Promise<ApiResponse<Company>> => {
-        const formData = new FormData();
-        formData.append("company", new Blob([JSON.stringify(payload)], { type: "application/json" }));
+    // Get Company By Code
+    getByCode: async (code: string): Promise<{ data: Company }> => {
+        const { data } = await axiosInstance.get(`/company/${code}`);
+        return data;
+    },
 
-        // console.log(payload, 'payload in service');
-        // for (const [key, value] of formData.entries()) {
-        //     console.log(key, value);
-        // }
+    // Create Company
+    create: async (payload: Partial<Company>): Promise<{ data: Company }> => {
+        const { data } = await axiosInstance.post("/company/create", payload);
+        return data;
+    },
 
-        if (logo) formData.append("logo", logo);
-        
-        
-        const { data } = await axiosInstance.put(`/company/update`, formData, {
-            headers: { "Content-Type": "multipart/form-data" },
-        });
+    // Update Company
+    update: async (payload: Partial<Company>): Promise<{ data: Company }> => {
+        const { data } = await axiosInstance.put("/company/update", payload);
+        return data;
+    },
+
+    // Delete Company
+    delete: async (code: string): Promise<{ data: string }> => {
+        const { data } = await axiosInstance.delete(`/company/delete/${code}`);
         return data;
     },
 };

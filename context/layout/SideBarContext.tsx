@@ -142,18 +142,21 @@ const createMenuData = (): SidebarMenu => ({
           { label: "Operator", route: "/dashboard/Master/Users/Operator", icon: UserCog },
           // { label: "System Assigning", route: "/dashboard/Master/Users/SystemAssigning", icon: Settings },
           { label: "Company", route: "/dashboard/Master/Users/Company", icon: Building2 },
-          { label: "AccountHead", route: "/dashboard/Master/Users/AccountHead", icon: Users },
+          // { label: "AccountHead", route: "/dashboard/Master/Users/AccountHead", icon: Users },
         ],
       },
       Object: {
         icon: Package,
         items: [
           { label: "Product", route: "/dashboard/Master/Objects/Product", icon: Package },
-          // { label: "CreditCard", route: "/dashboard/Master/Object/CreditCard", icon: CreditCard },
-          // { label: "OrionBarCode", route: "/dashboard/Master/Object/OrionBarCode", icon: Barcode },
-          // { label: "RateUpdation", route: "/dashboard/Master/Object/RateUpdation", icon: TrendingUp },
-          // { label: "SubProduct", route: "/dashboard/Master/Object/SubProducts", icon: PackageCheck },
-          // { label: "Vendor", route: "/dashboard/Master/Object/Vendor", icon: Truck },
+         
+          
+       
+          { label: "SubProduct", route: "/dashboard/Master/Objects/SubProduct", icon: PackageCheck },
+             { label: "RateUpdation", route: "/dashboard/Master/Objects/RateUpdation", icon: TrendingUp },
+          { label: "Vendor", route: "/dashboard/Master/Objects/Vendor", icon: Truck },
+          { label: "OrionBarCode", route: "/dashboard/Master/Objects/OrionBarcode", icon: Barcode },
+           { label: "CreditCard", route: "/dashboard/Master/Objects/CreditCard", icon: CreditCard },
         ],
       },
       Utility: {
@@ -172,7 +175,7 @@ const createMenuData = (): SidebarMenu => ({
     type: "flat",
     icon: Database,
     items: [
-      // { label: "Invoice", route: "/dashboard/Stock/Invoice", icon: Receipt },
+      { label: "Invoice", route: "/dashboard/Stock/Invoice", icon: Receipt },
       // { label: "Non-Tag Generation", route: "/dashboard/Stock/Non-TagGeneration", icon: FileText },
       // { label: "Tag Generation", route: "/dashboard/Stock/TagGeneration", icon: Tag },
       // { label: "Tag Print", route: "/dashboard/Stock/TagPrint", icon: PrinterIcon },

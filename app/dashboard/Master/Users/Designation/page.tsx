@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
     Box,
     Button,
@@ -13,11 +13,13 @@ import {
     NativeSelect,
     For,
     Flex,
+    Input,
 } from "@chakra-ui/react";
 import { Table } from "@chakra-ui/react/table";
-import { AiOutlineSave } from "react-icons/ai";
+import { AiOutlineSave, AiOutlineSearch } from "react-icons/ai";
 import { IoIosExit } from "react-icons/io";
 import { FaEdit, FaTrash } from "react-icons/fa";
+import { FaPrint, FaFileExcel } from "react-icons/fa";
 import { Toaster, toaster } from "@/components/ui/toaster";
 import { useTheme } from "@/context/theme/themeContext";
 import {
@@ -32,7 +34,7 @@ import { CustomTable } from "@/component/table/CustomTable";
 import { CapitalizedInput } from "@/components/ui/CapitalizedInput";
 import { usePrint } from "@/context/print/usePrintContext";
 import { useRouter } from "next/navigation";
-import { FaPrint, FaFileExcel } from "react-icons/fa";
+import { useDebounce } from "@/hooks/Debounce/useDebounce"; // Create this custom hook
 
 // Types
 interface Designation {
@@ -49,6 +51,28 @@ interface CreateDesignationPayload {
     ACTIVE: "Y" | "N";
 }
 
+// Badge component helper
+const Badge = ({ children, colorPalette, ...props }: any) => {
+    const bgColor = colorPalette === "green" ? "green.100" : "red.100";
+    const textColor = colorPalette === "green" ? "green.800" : "red.800";
+
+    return (
+        <Box
+            as="span"
+            bg={bgColor}
+            color={textColor}
+            display="inline-block"
+            fontWeight="medium"
+            {...props}
+        >
+            {children}
+        </Box>
+    );
+};
+
+// Memoized Badge component
+const MemoizedBadge = React.memo(Badge);
+
 export default function DesignationMaster() {
     const { theme } = useTheme();
     const router = useRouter();
@@ -60,23 +84,40 @@ export default function DesignationMaster() {
     const updateMutation = useUpdateDesignation();
     const deleteMutation = useDeleteDesignation();
 
-    const designationList = designations ?? [];
+    const designationList = useMemo(() => designations ?? [], [designations]);
+
+    /* -------------------- SEARCH STATE -------------------- */
+    const [searchTerm, setSearchTerm] = useState("");
+    const debouncedSearchTerm = useDebounce(searchTerm, 300); // 300ms debounce
 
     /* -------------------- FORM STATE -------------------- */
-    const emptyForm: CreateDesignationPayload = {
+    const emptyForm: CreateDesignationPayload = useMemo(() => ({
         DESCRIPTION: "",
         ACTIVE: "Y",
-    };
+    }), []);
 
     const [form, setForm] = useState<CreateDesignationPayload>(emptyForm);
     const [editId, setEditId] = useState<number | null>(null);
     const [highlightedId, setHighlightedId] = useState<number | null>(null);
 
     /* -------------------- SELECT OPTIONS -------------------- */
-    const activeStatus = [
+    const activeStatus = useMemo(() => [
         { label: "YES", value: "Y" },
         { label: "NO", value: "N" },
-    ];
+    ], []);
+
+    /* -------------------- FILTERED DATA -------------------- */
+    const filteredDesignations = useMemo(() => {
+        if (!debouncedSearchTerm.trim()) {
+            return designationList;
+        }
+        
+        const searchLower = debouncedSearchTerm.toLowerCase().trim();
+        return designationList.filter((des: Designation) => 
+            des.DESCRIPTION?.toLowerCase().includes(searchLower) ||
+            des.DESIGNATIONCODE?.toString().includes(searchLower)
+        );
+    }, [designationList, debouncedSearchTerm]);
 
     /* -------------------- EFFECTS -------------------- */
     useEffect(() => {
@@ -106,16 +147,16 @@ export default function DesignationMaster() {
     }, [highlightedId]);
 
     /* -------------------- HANDLERS -------------------- */
-    const handleChange = (field: keyof CreateDesignationPayload, value: any) => {
+    const handleChange = useCallback((field: keyof CreateDesignationPayload, value: any) => {
         setForm((prev) => ({ ...prev, [field]: value }));
-    };
+    }, []);
 
-    const resetForm = () => {
+    const resetForm = useCallback(() => {
         setEditId(null);
         setForm(emptyForm);
-    };
+    }, [emptyForm]);
 
-    const validateForm = () => {
+    const validateForm = useCallback(() => {
         if (!form.DESCRIPTION?.trim()) {
             toastError("Description is required");
             return false;
@@ -125,9 +166,9 @@ export default function DesignationMaster() {
             return false;
         }
         return true;
-    };
+    }, [form.DESCRIPTION]);
 
-    const handleSave = async () => {
+    const handleSave = useCallback(async () => {
         if (!validateForm()) return;
 
         try {
@@ -151,6 +192,7 @@ export default function DesignationMaster() {
                 await designationRefetch();
             }
             resetForm();
+            setSearchTerm(""); // Clear search on save
         } catch (error) {
             console.error("Form submission error:", error);
             toaster.error({
@@ -158,13 +200,14 @@ export default function DesignationMaster() {
                 description: "Operation failed"
             });
         }
-    };
+    }, [editId, form, validateForm, updateMutation, createMutation, designationRefetch, resetForm]);
 
-    const handleEdit = (designation: Designation) => {
+    const handleEdit = useCallback((designation: Designation) => {
         setEditId(designation.DESIGNATIONCODE!);
-    };
+        setSearchTerm(""); // Clear search when editing
+    }, []);
 
-    const handleDelete = async (code: number) => {
+    const handleDelete = useCallback(async (code: number) => {
         if (window.confirm("Are you sure you want to delete this designation?")) {
             try {
                 await deleteMutation.mutateAsync(code);
@@ -181,37 +224,39 @@ export default function DesignationMaster() {
                 });
             }
         }
-    };
+    }, [deleteMutation, designationRefetch]);
+
+    const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchTerm(e.target.value);
+    }, []);
+
+    const clearSearch = useCallback(() => {
+        setSearchTerm("");
+    }, []);
 
     /* -------------------- TABLE COLUMNS -------------------- */
-    const designationColumns = [
+    const designationColumns = useMemo(() => [
         { key: 'SNO', label: 'S.No' },
         { key: 'DESIGNATIONCODE', label: 'Code' },
         { key: 'DESCRIPTION', label: 'Description' },
         { key: 'ACTIVE', label: 'Status' },
-
         { key: 'CREATEDDATE', label: 'Created Date' },
         { key: 'actions', label: 'Actions' },
-    ];
+    ], []);
 
     /* -------------------- FORMAT HELPERS -------------------- */
-    const formatDate = (dateString?: string) => {
+    const formatDate = useCallback((dateString?: string) => {
         if (!dateString) return "-";
         return new Date(dateString).toLocaleDateString("en-IN", {
             day: "2-digit",
             month: "2-digit",
             year: "numeric",
         });
-    };
-
-    const formatTime = (timeString?: string) => {
-        if (!timeString) return "-";
-        return timeString.substring(0, 5); // HH:MM format
-    };
+    }, []);
 
     /* -------------------- EXPORT -------------------- */
-    const handleExport = (option: string) => {
-        setData(designationList);
+    const handleExport = useCallback((option: string) => {
+        setData(filteredDesignations); // Export filtered data
         setColumns([
             { key: "DESIGNATIONCODE", label: "Code" },
             { key: "DESCRIPTION", label: "Description" },
@@ -223,7 +268,47 @@ export default function DesignationMaster() {
         setShowSno(true);
         title?.("Designation Master");
         router.push(`/print?export=${option}`);
-    };
+    }, [filteredDesignations, setData, setColumns, setShowSno, title, router]);
+
+    /* -------------------- RENDER ROW -------------------- */
+    const renderRow = useCallback((designation: Designation, index: number) => (
+        <>
+            <Table.Cell>{index + 1}</Table.Cell>
+            <Table.Cell>{designation.DESIGNATIONCODE}</Table.Cell>
+            <Table.Cell>{designation.DESCRIPTION}</Table.Cell>
+            <Table.Cell>
+                <MemoizedBadge
+                    colorPalette={designation.ACTIVE === "Y" ? "green" : "red"}
+                    fontSize="2xs"
+                    px={2}
+                    py={0.5}
+                    borderRadius="full"
+                >
+                    {designation.ACTIVE === "Y" ? "Active" : "Inactive"}
+                </MemoizedBadge>
+            </Table.Cell>
+            <Table.Cell>{formatDate(designation.CREATEDDATE)}</Table.Cell>
+            <Table.Cell>
+                <Box display="flex" justifyContent="center" gap={2}>
+                    <FaEdit
+                        onClick={() => handleEdit(designation)}
+                        cursor="pointer"
+                        color={theme.colors.primaryText}
+                        size={14}
+                        aria-label="Edit designation"
+                    />
+                    {/* Uncomment if delete is needed */}
+                    {/* <FaTrash 
+                        onClick={() => handleDelete(designation.DESIGNATIONCODE!)} 
+                        cursor="pointer"
+                        color="red.500"
+                        size={14}
+                        aria-label="Delete designation"
+                    /> */}
+                </Box>
+            </Table.Cell>
+        </>
+    ), [theme.colors.primaryText, handleEdit, formatDate]);
 
     /* -------------------- UI -------------------- */
     return (
@@ -231,9 +316,10 @@ export default function DesignationMaster() {
             fontWeight="semibold"
             bg={theme.colors.primary}
             color={theme.colors.secondary}
+            minH="100vh"
         >
             <Toaster />
-            <Grid templateColumns={{ base: "1fr", lg: "400px 1fr" }} gap={2}>
+            <Grid templateColumns={{ base: "1fr", lg: "400px 1fr" }} gap={2} p={2}>
                 {/* ---------------- FORM ---------------- */}
                 <GridItem>
                     <VStack bg={theme.colors.formColor} p={4} borderRadius="xl" border="1px solid #eef">
@@ -311,10 +397,40 @@ export default function DesignationMaster() {
                     <Box bg={theme.colors.formColor} p={2} borderRadius="xl" border="1px solid #eef">
                         <Box display='flex' mb={2} gap={2} justifyContent='space-between' alignItems='center'>
                             <Text fontWeight="semibold" fontSize="small">
-                                DESIGNATION LIST
+                                DESIGNATION LIST ({filteredDesignations.length})
                             </Text>
 
-                            <Flex>
+                            <Flex gap={2} alignItems="center">
+                                {/* SEARCH SECTION */}
+                                <Box position="relative" minW="200px">
+                                    <Input
+                                        placeholder="Search by name or code..."
+                                        size="xs"
+                                        value={searchTerm}
+                                        onChange={handleSearchChange}
+                                        borderRadius="md"
+                                        bg="white"
+                                        _placeholder={{ fontSize: "2xs" }}
+                                        pr="30px"
+                                    />
+                                    {searchTerm && (
+                                        <Button
+                                            size="2xs"
+                                            position="absolute"
+                                            right="5px"
+                                            top="50%"
+                                            transform="translateY(-50%)"
+                                            variant="ghost"
+                                            onClick={clearSearch}
+                                            p={1}
+                                            minW="auto"
+                                            h="auto"
+                                        >
+                                            ×
+                                        </Button>
+                                    )}
+                                </Box>
+
                                 <Button
                                     variant="ghost"
                                     size="xs"
@@ -341,78 +457,27 @@ export default function DesignationMaster() {
 
                         <CustomTable
                             columns={designationColumns}
-                            data={designationList}
+                            data={filteredDesignations}
                             isLoading={isLoading}
-                            renderRow={(designation: Designation, index: number) => (
-                                <>
-                                    <Table.Cell>{index + 1}</Table.Cell>
-                                    <Table.Cell>{designation.DESIGNATIONCODE}</Table.Cell>
-                                    <Table.Cell>{designation.DESCRIPTION}</Table.Cell>
-                                    <Table.Cell>
-                                        <Badge
-                                            colorPalette={designation.ACTIVE === "Y" ? "green" : "red"}
-                                            fontSize="2xs"
-                                            px={2}
-                                            py={0.5}
-                                            borderRadius="full"
-                                        >
-                                            {designation.ACTIVE === "Y" ? "Active" : "Inactive"}
-                                        </Badge>
-                                    </Table.Cell>
-
-                                    <Table.Cell>{formatDate(designation.CREATEDDATE)}</Table.Cell>
-
-                                    <Table.Cell>
-                                        <Box display="flex" justifyContent="center" gap={2}>
-                                            <FaEdit
-                                                onClick={() => handleEdit(designation)}
-                                                cursor="pointer"
-                                                color={theme.colors.primaryText}
-                                                size={14}
-                                            />
-                                            {/* <FaTrash 
-                                                onClick={() => handleDelete(designation.DESIGNATIONCODE!)} 
-                                                cursor="pointer"
-                                                color="red.500"
-                                                size={14}
-                                            /> */}
-                                        </Box>
-                                    </Table.Cell>
-                                </>
-                            )}
+                            renderRow={renderRow}
                             headerBg="blue.800"
                             headerColor="white"
                             borderColor="white"
                             bodyBg={theme.colors.primary}
                             highlightRowId={highlightedId ? Number(highlightedId) : null}
                             rowIdKey="DESIGNATIONCODE"
-                            emptyText="No designations available"
+                            emptyText={searchTerm ? "No matching designations found" : "No designations available"}
                         />
+                        
+                        {/* Search result summary */}
+                        {searchTerm && filteredDesignations.length === 0 && (
+                            <Text fontSize="2xs" color="gray.500" mt={2} textAlign="center">
+                                No results found for "{searchTerm}"
+                            </Text>
+                        )}
                     </Box>
                 </GridItem>
             </Grid>
         </Box>
     );
 }
-
-// Badge component helper
-const Badge = ({ children, colorPalette, fontSize, px, py, borderRadius }: any) => {
-    const bgColor = colorPalette === "green" ? "green.100" : "red.100";
-    const textColor = colorPalette === "green" ? "green.800" : "red.800";
-
-    return (
-        <Box
-            as="span"
-            bg={bgColor}
-            color={textColor}
-            fontSize={fontSize}
-            px={px}
-            py={py}
-            borderRadius={borderRadius}
-            display="inline-block"
-            fontWeight="medium"
-        >
-            {children}
-        </Box>
-    );
-};

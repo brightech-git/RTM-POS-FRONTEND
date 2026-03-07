@@ -21,8 +21,6 @@ import { usePrint } from "@/context/print/usePrintContext";
 import { useRouter } from "next/navigation";
 
 import { CustomTable } from "@/component/table/CustomTable";
-import { CapitalizedInput } from "@/components/ui/CapitalizedInput";
-import { SelectCombobox } from "@/components/ui/selectComboBox";
 import {
     useAllProducts,
     useProductById,
@@ -33,8 +31,6 @@ import { Product, ProductForm, AllProducts } from "@/types/product/Product";
 
 import { toastCreated, toastError, toastLoaded, toastUpdated } from "@/component/toast/toast";
 import ScrollToTop from "@/component/scroll/ScrollToTop";
-import { sellingUnit, TaggedOrNonTagged, TagType } from "@/data/product/ProductData";
-import { YesOrNo } from "@/data/YesOrNo/YesOrNoTypes";
 import { ProductConfig } from "@/config/Master/Object/Product";
 import { DynamicForm } from "@/component/form/DynamicForm";
 import { useEnterNavigation } from "@/component/form/useEnterNavigation";
@@ -106,9 +102,38 @@ function ProductMaster() {
     }, [highlightedId]);
 
     /* -------------------- HANDLERS -------------------- */
-    const handleChange = (field: any, value: any) => {
-        setForm((prev) => ({ ...prev, [field]: value }));
-    };
+const handleChange = (field: any, value: any) => {
+
+    // If product type changes
+    if (field === "PRODUCTTYPE") {
+
+        if (value === "NT") {
+            setForm(prev => ({
+                ...prev,
+                PRODUCTTYPE: value,
+                TAGTYPE: "S",
+                ORIONBARCODE: "Y"
+            }));
+            return;
+        }
+
+        // If user switches back to Tagged
+        if (value === "T") {
+            setForm(prev => ({
+                ...prev,
+                PRODUCTTYPE: value,
+                TAGTYPE: "S",
+                ORIONBARCODE: "N"
+            }));
+            return;
+        }
+    }
+
+    setForm(prev => ({
+        ...prev,
+        [field]: value
+    }));
+};
 
     const resetForm = () => {
         setEditId(null);
@@ -127,78 +152,94 @@ function ProductMaster() {
         });
     };
 
-    const handleSave = () => {
-        const errors: Record<string, string> = {};
+const handleSave = () => {
+     console.log('handleSave clicked', { form, editId }); 
+    const errors: Record<string, string> = {};
 
-        if (!form.PRODUCTNAME?.trim()) errors.PRODUCTNAME = "Product Name is required";
-        if (!form.SUBPRODUCT?.trim()) errors.SUBPRODUCT = "Subproduct is required";
-        if (!form.UNITCODE) errors.UNITCODE = "Selling Unit is required";
-        if (!form.PURUNITCODE) errors.PURUNITCODE = "Purchase Unit is required";
-        if (!form.PRODUCTTYPE?.trim()) errors.PRODUCTTYPE = "Product Type is required";
+    // Validation
+    if (!form.PRODUCTNAME?.trim()) errors.PRODUCTNAME = "Product Name is required";
+    if (!form.SUBPRODUCT?.trim()) errors.SUBPRODUCT = "Subproduct is required";
+    if (!form.UNITCODE) errors.UNITCODE = "Selling Unit is required";
+    if (!form.PURUNITCODE) errors.PURUNITCODE = "Purchase Unit is required";
+    if (!form.PRODUCTTYPE?.trim()) errors.PRODUCTTYPE = "Product Type is required";
 
-        if (form.PRODUCTTYPE === "NT") {
-            // auto-set for NT
-            form.TAGTYPE = "S";
-            form.ORIONBARCODE = "Y";
-            if (!form.ORIONBARCODE?.trim()) errors.ORIONBARCODE = "Orion Barcode selection is required for tagged products";
-        } else {
-            if (!form.TAGTYPE?.trim()) errors.TAGTYPE = "Tag Type is required for tagged products";
+    // Fix: Don't mutate form directly, just validate
+    if (form.PRODUCTTYPE === "NT") {
+        if (!form.ORIONBARCODE?.trim()) errors.ORIONBARCODE = "Orion Barcode selection is required for tagged products";
+    } else {
+        if (!form.TAGTYPE?.trim()) errors.TAGTYPE = "Tag Type is required for tagged products";
+    }
 
-        }
+    if (!form.ALLOWDISCOUNT?.trim()) errors.ALLOWDISCOUNT = "Allow Discount selection is required";
+    if (!form.ACTIVE?.trim()) errors.ACTIVE = "Active selection is required";
+    if (!form.EXPIRYDAYS) errors.EXPIRYDAYS = "Expiry Days is required";
 
-        if (!form.ALLOWDISCOUNT?.trim()) errors.ALLOWDISCOUNT = "Allow Discount selection is required";
-        if (!form.ACTIVE?.trim()) errors.ACTIVE = "Active selection is required";
-        if (!form.EXPIRYDAYS) errors.EXPIRYDAYS = "Expiry Days is required";
+    setFormErrors(errors);
 
-        setFormErrors(errors);
+    // Stop if there are validation errors
+    if (Object.keys(errors).length > 0) {
+        console.log('Validation errors:', errors);
+        return;
+    }
 
-        if (Object.keys(errors).length > 0) return; // stop saving if errors exist
-        // ✅ Build final values safely (NO MUTATION)
-        const finalTagType =
-            form.PRODUCTTYPE === "NT" ? "S" : form.TAGTYPE;
+    // Build final values
+    console.log("FORM DATA:", form);
+const finalTagType =
+    form.PRODUCTTYPE === "N" ? "S" : form.TAGTYPE || "S";
 
-        const finalOrionBarcode =
-            form.PRODUCTTYPE === "NT" ? "Y" : form.ORIONBARCODE;
+const finalOrionBarcode =
+    form.PRODUCTTYPE === "N" ? "Y" : form.ORIONBARCODE || "N";
 
-        const payload: Product = {
-            PRODUCTNAME: form.PRODUCTNAME,
-            SHORTNAME: form.SHORTNAME,
-            SUBPRODUCT: form.SUBPRODUCT,
-            UNITCODE: Number(form.UNITCODE),
-            PURUNITCODE: Number(form.PURUNITCODE),
-            PRODUCTTYPE: form.PRODUCTTYPE,
-            TAGTYPE: finalTagType,
-            ORIONBARCODE: finalOrionBarcode,
-            ALLOWDISCOUNT: form.ALLOWDISCOUNT,
-            ACTIVE: form.ACTIVE,
-            EXPIRYDAYS: Number(form.EXPIRYDAYS),
-        };
-
-        // ✅ EDIT
-        if (editId) {
-            updateProduct(
-                { payload: { ...payload, PRODUCTCODE: Number(editId) } },
-                {
-                    onSuccess: () => {
-                        refetchProducts();
-                        resetForm();
-                        setHighlightedId(Number(editId));
-                        toastUpdated("Product");
-                    },
-                }
-            );
-        }
-        // ✅ CREATE (NO PRODUCTCODE)
-        else {
-            createProduct(payload, {
-                onSuccess: () => {
-                    refetchProducts();
-                    resetForm();
-                    toastCreated("Product");
-                },
-            });
-        }
+    const payload: Product = {
+        PRODUCTNAME: form.PRODUCTNAME,
+        SHORTNAME: form.SHORTNAME,
+        SUBPRODUCT: form.SUBPRODUCT,
+        UNITCODE: Number(form.UNITCODE),
+        PURUNITCODE: Number(form.PURUNITCODE),
+        PRODUCTTYPE: form.PRODUCTTYPE,
+        TAGTYPE: finalTagType,
+        ORIONBARCODE: finalOrionBarcode,
+        ALLOWDISCOUNT: form.ALLOWDISCOUNT,
+        ACTIVE: form.ACTIVE,
+        EXPIRYDAYS: Number(form.EXPIRYDAYS),
     };
+
+    console.log('Saving payload:', payload, 'Edit ID:', editId); // Debug log
+
+    if (editId) {
+        // Update existing product
+       updateProduct({
+    ...payload,
+    PRODUCTCODE: Number(editId)
+}, {
+    onSuccess: (response) => {
+        console.log('Update success:', response);
+        refetchProducts();
+        resetForm();
+        setHighlightedId(Number(editId));
+        toastUpdated("Product");
+    },
+    onError: (error) => {
+        console.error('Update error:', error);
+        toastError("Failed to update product");
+    },
+});
+    } else {
+        // Create new product
+        createProduct(payload, {
+            onSuccess: (response) => {
+                console.log('Create success:', response);
+                refetchProducts();
+                resetForm();
+                toastCreated("Product");
+            },
+            onError: (error) => {
+                console.error('Create error:', error);
+                toastError("Failed to create product");
+            },
+        });
+    }
+};
 
     const handleEdit = (product: Product) => {
         setEditId(String(product.PRODUCTCODE));

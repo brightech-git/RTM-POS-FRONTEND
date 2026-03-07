@@ -17,7 +17,7 @@ export const ProductConfig = (product:string,  editId: string|number|null): Form
     },
     {
         name: "SHORTNAME",
-        label: "Sub Product",
+        label: "Short Name",
         type: "text",
         required: true,
         width: '110px',
@@ -39,7 +39,7 @@ export const ProductConfig = (product:string,  editId: string|number|null): Form
 
     },
     {
-        name: "SELLINGUNIT",
+        name: "UNITCODE",
         label: "Selling Unit",
         required: true,
         width: '110px',
@@ -52,7 +52,7 @@ export const ProductConfig = (product:string,  editId: string|number|null): Form
 
     },
     {
-        name: "PURCHASEUNIT",
+        name: "PUREUNITCODE",
         label: "Purchase Unit",
         required: true,
         width: '110px',
@@ -65,7 +65,7 @@ export const ProductConfig = (product:string,  editId: string|number|null): Form
 
     },
     {
-        name: "PRODUCT TYPE",
+        name: "PRODUCTTYPE",
         label: "Product Type",
         required: true,
         width: '110px',
@@ -77,32 +77,26 @@ export const ProductConfig = (product:string,  editId: string|number|null): Form
         size: 'xs'
 
     },
-    {
-        name: "TAGTYPE",
-        label: "Tag Type",
-        required: true,
-        width: '110px',
-        maxWidth: '110px',
-        rounded: 'full',
-        options: TagType,
-        type: 'select',
-        defaultValue: 'S',
-        size: 'xs'
-
-    },
-    {
-        name: "ORIONBARCODE",
-        label: "Orion Barcode",
-        required: true,
-        width: '110px',
-        maxWidth: '110px',
-        rounded: 'full',
-        options: YesOrNo,
-        type: 'select',
-        defaultValue: 'Y',
-        size: 'xs'
-
-    },
+  {
+    name: "TAGTYPE",
+    label: "Tag Type",
+    required: true,
+    type: "select",
+    options: TagType,
+    defaultValue: "S",
+    size: "xs",
+    disabled: product === "N"
+},
+{
+    name: "ORIONBARCODE",
+    label: "Orion Barcode",
+    required: true,
+    type: "select",
+    options: YesOrNo,
+    defaultValue: "Y",
+    size: "xs",
+    disabled: product === "N"
+},
     {
         name: "ALLOWDISCOUNT",
         label: "Allow Discount",
@@ -117,8 +111,8 @@ export const ProductConfig = (product:string,  editId: string|number|null): Form
 
     },
     {
-        name: "EXPIRYDATES",
-        label: "Expiry Date",
+        name: "EXPIRYDAYS",
+        label: "Expiry Days",
         required: true,
         width: '110px',
         maxWidth: '110px',

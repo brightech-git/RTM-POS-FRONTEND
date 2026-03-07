@@ -4,325 +4,343 @@ import React, { useState, useEffect } from "react";
 import {
     Box,
     Button,
-    Input,
     VStack,
     Text,
     Grid,
     GridItem,
     HStack,
-    Stack,
     Fieldset,
-    Field,
-    NativeSelect,
-    Textarea,
-    createListCollection,
-    For,
     Flex,
-    useListCollection,
-    useFilter,
-    Combobox,
-    Portal
-
 } from "@chakra-ui/react";
 import { Table } from "@chakra-ui/react/table";
 import { AiOutlineSave } from "react-icons/ai";
 import { IoIosExit } from "react-icons/io";
 import { FaEdit } from "react-icons/fa";
-import { Toaster, toaster } from "@/components/ui/toaster";
+import { FaPrint, FaFileExcel } from "react-icons/fa";
+import { Toaster } from "@/components/ui/toaster";
 import { useTheme } from "@/context/theme/themeContext";
-import { fontVariables } from "@/context/theme/font";
 import {
     useAllCompanies,
     useCompanyById,
     useCreateCompany,
     useUpdateCompany,
 } from "@/hooks/company/useCompany";
-import { useAllStates } from "@/hooks/state/useStates";
 import ScrollToTop from "@/component/scroll/ScrollToTop";
-import { CreateCompanyPayload, Company } from "@/service/CompanyService";
-import { toastCreated, toastError, toastLoaded, toastUpdated, toastUploaded } from "@/component/toast/toast";
+import { Company } from "@/service/CompanyService";
+import { toastError, toastLoaded } from "@/component/toast/toast";
 import { CustomTable } from "@/component/table/CustomTable";
 import { CapitalizedInput } from "@/components/ui/CapitalizedInput";
 import { usePrint } from "@/context/print/usePrintContext";
 import { useRouter } from "next/navigation";
-import { FaPrint, FaFileExcel } from "react-icons/fa";
-import { SelectCombobox } from "@/components/ui/selectComboBox";
-
-
 
 function CompanyMaster() {
     const { theme } = useTheme();
-    /* -------------------- API HOOKS -------------------- */
-    const { data, isLoading, refetch: companyRefetch } = useAllCompanies();
     const router = useRouter();
     const { setData, setColumns, setShowSno, title } = usePrint();
-    const companies = data?.data ?? [];
-    const [inputValue, setInputValue] = useState("")
-    const { data: allStates, isLoading: stateLoading, isError: stateError } = useAllStates();
-
-
-    const { mutate: createCompany, isPending } = useCreateCompany();
+    
+    /* -------------------- API HOOKS -------------------- */
+    const { data, isLoading, refetch: companyRefetch } = useAllCompanies();
+    
+    const { mutate: createCompany, isPending: isCreating } = useCreateCompany();
     const { mutate: updateCompany, isPending: isUpdating } = useUpdateCompany();
 
-    const stateOptions = (allStates || []).map((s: any) => ({
-        label: s.stateName,
-        value: String(s.stateId), // ALWAYS string
-    }))
-
-
-
-    /* -------------------- FORM STATE -------------------- */
-    const [form, setForm] = useState<CreateCompanyPayload>({
-        COMPANYID: "",
+    const [editId, setEditId] = useState<string | null>(null);
+    const [highlightedId, setHighlightedId] = useState<string | null>(null);
+    
+    // Get USERID from localStorage
+    const [userId, setUserId] = useState<string>("");
+    
+    useEffect(() => {
+        // Get user from localStorage on component mount
+        if (typeof window !== 'undefined') {
+            const storedUser = localStorage.getItem('user');
+            if (storedUser) {
+                try {
+                    const parsedUser = JSON.parse(storedUser);
+                    setUserId(parsedUser.USERID || parsedUser.userId || parsedUser.id || "admin");
+                } catch {
+                    setUserId("admin");
+                }
+            } else {
+                setUserId("admin");
+            }
+        }
+    }, []);
+    
+    /* -------------------- FORM STATE - Only Payload Fields -------------------- */
+    const [form, setForm] = useState<Partial<Company>>({
+        COMPANYCODE: "",
         COMPANYNAME: "",
-        // costid: "",
+        COMPANYSHORTNAME: "",
         ADDRESS1: "",
         ADDRESS2: "",
-        ADDRESS3: "",
-        AREACODE: "",
-        PHONE: "",
-        EMAIL: "",
-        GSTNO: "",
-        ACTIVE: "Y",
-        STATEID: "24",
-    });
-    const [highlightedId, setHighlightedId] = useState<Number>()
-
-    const [logoFile, setLogoFile] = useState<File>();
-    const [imagePreview, setImagePreview] = useState<string | null>(null);
-    const [editId, setEditId] = useState<string | null>(null);
-
-    /* -------------------- SELECT OPTIONS -------------------- */
-    const activeStatus = createListCollection({
-        items: [
-            { label: "YES", value: "Y" },
-            { label: "NO", value: "N" },
-        ],
+        AREA: "",
+        CITY: "",
+        PINCODE: "",
+        MOBILENO: "",
+        GSTTINNO: "",
+        PASSWORD: "",
+        SERVERNAME: "",
+        PORTNO: "",
+        USERID: String(userId),
     });
 
-    const { data: companyById } = useCompanyById(editId ?? '');
-    const company = companyById?.data;
-
-
-
+    // Update USERID in form when userId changes
     useEffect(() => {
-        if (!company) return;
+        setForm(prev => ({
+            ...prev,
+            USERID: userId
+        }));
+    }, [userId]);
 
+    /* -------------------- GET COMPANY BY ID - FIXED -------------------- */
+    // Only call the hook when editId exists
+    const { data: companyData, refetch: fetchCompanyById } = useCompanyById(editId || '', {
+        enabled: !!editId,
+    });
+    
+    const company = companyData?.data;
+
+    // Use useEffect to load company data when company changes
+    useEffect(() => {
+        if (company) {
+            console.log("Loading company data for edit:", company);
+            
+            setForm({
+                COMPANYCODE: company.COMPANYCODE || "",
+                COMPANYNAME: company.COMPANYNAME || "",
+                COMPANYSHORTNAME: company.COMPANYSHORTNAME || "",
+                ADDRESS1: company.ADDRESS1 || "",
+                ADDRESS2: company.ADDRESS2 || "",
+                AREA: company.AREA || "",
+                CITY: company.CITY || "",
+                PINCODE: company.PINCODE || company.PINCODE || "",
+                MOBILENO: company.MOBILENO || company.MOBILENO || "",
+                GSTTINNO: company.GSTTINNO || company.GSTTINNO || "",
+                PASSWORD: "",
+                SERVERNAME: company.SERVERNAME || "",
+                PORTNO: company.PORTNO || "",
+                USERID: String(userId)
+            });
+            
+            // Show toast after company data is loaded
+            setTimeout(() => {
+                toastLoaded("Company");
+                ScrollToTop();
+            }, 0);
+        }
+    }, [company, userId]);
+
+    // Alternative: If the above doesn't work, use this approach to manually fetch
+    const handleEditClick = (company: Company) => {
+        setEditId(company.COMPANYCODE);
+        
+        // Manually set form data from the company object in the list
+        // This ensures data loads immediately without waiting for API
         setForm({
-            COMPANYID: company.COMPANYID,
-            COMPANYNAME: company.COMPANYNAME,
-            // costid: company.COSTID ?? "",
-            ADDRESS1: company.ADDRESS1 ?? "",
-            ADDRESS2: company.ADDRESS2 ?? "",
-            ADDRESS3: company.ADDRESS3 ?? "",
-            AREACODE: company.AREACODE ?? "",
-            PHONE: company.PHONE ?? "",
-            EMAIL: company.EMAIL ?? "",
-            GSTNO: company.GSTNO ?? "",
-            ACTIVE: company.ACTIVE ?? "Y",
-            STATEID: String(company.STATEID) ?? "",
+            COMPANYCODE: company.COMPANYCODE || "",
+            COMPANYNAME: company.COMPANYNAME || "",
+            COMPANYSHORTNAME: company.COMPANYSHORTNAME || "",
+            ADDRESS1: company.ADDRESS1 || "",
+            ADDRESS2: company.ADDRESS2 || "",
+            AREA: company.AREA || "",
+            CITY: company.CITY || "",
+            PINCODE: company.PINCODE || "",
+            MOBILENO: company.MOBILENO || "",
+            GSTTINNO: company.GSTTINNO || "",
+            PASSWORD: "",
+            SERVERNAME: company.SERVERNAME || "",
+            PORTNO: company.PORTNO || "",
+            USERID: String(userId)
         });
-    }, [company]);
+        
+        // Optional: Still fetch from API to get latest data
+        if (company.COMPANYCODE) {
+            fetchCompanyById();
+        }
+    };
 
     useEffect(() => {
-        if (!company) return;
-
-        // ✅ AFTER render is fully committed
-        setTimeout(() => {
-            toastLoaded("Company");
-            ScrollToTop();
-        }, 0);
-
-
-    }, [company]);
-
-
-    useEffect(() => {
-        if (!highlightedId) return;
-
-        // ✅ AFTER render is fully committed
-        const timer = setTimeout(() => {
-
-            setHighlightedId(undefined);
-        }, 3000);
-
-        return () => clearTimeout(timer);
-
+        if (highlightedId) {
+            const timer = setTimeout(() => {
+                setHighlightedId(null);
+            }, 3000);
+            return () => clearTimeout(timer);
+        }
     }, [highlightedId]);
 
-
     /* -------------------- HANDLERS -------------------- */
-    const handleChange = (field: keyof CreateCompanyPayload, value: any) => {
+    const handleChange = (field: keyof Company, value: any) => {
         setForm((prev) => ({ ...prev, [field]: value }));
     };
 
     const resetForm = () => {
         setEditId(null);
-        setLogoFile(undefined);
-        setImagePreview(null);
         setForm({
-            COMPANYID: "",
+            COMPANYCODE: "",
             COMPANYNAME: "",
-            // costid: "",
+            COMPANYSHORTNAME: "",
             ADDRESS1: "",
             ADDRESS2: "",
-            ADDRESS3: "",
-            AREACODE: "",
-            PHONE: "",
-            EMAIL: "",
-            GSTNO: "",
-            ACTIVE: "Y",
-            STATEID: "24",
+            AREA: "",
+            CITY: "",
+            PINCODE: "",
+            MOBILENO: "",
+            GSTTINNO: "",
+            PASSWORD: "",
+            SERVERNAME: "",
+            PORTNO: "",
+            USERID: String(userId)
         });
     };
 
-
-    // const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    //     const file = e.target.files?.[0];
-    //     if (file) {
-    //         setLogoFile(file);
-    //         setImagePreview(URL.createObjectURL(file));
-    //     }
-    // };
-
-    const handleSave = () => {
-        if (!form.COMPANYID) {
+    const validateForm = () => {
+        if (!form.COMPANYCODE) {
             toastError("Company ID is required");
-            return;
+            return false;
         }
-
-        if (form.COMPANYID.length > 4) {
-            toastError("Company ID must be at most 3 characters long");
-            return;
+        if (form.COMPANYCODE.length > 4) {
+            toastError("Company ID must be at most 4 characters");
+            return false;
         }
-
         if (!form.COMPANYNAME?.trim()) {
             toastError("Company Name is required");
-            return;
+            return false;
         }
-        if (!form.ADDRESS1?.trim()) {
-            toastError("Address is required");
-            return;
-        }
-        if (!form.ADDRESS2?.trim()) {
-            toastError("Area is required");
-            return;
-        }
-        if (!form.ADDRESS3?.trim()) {
-            toastError("City is required");
-            return;
-        }
-        if (!form.STATEID) {
-            toastError("State is required");
-            return;
-        }
-        if (!form.AREACODE?.trim()) {
-            toastError("Pincode is required");
-            return;
-        }
-
-        if (form.AREACODE) {
+        
+        // Optional validations
+        if (form.PINCODE) {
             const pinRegex = /^[0-9]{6}$/;
-            if (!pinRegex.test(form.AREACODE)) {
+            if (!pinRegex.test(form.PINCODE)) {
                 toastError("Pincode must be exactly 6 digits");
-                return;
+                return false;
             }
         }
-        if (!form.PHONE?.trim()) {
-            toastError("Mobile Number is required");
-            return;
+        
+        if (form.MOBILENO) {
+            const phoneRegex = /^[0-9]{10}$/;
+            if (!phoneRegex.test(form.MOBILENO)) {
+                toastError("Mobile Number must be exactly 10 digits");
+                return false;
+            }
         }
-        if (!form.EMAIL?.trim()) {
-            toastError("Email is required");
-            return;
-        }
+        
+        return true;
+    };
 
+    const handleSave = () => {
+        if (!validateForm()) return;
+
+        const payload = {
+            COMPANYCODE: form.COMPANYCODE,
+            COMPANYNAME: form.COMPANYNAME,
+            COMPANYSHORTNAME: form.COMPANYSHORTNAME || "",
+            ADDRESS1: form.ADDRESS1 || "",
+            ADDRESS2: form.ADDRESS2 || "",
+            AREA: form.AREA || "",
+            CITY: form.CITY || "",
+            PINCODE: form.PINCODE || "",
+            MOBILENO: form.MOBILENO || "",
+            GSTTINNO: form.GSTTINNO || "",
+            PASSWORD: "",
+            SERVERNAME: "DEFAULT SERVER",
+            PORTNO: "3000",
+            USERID: String(userId) || "admin",
+        };
+
+        console.log("Final Payload", payload);
 
         if (editId) {
-            updateCompany({
-                id: editId,
-                payload: form,
-                logo: logoFile,
-            }, {
+            updateCompany(
+                { id: editId, ...payload },
+                {
+                    onSuccess: () => {
+                        companyRefetch();
+                        resetForm();
+                        setHighlightedId(editId);
+                    },
+                }
+            );
+        } else {
+            createCompany(payload, {
                 onSuccess: () => {
                     companyRefetch();
-                    resetForm;
-                    setHighlightedId(Number(editId));
-                }
-            })
-                ;
-
-        } else {
-            createCompany({
-                payload: form,
-                logo: logoFile,
+                    resetForm();
+                },
             });
-
         }
-
-        resetForm();
     };
 
-
-    const handleEdit = (company: Company) => {
-        setEditId(company.COMPANYID); // 🔥 trigger useCompanyById
-    };
-
+    /* -------------------- TABLE COLUMNS -------------------- */
     const CompanyColumn = [
-
-        { key: 'COMPANYID', label: 'Sno' },
-        { key: 'companyId', label: 'Company Id' },
-        { key: 'companyName', label: 'Company Name' },
-        // {key:'state' , label:'State' },
-        { key: 'active', label: 'Active' },
+        { key: 'sno', label: 'S.No' },
+        { key: 'COMPANYCODE', label: 'Company Id' },
+        { key: 'COMPANYNAME', label: 'Company Name' },
+        { key: 'COMPANYSHORTNAME', label: 'Short Name' },
         { key: 'actions', label: 'Actions' },
     ];
 
-    /* -------------------- Export -------------------- */
+    // Map companies for display
+    const companies = (data || []).map((c: any) => ({
+        COMPANYCODE: c.COMPANYCODE,
+        COMPANYNAME: c.COMPANYNAME,
+        COMPANYSHORTNAME: c.COMPANYSHORTNAME || "",
+        ADDRESS1: c.ADDRESS1 || "",
+        ADDRESS2: c.ADDRESS2 || "",
+        AREA: c.AREA || "",
+        CITY: c.CITY || "",
+        PINCODE: c.PINCODE || "",
+        MOBILENO: c.MOBILENO || "",
+        GSTTINNO: c.GSTTINNO || "",
+        PASSWORD: "",
+        SERVERNAME: c.SERVERNAME || "",
+        PORTNO: c.PORTNO || "",
+        USERID: c.USERID || "",
+    }));
+
+    /* -------------------- EXPORT HANDLER -------------------- */
     const handleExport = (option: string) => {
         setData(companies);
         setColumns([
-            { key: "COMPANYID", label: "Company Id" },
+            { key: "COMPANYCODE", label: "Company Code" },
             { key: "COMPANYNAME", label: "Company Name" },
-            { key: 'ACTIVE', label: 'Active' },
-            { key: "ADDRESS1", label: "Address" },
-            { key: "itemName", label: "Item Name" },
-            { key: "touch", label: "Touch", align: 'end' as const, allowTotal: true },
+            { key: "COMPANYSHORTNAME", label: "Short Name" },
+            { key: "ADDRESS1", label: "Address 1" },
+            { key: "ADDRESS2", label: "Address 2" },
+            { key: "AREA", label: "Area" },
+            { key: "CITY", label: "City" },
+            { key: "PINCODE", label: "Pincode" },
+            { key: "MOBILENO", label: "Mobile No" },
+            { key: "GSTTINNO", label: "GSTIN" },
         ]);
         setShowSno(true);
-        title?.("Company Master")
+        title?.("Company Master");
         router.push(`/print?export=${option}`);
-    }
+    };
+
     /* -------------------- UI -------------------- */
     return (
-        <Box
-            fontWeight="semibold"
-            bg={theme.colors.primary}
-            color={theme.colors.secondary}
-
-        >
+        <Box fontWeight="semibold" bg={theme.colors.primary} color={theme.colors.secondary}>
             <Toaster />
             <Grid templateColumns={{ base: "1fr", lg: "1fr 1.5fr" }} gap={2}>
                 {/* ---------------- FORM ---------------- */}
                 <GridItem>
                     <VStack bg={theme.colors.formColor} p={4} borderRadius="xl" border="1px solid #eef">
-                        <Text fontSize="small" fontWeight="600" >
+                        <Text fontSize="small" fontWeight="600">
                             COMPANY CREATION
                         </Text>
 
                         <Fieldset.Root size="sm" width="100%">
                             <Fieldset.Content>
                                 <Grid gap={2}>
-
                                     {/* COMPANY ID */}
                                     <Box display="flex" alignItems="center" gap={2}>
-                                        <Box minW="90px" fontSize="2xs">COMPANY ID :</Box>
+                                        <Box minW="100px" fontSize="2xs">COMPANY ID :</Box>
                                         <CapitalizedInput
-                                            field="COMPANYID"
-                                            value={form.COMPANYID}
+                                            field="COMPANYCODE"
+                                            value={form.COMPANYCODE || ""}
                                             disabled={!!editId}
                                             onChange={handleChange}
-                                            max={3}
                                             size="2xs"
                                             maxWidth="90px"
                                             rounded="full"
@@ -331,151 +349,123 @@ function CompanyMaster() {
 
                                     {/* COMPANY NAME */}
                                     <Box display="flex" alignItems="center" gap={2}>
-                                        <Box minW='90px' fontSize="2xs">COMPANY NAME :</Box>
+                                        <Box minW='100px' fontSize="2xs">COMPANY NAME :</Box>
                                         <CapitalizedInput
                                             field="COMPANYNAME"
-                                            value={form.COMPANYNAME}
+                                            value={form.COMPANYNAME || ""}
                                             onChange={handleChange}
                                             isCapitalized
                                             size="2xs"
                                         />
                                     </Box>
 
-                                    {/* ADDRESS */}
-                                    <Box display="flex" alignItems="center" gap={2} >
-                                        <Box minW='90px' fontSize="2xs">ADDRESS :</Box>
+                                    {/* COMPANY SHORT NAME */}
+                                    <Box display="flex" alignItems="center" gap={2}>
+                                        <Box minW='100px' fontSize="2xs">SHORT NAME :</Box>
+                                        <CapitalizedInput
+                                            field="COMPANYSHORTNAME"
+                                            value={form.COMPANYSHORTNAME || ""}
+                                            onChange={handleChange}
+                                            isCapitalized
+                                            size="2xs"
+                                        />
+                                    </Box>
+
+                                    {/* ADDRESS1 */}
+                                    <Box display="flex" alignItems="center" gap={2}>
+                                        <Box minW='100px' fontSize="2xs">ADDRESS 1 :</Box>
                                         <CapitalizedInput
                                             field="ADDRESS1"
-                                            value={form.ADDRESS1}
+                                            value={form.ADDRESS1 || ""}
                                             onChange={handleChange}
                                             size="2xs"
                                             allowSpecial
                                         />
                                     </Box>
 
-                                    {/* AREA */}
-                                    <Box display="flex" alignItems="center" gap={2} >
-                                        <Box minW="90px" fontSize="2xs">AREA :</Box>
+                                    {/* ADDRESS2 */}
+                                    <Box display="flex" alignItems="center" gap={2}>
+                                        <Box minW="100px" fontSize="2xs">ADDRESS 2 :</Box>
                                         <CapitalizedInput
                                             field="ADDRESS2"
-                                            value={form.ADDRESS2}
+                                            value={form.ADDRESS2 || ""}
+                                            onChange={handleChange}
+                                            size="2xs"
+                                        />
+                                    </Box>
+
+                                    {/* AREA */}
+                                    <Box display="flex" alignItems="center" gap={2}>
+                                        <Box minW="100px" fontSize="2xs">AREA :</Box>
+                                        <CapitalizedInput
+                                            field="AREA"
+                                            value={form.AREA || ""}
                                             onChange={handleChange}
                                             size="2xs"
                                         />
                                     </Box>
 
                                     {/* CITY */}
-                                    <Box display="flex" alignItems="center" gap={2} >
-                                        <Box minW="90px" fontSize="2xs">CITY :</Box>
+                                    <Box display="flex" alignItems="center" gap={2}>
+                                        <Box minW="100px" fontSize="2xs">CITY :</Box>
                                         <CapitalizedInput
-                                            field="ADDRESS3"
-                                            value={form.ADDRESS3}
+                                            field="CITY"
+                                            value={form.CITY || ""}
                                             onChange={handleChange}
                                             size="2xs"
-                                        />
-                                    </Box>
-
-                                    {/* STATE */}
-                                    <Box display="flex" alignItems="center" gap={2}>
-                                        <Box minW="90px" fontSize="2xs">STATE :</Box>
-                                        <SelectCombobox
-                                            items={stateOptions}
-                                            value={form.STATEID}
-                                            onChange={(val) => handleChange("STATEID", val)}
-                                            placeholder="Select State"
                                         />
                                     </Box>
 
                                     {/* PINCODE */}
                                     <Box display="flex" alignItems="center" gap={2}>
-                                        <Box minW="90px" fontSize="2xs">PINCODE :</Box>
+                                        <Box minW="100px" fontSize="2xs">PINCODE :</Box>
                                         <CapitalizedInput
-                                            field="AREACODE"
-                                            value={form.AREACODE}
+                                            field="PINCODE"
+                                            value={form.PINCODE || ""}
                                             onChange={handleChange}
-                                            max={999999}
                                             type="number"
                                             size="2xs"
                                         />
                                     </Box>
 
-                                    {/* MOBILE */}
+                                    {/* MOBILE NO */}
                                     <Box display="flex" alignItems="center" gap={2}>
-                                        <Box minW="90px" fontSize="2xs">MOBILE :</Box>
+                                        <Box minW="100px" fontSize="2xs">MOBILE NO :</Box>
                                         <CapitalizedInput
-                                            field="PHONE"
-                                            value={form.PHONE}
+                                            field="MOBILENO"
+                                            value={form.MOBILENO || ""}
                                             onChange={handleChange}
-                                            max={9999999999}
                                             type="number"
                                             size="2xs"
                                         />
                                     </Box>
 
-                                    {/* EMAIL */}
+                                    {/* GST TIN NO */}
                                     <Box display="flex" alignItems="center" gap={2}>
-                                        <Box minW="90px" fontSize="2xs">EMAIL :</Box>
+                                        <Box minW="100px" fontSize="2xs">GST TIN NO :</Box>
                                         <CapitalizedInput
-                                            field="EMAIL"
-                                            size="2xs"
-                                            value={form.EMAIL}
-                                            onChange={handleChange}
-                                            inputModeType="email"
-                                        />
-                                    </Box>
-
-                                    {/* GSTIN */}
-                                    <Box display="flex" alignItems="center" gap={2}>
-                                        <Box minW="90px" fontSize="2xs">GSTIN :</Box>
-                                        <CapitalizedInput
-                                            field="GSTNO"
-                                            value={form.GSTNO}
+                                            field="GSTTINNO"
+                                            value={form.GSTTINNO || ""}
                                             onChange={handleChange}
                                             size="2xs"
                                             type="text"
-                                            inputModeType="gst"
-
                                         />
                                     </Box>
-
-                                    {/* ACTIVE */}
-                                    <Box display="flex" alignItems="center" gap={2}>
-                                        <Box minW="90px" fontSize="2xs">ACTIVE :</Box>
-                                        <NativeSelect.Root size="xs" maxW="90px" fontSize="2xs">
-                                            <NativeSelect.Field
-                                                value={form.ACTIVE || "Y"}
-                                                onChange={(e) => handleChange("ACTIVE", e.target.value)}
-                                                css={{
-                                                    backgroundColor: "#eee",
-                                                    color: "#111827",
-                                                    border: "1px solid #e5e7eb",
-                                                    borderRadius: "20px",
-                                                    height: "30px",
-                                                    fontSize: "10px",
-                                                }}
-                                            >
-                                                <For each={activeStatus.items}>
-                                                    {(item) => (
-                                                        <option key={item.value} value={item.value}>
-                                                            {item.label}
-                                                        </option>
-                                                    )}
-                                                </For>
-                                            </NativeSelect.Field>
-                                            <NativeSelect.Indicator />
-                                        </NativeSelect.Root>
-                                    </Box>
-
+                                    
+                                    {/* Hidden fields for PASSWORD, SERVERNAME, PORTNO, USERID */}
+                                    <input type="hidden" name="PASSWORD" value="" />
+                                    <input type="hidden" name="SERVERNAME" value="" />
+                                    <input type="hidden" name="PORTNO" value="" />
+                                    <input type="hidden" name="USERID" value={userId} />
                                 </Grid>
                             </Fieldset.Content>
                         </Fieldset.Root>
-
 
                         <HStack>
                             <Button
                                 size="xs"
                                 colorPalette="blue"
-                                loading={isPending}
+                                loading={isCreating || isUpdating}
                                 onClick={handleSave}
                             >
                                 <AiOutlineSave /> {editId ? "Update" : "Save"}
@@ -491,7 +481,7 @@ function CompanyMaster() {
                 <GridItem minW={0}>
                     <Box bg={theme.colors.formColor} p={2} borderRadius="xl" border="1px solid #eef">
                         <Box display='flex' mb={2} gap={2} justifyContent='space-between' alignItems='center'>
-                            <Text fontWeight="semibold" fontSize="small" >
+                            <Text fontWeight="semibold" fontSize="small">
                                 COMPANY DETAILS
                             </Text>
 
@@ -520,20 +510,22 @@ function CompanyMaster() {
                             </Flex>
                         </Box>
 
-
                         <CustomTable
                             columns={CompanyColumn}
                             data={companies}
-                            renderRow={(company, index) => (
+                            renderRow={(company: Company, index: number) => (
                                 <>
                                     <Table.Cell>{index + 1}</Table.Cell>
-                                    <Table.Cell>{company.COMPANYID}</Table.Cell>
+                                    <Table.Cell>{company.COMPANYCODE}</Table.Cell>
                                     <Table.Cell>{company.COMPANYNAME}</Table.Cell>
-                                    {/* <Table.Cell>{company.STATE}</Table.Cell> */}
-                                    <Table.Cell textAlign="center">{company.ACTIVE}</Table.Cell>
+                                    <Table.Cell>{company.COMPANYSHORTNAME}</Table.Cell>
                                     <Table.Cell>
                                         <Box display="flex" justifyContent="center">
-                                            <FaEdit onClick={() => handleEdit(company)} cursor="pointer" />
+                                            <FaEdit 
+                                                onClick={() => handleEditClick(company)} 
+                                                cursor="pointer"
+                                                color={theme.colors.primaryText}
+                                            />
                                         </Box>
                                     </Table.Cell>
                                 </>
@@ -542,10 +534,10 @@ function CompanyMaster() {
                             headerColor="white"
                             borderColor="white"
                             bodyBg={theme.colors.primary}
-                            highlightRowId={highlightedId ? Number(highlightedId) : null}
-                            rowIdKey="COMPANYID"
+                            highlightRowId={highlightedId}
+                            rowIdKey="COMPANYCODE"
                             emptyText="No companies available"
-
+                            isLoading={isLoading}
                         />
                     </Box>
                 </GridItem>

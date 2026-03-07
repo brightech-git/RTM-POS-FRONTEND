@@ -24,10 +24,12 @@ interface DynamicFormProps {
     fields: FormField[];
     formData: Record<string, any>;
     onChange: (field: string | number, value: any) => void;
+    onBlur?: (field: string) => void;
     register: (name: string) => (el: any) => void;
     focusNext: (name: string) => void;
     disabled?: Record<string, boolean | undefined>;
-    errors?: Record<string, string>; // Add errors prop
+    errors?: Record<string, string>;
+    touchedFields?: Record<string, boolean>;
 }
 
 export const DynamicForm: React.FC<DynamicFormProps> = ({
@@ -42,12 +44,22 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
 
     const [touched, setTouched] = useState<Record<string, boolean>>({});
 
-    const handleKeyDown = (e: React.KeyboardEvent, fieldName: string) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            focusNext(fieldName);
+ const handleKeyDown = (e: React.KeyboardEvent, fieldName: string) => {
+    if (e.key === "Enter") {
+        e.preventDefault();
+
+        // Special handling for barcode scanner
+        if (fieldName === "ORIONBARCODE") {
+            const barcodeValue = formData[fieldName];
+
+            if (barcodeValue) {
+                console.log("Scanned Barcode:", barcodeValue);
+            }
         }
-    };
+
+        focusNext(fieldName);
+    }
+};
 
     const handleBlur = (fieldName: string) => {
         setTouched(prev => ({ ...prev, [fieldName]: true }));
@@ -246,9 +258,6 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
                         maxWidth={field.maxWidth || field.maxW || field.width}
                         minWidth={field.minWidth}
                         rounded={field.rounded}
-                        // fontSize={field.fontSize}
-                        // className={field.className}
-                        // css={field.css}
                         max={field.maxLength}
                         isCapitalized={field.isCapitalized}
                         inputModeType={field.inputModeType}
