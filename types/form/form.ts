@@ -10,6 +10,7 @@ export interface FormField {
     disabled?: boolean;
     colSpan?: number;       // for grid layout
     width?: string;
+    isReadOnly?:boolean
 
     // Common props for all input types
     size?: "xs" | "sm" | "md" | "lg";
@@ -30,6 +31,7 @@ export interface FormField {
     icon?: boolean;
     noBorder?: boolean;
     autoFocus?: boolean;
+    
 
     // For select/combobox inputs
     options?: SelectItem[];

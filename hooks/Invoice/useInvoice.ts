@@ -1,68 +1,75 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+
 import {
     getAllInvoiceDetails,
     getInvoiceDetailsById,
     createInvoiceDetails,
     updateInvoiceDetails,
     deleteInvoiceDetails,
+    previewRowSign
 } from "@/service/InvoiceService";
 
-// GET ALL
 export const useAllInvoiceDetails = () => {
     return useQuery({
-        queryKey: ["invoiceDetails"],
+        queryKey: ["invoice-details"],
         queryFn: getAllInvoiceDetails,
-        staleTime: 1000 * 60 * 5,
+        staleTime: 1000 * 60 * 5
     });
 };
 
-// GET BY ID
 export const useInvoiceDetailsById = (id: string) => {
     return useQuery({
-        queryKey: ["invoiceDetails", id],
+        queryKey: ["invoice-details", id],
         queryFn: () => getInvoiceDetailsById(id),
-        enabled: !!id,
+        enabled: !!id
     });
 };
 
-// CREATE
 export const useCreateInvoiceDetails = () => {
+
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: ({ invoice, createdBy }: any) =>
+        mutationFn: ({ invoice, createdBy }: { invoice: any; createdBy: number }) =>
             createInvoiceDetails(invoice, createdBy),
 
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["invoiceDetails"] });
-        },
+            queryClient.invalidateQueries({ queryKey: ["invoice-details"] });
+        }
     });
 };
 
-// UPDATE
 export const useUpdateInvoiceDetails = () => {
+
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: ({ id, invoice }: any) =>
+        mutationFn: ({ id, invoice }: { id: string; invoice: any }) =>
             updateInvoiceDetails(id, invoice),
 
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["invoiceDetails"] });
-            queryClient.invalidateQueries({ queryKey: ["invoiceDetail"] });
-        },
+            queryClient.invalidateQueries({ queryKey: ["invoice-details"] });
+        }
     });
 };
 
-// DELETE
 export const useDeleteInvoiceDetails = () => {
+
     const queryClient = useQueryClient();
 
     return useMutation({
         mutationFn: deleteInvoiceDetails,
 
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["invoiceDetails"] });
-        },
+            queryClient.invalidateQueries({ queryKey: ["invoice-details"] });
+        }
+    });
+};
+
+export const usePreviewRowSign = (billType: string) => {
+    return useQuery({
+        queryKey: ["preview-rowsign", billType],
+        queryFn: () => previewRowSign(billType),
+        enabled: !!billType
     });
 };

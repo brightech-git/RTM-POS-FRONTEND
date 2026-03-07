@@ -142,7 +142,7 @@ const createMenuData = (): SidebarMenu => ({
           { label: "Operator", route: "/dashboard/Master/Users/Operator", icon: UserCog },
           // { label: "System Assigning", route: "/dashboard/Master/Users/SystemAssigning", icon: Settings },
           { label: "Company", route: "/dashboard/Master/Users/Company", icon: Building2 },
-          { label: "AccountHead", route: "/dashboard/Master/Users/AccountHead", icon: Users },
+          // { label: "AccountHead", route: "/dashboard/Master/Users/AccountHead", icon: Users },
         ],
       },
       Object: {

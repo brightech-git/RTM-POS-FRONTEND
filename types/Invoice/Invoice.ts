@@ -1,34 +1,35 @@
 export interface InvoiceDetails {
 
-    ROWSIGN: string;
+    ROWSIGN?: string;
 
     VENDORCODE: number;
-    ORIONBARCODE: string;
+    ORIONBARCODE?: string;
+
     PRODUCTCODE: number;
     SUBPRODUCTCODE?: number;
 
-    PIECES: number;
-    WEIGHT: number;
+    PIECES?: number;
+    WEIGHT?: number;
 
     MRP: number;
     PURRATE: number;
-    SELLINGRATE: number;
+    SELLINGRATE?: number;
 
     MARKUPPER?: number;
     MARKUP?: number;
 
     INVOICENO: string;
     BILLDATE: string;
-    BILLNO: number;
+    BILLNO?: number;
 
     TAGGEN?: string;
     BILLTYPE?: string;
+
     UNIQUEKEY?: string;
+    UNITCODE?: number;
 
-    UNITCODE: number;
-
-    AMOUNT: number;
-    TOTALAMOUNT: number;
+    AMOUNT?: number;
+    TOTALAMOUNT?: number;
 
     TAXCALC?: string;
     TAXPER?: number;
@@ -40,7 +41,6 @@ export interface InvoiceDetails {
     ENTRYORDER?: number;
 
     HSNCODE?: string;
-
     HSNTAXCODE?: number;
 
     SGSTTAXCODE?: number;
@@ -68,38 +68,38 @@ export interface InvoiceDetails {
     CREATEDBY?: number;
     CREATEDDATE?: string;
     CREATEDTIME?: string;
+
+    PRODUCTNAME?: string;
+    SUBPRODUCTNAME?: string;
 }
+
 
 export interface InvoiceDetailsForm {
 
-    ROWSIGN: string;
-
     VENDORCODE: string;
-    ORIONBARCODE: string;
     PRODUCTCODE: string;
-    SUBPRODUCTCODE: string;
+    SUBPRODUCTCODE?: string;
 
-    PIECES: string;
-    WEIGHT: string;
+    ORIONBARCODE?: string;
+
+    PIECES?: string;
+    WEIGHT?: string;
 
     MRP: string;
     PURRATE: string;
-    SELLINGRATE: string;
+    SELLINGRATE?: string;
 
-    MARKUPPER: string;
+    MARKUPPER?: string;
 
     INVOICENO: string;
     BILLDATE: string;
-    BILLNO: string;
 
-    UNITCODE: string;
+    TAGGEN?: string;
 
-    TAXPER: string;
-    DISCPER: string;
+    DISCPER?: string;
 
-    HSNCODE: string;
-
-    BILLSTATUS: string;
+    HSNCODE?: string;
+    HSNTAXCODE?: string;
 }
 
 export type AllInvoiceDetails = InvoiceDetails[];

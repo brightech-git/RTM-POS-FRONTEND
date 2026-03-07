@@ -8,7 +8,6 @@ import {
     VStack,
     HStack,
     Text,
-    SimpleGrid,
     Badge,
     Spinner,
     Center,
@@ -20,12 +19,16 @@ import {
     GridItem,
     IconButton,
     Separator,
-    Field
+    Kbd,
+    Alert,
+    AlertTitle,
+    AlertDescription,
 } from "@chakra-ui/react";
 import { 
     AiOutlineSave, 
     AiOutlineClear,
-    AiOutlineArrowUp 
+    AiOutlineArrowUp,
+    AiOutlineReload 
 } from "react-icons/ai";
 import { IoIosExit } from "react-icons/io";
 import { FaEdit, FaPrint, FaFileExcel, FaTrash } from "react-icons/fa";
@@ -35,6 +38,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { usePrint } from "@/context/print/usePrintContext";
 import { useRouter } from "next/navigation";
 
+// Import the selection modal
+import { SelectionModal } from "@/components/Modals/SelectionModal";
+import { useGlobalKey } from "@/components/key/useGlobalKey";
+
 import { CustomTable } from "@/component/table/CustomTable";
 import {
     useAllInvoiceDetails,
@@ -42,6 +49,7 @@ import {
     useCreateInvoiceDetails,
     useUpdateInvoiceDetails,
     useDeleteInvoiceDetails,
+    usePreviewRowSign,
 } from "@/hooks/Invoice/useInvoice";
 import { InvoiceDetails, InvoiceDetailsForm } from "@/types/Invoice/Invoice";
 import { useAllVendors } from "@/hooks/Vendor/useVendor";
@@ -56,6 +64,28 @@ import { DynamicForm } from "@/component/form/DynamicForm";
 import { useEnterNavigation } from "@/component/form/useEnterNavigation";
 import { DeleteDialog } from "@/components/ui/DeleteDialog";
 
+// Extended form interface to match API structure
+interface ExtendedInvoiceForm extends InvoiceDetailsForm {
+    DISCOUNTAMOUNT?: string;
+    MARKUPAMOUNT?: string;
+    NETAMOUNT?: string;
+    TAXAMOUNT?: string;
+    IGSTAMOUNT?: string;
+    CGSTAMOUNT?: string;
+    SGSTAMOUNT?: string;
+    IGSTPER?: string;
+    CGSTPER?: string;
+    SGSTPER?: string;
+    ROWSIGN?: string;
+    BILLNO?: string;
+    UNITCODE?: string;
+    TAXPER?: string;
+    ENTRYORDER?: string;
+    BILLSTATUS?: string;
+    UNIQUEKEY?: string;
+    BILLTYPE?: string;
+}
+
 function InvoicePage() {
     const { theme } = useTheme();
     const router = useRouter();
@@ -63,7 +93,7 @@ function InvoicePage() {
     const tableRef = useRef<HTMLDivElement>(null);
 
     /* -------------------- API HOOKS -------------------- */
-    const { data: invoiceDetailsData, refetch: refetchInvoiceDetails, isLoading, error } = useAllInvoiceDetails();
+    const { data: invoiceDetailsData, refetch: refetchInvoiceDetails, isLoading, error, isError } = useAllInvoiceDetails();
     
     // Safely handle the data - ensure it's an array
     const invoiceDetails = React.useMemo(() => {
@@ -84,7 +114,7 @@ function InvoicePage() {
         return [];
     }, [invoiceDetailsData]);
 
-    const { data: vendorsData } = useAllVendors();
+    const { data: vendorsData, isLoading: vendorsLoading, error: vendorsError } = useAllVendors();
     const vendors = React.useMemo(() => {
         if (!vendorsData) return [];
         if (Array.isArray(vendorsData)) return vendorsData;
@@ -92,7 +122,7 @@ function InvoicePage() {
         return [];
     }, [vendorsData]);
 
-    const { data: productsData } = useAllProducts();
+    const { data: productsData, isLoading: productsLoading, error: productsError } = useAllProducts();
     const products = React.useMemo(() => {
         if (!productsData) return [];
         if (Array.isArray(productsData)) return productsData;
@@ -100,7 +130,7 @@ function InvoicePage() {
         return [];
     }, [productsData]);
 
-    const { data: subProductsData } = useAllSubProducts();
+    const { data: subProductsData, isLoading: subProductsLoading, error: subProductsError } = useAllSubProducts();
     const allSubProducts = React.useMemo(() => {
         if (!subProductsData) return [];
         if (Array.isArray(subProductsData)) return subProductsData;
@@ -108,7 +138,7 @@ function InvoicePage() {
         return [];
     }, [subProductsData]);
 
-    const { data: barcodesData } = useAllBarcodes();
+    const { data: barcodesData, isLoading: barcodesLoading, error: barcodesError } = useAllBarcodes();
     const barcodes = React.useMemo(() => {
         if (!barcodesData) return [];
         if (Array.isArray(barcodesData)) return barcodesData;
@@ -122,6 +152,11 @@ function InvoicePage() {
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [showScrollButton, setShowScrollButton] = useState(false);
 
+    // Modal state
+    const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+    const [isSubProductModalOpen, setIsSubProductModalOpen] = useState(false);
+    const [focusedField, setFocusedField] = useState<string | null>(null);
+
     const { data: invoiceDetailById } = useInvoiceDetailsById(editId || "");
     const invoiceDetail = invoiceDetailById ?? null;
 
@@ -130,7 +165,7 @@ function InvoicePage() {
     const { mutate: deleteInvoiceDetails } = useDeleteInvoiceDetails();
 
     /* -------------------- FORM STATE -------------------- */
-    const [form, setForm] = useState<InvoiceDetailsForm>({
+    const [form, setForm] = useState<ExtendedInvoiceForm>({
         ROWSIGN: "I",
         VENDORCODE: "",
         ORIONBARCODE: "",
@@ -146,26 +181,94 @@ function InvoicePage() {
         BILLDATE: new Date().toISOString().split('T')[0],
         BILLNO: new Date().getTime().toString().slice(-8),
         UNITCODE: "1",
+        TAGGEN: "Y",
+        HSNCODE: "",
+        HSNTAXCODE: "",
+        BILLSTATUS: "PENDING",
         TAXPER: "18",
         DISCPER: "0",
-        HSNCODE: "",
-        BILLSTATUS: "PENDING",
+        // Calculated fields
+        DISCOUNTAMOUNT: "0",
+        MARKUPAMOUNT: "0",
+        AMOUNT: "0",
+        NETAMOUNT: "0",
+        TAXAMOUNT: "0",
+        IGSTAMOUNT: "0",
+        CGSTAMOUNT: "0",
+        SGSTAMOUNT: "0",
+        IGSTPER: "9",
+        CGSTPER: "9",
+        SGSTPER: "9",
     });
 
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
     const [filteredSubProducts, setFilteredSubProducts] = useState<any[]>([]);
 
-    // Calculate derived values
-    const [calculatedValues, setCalculatedValues] = useState({
-        AMOUNT: 0,
-        TOTALAMOUNT: 0,
-        TAXAMOUNT: 0,
-        DISCOUNT: 0,
-        MARKUP: 0,
-        SGSTAMOUNT: 0,
-        CGSTAMOUNT: 0,
-        IGSTAMOUNT: 0,
-    });
+    // Calculate all values when relevant fields change
+    useEffect(() => {
+        calculateAll();
+    }, [
+        form.PIECES, 
+        form.WEIGHT, 
+        form.MRP, 
+        form.PURRATE, 
+        form.MARKUPPER,
+        form.DISCPER,
+        form.TAXPER
+    ]);
+
+    const calculateAll = () => {
+        const pieces = parseFloat(form.PIECES || "1");
+        const weight = parseFloat(form.WEIGHT || "0");
+        const mrp = parseFloat(form.MRP || "0");
+        const purRate = parseFloat(form.PURRATE || "0");
+        const markUpper = parseFloat(form.MARKUPPER || "0");
+        const discPer = parseFloat(form.DISCPER || "0");
+        const taxPer = parseFloat(form.TAXPER || "18");
+
+        // Determine quantity (use weight if available, otherwise pieces)
+        const quantity = weight > 0 ? weight : pieces;
+        
+        // Calculate selling rate with markup
+        const sellingRate = purRate + (purRate * markUpper / 100);
+        
+        // Calculate amount (Pieces × Purchase Rate)
+        const amount = quantity * purRate;
+        
+        // Calculate markup amount
+        const markupAmount = (purRate * quantity * markUpper) / 100;
+        
+        // Calculate discount amount
+        const discountAmount = (amount * discPer) / 100;
+        
+        // Calculate taxable amount after discount
+        const taxableAmount = amount - discountAmount;
+        
+        // Calculate tax amount
+        const taxAmount = (taxableAmount * taxPer) / 100;
+        
+        // Calculate GST splits (assuming 50/50 for intra-state)
+        const sgstAmount = taxAmount / 2;
+        const cgstAmount = taxAmount / 2;
+        const igstAmount = taxAmount;
+        
+        // Calculate net amount
+        const netAmount = taxableAmount + taxAmount;
+
+        // Update form with calculated values
+        setForm(prev => ({
+            ...prev,
+            SELLINGRATE: sellingRate.toFixed(2),
+            AMOUNT: amount.toFixed(2),
+            MARKUPAMOUNT: markupAmount.toFixed(2),
+            DISCOUNTAMOUNT: discountAmount.toFixed(2),
+            TAXAMOUNT: taxAmount.toFixed(2),
+            IGSTAMOUNT: igstAmount.toFixed(2),
+            CGSTAMOUNT: cgstAmount.toFixed(2),
+            SGSTAMOUNT: sgstAmount.toFixed(2),
+            NETAMOUNT: netAmount.toFixed(2),
+        }));
+    };
 
     // Prepare vendors with string values for dropdown
     const vendorsForDropdown = useMemo(() => {
@@ -214,72 +317,6 @@ function InvoicePage() {
         }));
     }, [filteredSubProducts]);
 
-    // Calculate all values when relevant fields change
-    useEffect(() => {
-        calculateAll();
-    }, [
-        form.PIECES, 
-        form.WEIGHT, 
-        form.MRP, 
-        form.PURRATE, 
-        form.MARKUPPER, 
-        form.TAXPER, 
-        form.DISCPER
-    ]);
-
-    const calculateAll = () => {
-        const pieces = parseFloat(form.PIECES) || 1;
-        const weight = parseFloat(form.WEIGHT) || 0;
-        const mrp = parseFloat(form.MRP) || 0;
-        const purRate = parseFloat(form.PURRATE) || 0;
-        const markUpper = parseFloat(form.MARKUPPER) || 0;
-        const taxPer = parseFloat(form.TAXPER) || 18;
-        const discPer = parseFloat(form.DISCPER) || 0;
-
-        // Calculate quantity based on pieces/weight
-        const quantity = weight > 0 ? weight : pieces;
-        
-        // Calculate discount
-        const discount = (mrp * quantity * discPer) / 100;
-        
-        // Calculate markup
-        const markup = (purRate * quantity * markUpper) / 100;
-        
-        // Calculate selling rate with markup
-        const sellingRate = purRate + (purRate * markUpper / 100);
-        
-        // Calculate amount
-        const amount = sellingRate * quantity;
-        
-        // Calculate tax amount
-        const taxAmount = (amount * taxPer) / 100;
-        
-        // Calculate GST splits (assuming 50/50 for intra-state)
-        const sgstAmount = taxAmount / 2;
-        const cgstAmount = taxAmount / 2;
-        const igstAmount = taxAmount; // For inter-state
-        
-        // Calculate total amount
-        const totalAmount = amount + taxAmount - discount;
-
-        setCalculatedValues({
-            AMOUNT: amount,
-            TOTALAMOUNT: totalAmount,
-            TAXAMOUNT: taxAmount,
-            DISCOUNT: discount,
-            MARKUP: markup,
-            SGSTAMOUNT: sgstAmount,
-            CGSTAMOUNT: cgstAmount,
-            IGSTAMOUNT: igstAmount,
-        });
-
-        // Update selling rate in form
-        setForm(prev => ({
-            ...prev,
-            SELLINGRATE: sellingRate.toFixed(2)
-        }));
-    };
-
     /* -------------------- BARCODE SCAN HANDLER -------------------- */
     const handleBarcodeScan = (barcode: string) => {
         const foundBarcode = barcodes.find((b: any) => b.ORIONBARCODE === barcode);
@@ -304,6 +341,75 @@ function InvoicePage() {
         }
     };
 
+    /* -------------------- MODAL HANDLERS -------------------- */
+const handleProductSelect = (product: any) => {
+    setForm(prev => ({
+        ...prev,
+        PRODUCTCODE: product.PRODUCTCODE?.toString() || "",
+        MRP: product.MRP?.toString() || prev.MRP,
+        PURRATE: product.PURRATE?.toString() || prev.PURRATE,
+        UNITCODE: product.UNITCODE?.toString() || "1",
+    }));
+    
+    // Automatically focus on next field after selection
+    setTimeout(() => {
+        const nextField = document.querySelector('[name="SUBPRODUCTCODE"]') as HTMLInputElement;
+        if (nextField) {
+            nextField.focus();
+        }
+    }, 100);
+    
+    toastLoaded(`Product selected: ${product.PRODUCTNAME || product.PRODUCTCODE}`);
+    setIsProductModalOpen(false);
+};
+
+const handleSubProductSelect = (subProduct: any) => {
+    setForm(prev => ({
+        ...prev,
+        SUBPRODUCTCODE: subProduct.SUBPRODUCTCODE?.toString() || "",
+        MRP: subProduct.MRP?.toString() || prev.MRP,
+        PURRATE: subProduct.PURRATE?.toString() || prev.PURRATE,
+    }));
+    
+    // Automatically focus on next field after selection
+    setTimeout(() => {
+        const nextField = document.querySelector('[name="PIECES"]') as HTMLInputElement;
+        if (nextField) {
+            nextField.focus();
+        }
+    }, 100);
+    
+    toastLoaded(`Sub Product selected: ${subProduct.SUBPRODUCTNAME || subProduct.SUBPRODUCTCODE}`);
+    setIsSubProductModalOpen(false);
+};
+
+// Update the F2 key handler to be more precise
+useGlobalKey("F2", (e) => {
+    e.preventDefault();
+    const activeElement = document.activeElement;
+    
+    if (activeElement instanceof HTMLInputElement) {
+        const inputName = activeElement.name;
+        
+        if (inputName === "PRODUCTCODE") {
+            setIsProductModalOpen(true);
+        } else if (inputName === "SUBPRODUCTCODE") {
+            if (form.PRODUCTCODE) {
+                setIsSubProductModalOpen(true);
+            } else {
+                toastError("Please select a product first");
+                // Focus on product field
+                const productField = document.querySelector('[name="PRODUCTCODE"]') as HTMLInputElement;
+                if (productField) productField.focus();
+            }
+        }
+    }
+}, "invoice-page");
+
+    const handleInputFocus = (fieldName: string) => {
+        setFocusedField(fieldName);
+    };
+
     /* -------------------- USE EFFECTS -------------------- */
     useEffect(() => {
         if (!invoiceDetail) return;
@@ -326,10 +432,24 @@ function InvoicePage() {
             BILLDATE: invoiceDetail.BILLDATE || new Date().toISOString().split('T')[0],
             BILLNO: invoiceDetail.BILLNO?.toString() || new Date().getTime().toString().slice(-8),
             UNITCODE: invoiceDetail.UNITCODE?.toString() || "1",
+            TAGGEN: invoiceDetail.TAGGEN || "Y",
+            HSNCODE: invoiceDetail.HSNCODE || "",
+            HSNTAXCODE: invoiceDetail.HSNTAXCODE?.toString() || "",
+            BILLSTATUS: invoiceDetail.BILLSTATUS || "PENDING",
             TAXPER: invoiceDetail.TAXPER?.toString() || "18",
             DISCPER: invoiceDetail.DISCPER?.toString() || "0",
-            HSNCODE: invoiceDetail.HSNCODE || "",
-            BILLSTATUS: invoiceDetail.BILLSTATUS || "PENDING",
+            // Calculated fields
+            DISCOUNTAMOUNT: invoiceDetail.DISCOUNT?.toString() || "0",
+            MARKUPAMOUNT: invoiceDetail.MARKUP?.toString() || "0",
+            AMOUNT: invoiceDetail.AMOUNT?.toString() || "0",
+            NETAMOUNT: invoiceDetail.TOTALAMOUNT?.toString() || "0",
+            TAXAMOUNT: invoiceDetail.TAXAMOUNT?.toString() || "0",
+            IGSTAMOUNT: invoiceDetail.IGSTAMOUNT?.toString() || "0",
+            CGSTAMOUNT: invoiceDetail.CGSTAMOUNT?.toString() || "0",
+            SGSTAMOUNT: invoiceDetail.SGSTAMOUNT?.toString() || "0",
+            IGSTPER: invoiceDetail.IGSTPER?.toString() || "9",
+            CGSTPER: invoiceDetail.CGSTPER?.toString() || "9",
+            SGSTPER: invoiceDetail.SGSTPER?.toString() || "9",
         });
 
         setTimeout(() => {
@@ -399,22 +519,25 @@ function InvoicePage() {
             BILLDATE: new Date().toISOString().split('T')[0],
             BILLNO: new Date().getTime().toString().slice(-8),
             UNITCODE: "1",
+            TAGGEN: "Y",
+            HSNCODE: "",
+            HSNTAXCODE: "",
+            BILLSTATUS: "PENDING",
             TAXPER: "18",
             DISCPER: "0",
-            HSNCODE: "",
-            BILLSTATUS: "PENDING",
+            DISCOUNTAMOUNT: "0",
+            MARKUPAMOUNT: "0",
+            AMOUNT: "0",
+            NETAMOUNT: "0",
+            TAXAMOUNT: "0",
+            IGSTAMOUNT: "0",
+            CGSTAMOUNT: "0",
+            SGSTAMOUNT: "0",
+            IGSTPER: "9",
+            CGSTPER: "9",
+            SGSTPER: "9",
         });
         setFormErrors({});
-        setCalculatedValues({
-            AMOUNT: 0,
-            TOTALAMOUNT: 0,
-            TAXAMOUNT: 0,
-            DISCOUNT: 0,
-            MARKUP: 0,
-            SGSTAMOUNT: 0,
-            CGSTAMOUNT: 0,
-            IGSTAMOUNT: 0,
-        });
     };
 
     const handleEdit = (invoiceDetail: any) => {
@@ -426,9 +549,9 @@ function InvoicePage() {
         const errors: Record<string, string> = {};
 
         // Validation
-        if (!form.VENDORCODE) errors.VENDORCODE = "Vendor is required";
-        if (!form.ORIONBARCODE) errors.ORIONBARCODE = "Barcode is required";
-        if (!form.PRODUCTCODE) errors.PRODUCTCODE = "Product is required";
+        if (!form.VENDORCODE) errors.VENDORCODE = "Vendor Code is required";
+        if (!form.PRODUCTCODE) errors.PRODUCTCODE = "Product Code is required";
+        if (!form.SUBPRODUCTCODE) errors.SUBPRODUCTCODE = "Sub Product Code is required";
         if (!form.MRP) errors.MRP = "MRP is required";
         if (!form.PURRATE) errors.PURRATE = "Purchase Rate is required";
         if (!form.INVOICENO) errors.INVOICENO = "Invoice No is required";
@@ -440,34 +563,40 @@ function InvoicePage() {
             return;
         }
 
+        // Create payload matching InvoiceDetails interface
         const payload: InvoiceDetails = {
-            ROWSIGN: form.ROWSIGN,
+            ROWSIGN: form.ROWSIGN || "I",
             VENDORCODE: Number(form.VENDORCODE),
-            ORIONBARCODE: form.ORIONBARCODE,
+            ORIONBARCODE: form.ORIONBARCODE || "",
             PRODUCTCODE: Number(form.PRODUCTCODE),
             SUBPRODUCTCODE: form.SUBPRODUCTCODE ? Number(form.SUBPRODUCTCODE) : undefined,
-            PIECES: Number(form.PIECES),
-            WEIGHT: Number(form.WEIGHT),
-            MRP: Number(form.MRP),
-            PURRATE: Number(form.PURRATE),
-            SELLINGRATE: Number(form.SELLINGRATE) || calculatedValues.AMOUNT / (Number(form.PIECES) || 1),
-            MARKUPPER: Number(form.MARKUPPER),
-            MARKUP: calculatedValues.MARKUP,
+            PIECES: Number(form.PIECES) || 1,
+            WEIGHT: Number(form.WEIGHT) || 0,
+            MRP: Number(form.MRP) || 0,
+            PURRATE: Number(form.PURRATE) || 0,
+            SELLINGRATE: Number(form.SELLINGRATE) || 0,
+            MARKUPPER: Number(form.MARKUPPER) || 0,
+            MARKUP: Number(form.MARKUPAMOUNT) || 0,
             INVOICENO: form.INVOICENO,
             BILLDATE: form.BILLDATE,
-            BILLNO: Number(form.BILLNO),
-            UNITCODE: Number(form.UNITCODE),
-            AMOUNT: calculatedValues.AMOUNT,
-            TOTALAMOUNT: calculatedValues.TOTALAMOUNT,
-            TAXPER: Number(form.TAXPER),
-            TAXAMOUNT: calculatedValues.TAXAMOUNT,
-            DISCPER: Number(form.DISCPER),
-            DISCOUNT: calculatedValues.DISCOUNT,
-            HSNCODE: form.HSNCODE,
-            SGSTAMOUNT: calculatedValues.SGSTAMOUNT,
-            CGSTAMOUNT: calculatedValues.CGSTAMOUNT,
-            IGSTAMOUNT: calculatedValues.IGSTAMOUNT,
-            BILLSTATUS: form.BILLSTATUS,
+            BILLNO: form.BILLNO ? Number(form.BILLNO) : undefined,
+            UNITCODE: form.UNITCODE ? Number(form.UNITCODE) : undefined,
+            TAGGEN: form.TAGGEN || "Y",
+            HSNCODE: form.HSNCODE || "",
+            HSNTAXCODE: form.HSNTAXCODE ? Number(form.HSNTAXCODE) : undefined,
+            AMOUNT: Number(form.AMOUNT) || 0,
+            TOTALAMOUNT: Number(form.NETAMOUNT) || 0,
+            DISCPER: Number(form.DISCPER) || 0,
+            DISCOUNT: Number(form.DISCOUNTAMOUNT) || 0,
+            TAXPER: Number(form.TAXPER) || 18,
+            TAXAMOUNT: Number(form.TAXAMOUNT) || 0,
+            IGSTAMOUNT: Number(form.IGSTAMOUNT) || 0,
+            CGSTAMOUNT: Number(form.CGSTAMOUNT) || 0,
+            SGSTAMOUNT: Number(form.SGSTAMOUNT) || 0,
+            IGSTPER: Number(form.IGSTPER) || 9,
+            CGSTPER: Number(form.CGSTPER) || 9,
+            SGSTPER: Number(form.SGSTPER) || 9,
+            BILLSTATUS: form.BILLSTATUS || "PENDING",
             CREATEDBY: 1,
         };
 
@@ -533,25 +662,24 @@ function InvoicePage() {
     const getVendorName = (detail: any) => {
         if (detail.vendor?.VENDORNAME) return detail.vendor.VENDORNAME;
         const vendor = vendors.find((v: any) => v.VENDORCODE === detail.VENDORCODE);
-        return vendor?.VENDORNAME || detail.VENDORCODE?.toString() || '-';
+        return vendor?.VENDORNAME || `Vendor ${detail.VENDORCODE}` || '-';
     };
 
     const getProductName = (detail: any) => {
         if (detail.product?.PRODUCTNAME) return detail.product.PRODUCTNAME;
         const product = products.find((p: any) => p.PRODUCTCODE === detail.PRODUCTCODE);
-        return product?.PRODUCTNAME || detail.PRODUCTCODE?.toString() || '-';
+        return product?.PRODUCTNAME || `Product ${detail.PRODUCTCODE}` || '-';
     };
 
     const getSubProductName = (detail: any) => {
         if (detail.subProduct?.SUBPRODUCTNAME) return detail.subProduct.SUBPRODUCTNAME;
         if (!detail.SUBPRODUCTCODE) return '-';
         const subProduct = allSubProducts.find((sp: any) => sp.SUBPRODUCTCODE === detail.SUBPRODUCTCODE);
-        return subProduct?.SUBPRODUCTNAME || detail.SUBPRODUCTCODE?.toString() || '-';
+        return subProduct?.SUBPRODUCTNAME || `Sub Product ${detail.SUBPRODUCTCODE}` || '-';
     };
 
     const InvoiceColumns = [
         { key: "actions", label: "Actions" },
-        { key: "IPID", label: "ID" },
         { key: "INVOICENO", label: "Invoice No" },
         { key: "BILLDATE", label: "Bill Date" },
         { key: "VENDORNAME", label: "Vendor" },
@@ -559,18 +687,19 @@ function InvoicePage() {
         { key: "SUBPRODUCTNAME", label: "Sub Product" },
         { key: "PIECES", label: "Pcs" },
         { key: "WEIGHT", label: "Wt" },
+        { key: "PURRATE", label: "Rate" },
         { key: "MRP", label: "MRP" },
-        { key: "PURRATE", label: "Pur Rate" },
-        { key: "SELLINGRATE", label: "Sell Rate" },
         { key: "AMOUNT", label: "Amount" },
+        { key: "DISCOUNT", label: "Disc" },
+        { key: "MARKUP", label: "Markup" },
         { key: "TAXAMOUNT", label: "Tax" },
-        { key: "TOTALAMOUNT", label: "Total" },
+        { key: "TOTALAMOUNT", label: "Net" },
+        { key: "TAGGEN", label: "Tag" },
         { key: "BILLSTATUS", label: "Status" },
     ];
 
     const handleExport = (option: string) => {
         const exportData = invoiceDetails.map((detail: any) => ({
-            IPID: detail.IPID,
             INVOICENO: detail.INVOICENO,
             BILLDATE: detail.BILLDATE,
             VENDORNAME: getVendorName(detail),
@@ -578,13 +707,15 @@ function InvoicePage() {
             SUBPRODUCTNAME: getSubProductName(detail),
             PIECES: detail.PIECES,
             WEIGHT: detail.WEIGHT,
-            MRP: `₹${detail.MRP}`,
             PURRATE: `₹${detail.PURRATE}`,
-            SELLINGRATE: `₹${detail.SELLINGRATE}`,
+            MRP: `₹${detail.MRP}`,
             AMOUNT: `₹${detail.AMOUNT?.toFixed(2)}`,
-            TAXAMOUNT: `₹${detail.TAXAMOUNT?.toFixed(2)}`,
+            DISCOUNT: `₹${detail.DISCOUNT?.toFixed(2) || '0.00'}`,
+            MARKUP: `₹${detail.MARKUP?.toFixed(2) || '0.00'}`,
+            TAXAMOUNT: `₹${detail.TAXAMOUNT?.toFixed(2) || '0.00'}`,
             TOTALAMOUNT: `₹${detail.TOTALAMOUNT?.toFixed(2)}`,
-            BILLSTATUS: detail.BILLSTATUS,
+            TAGGEN: detail.TAGGEN || 'Y',
+            BILLSTATUS: detail.BILLSTATUS || 'PENDING',
         }));
 
         setData(exportData);
@@ -601,39 +732,70 @@ function InvoicePage() {
         subProductsForDropdown
     );
 
-    // Define the sections for 3-column layout
-    const formSections = [
-        {
-            title: "Basic Information",
-            fields: ["ROWSIGN", "VENDORCODE", "ORIONBARCODE", "PRODUCTCODE", "SUBPRODUCTCODE"]
-        },
-        {
-            title: "Product Details & Rates",
-            fields: ["PIECES", "WEIGHT", "MRP", "PURRATE", "SELLINGRATE", "MARKUPPER"]
-        },
-        {
-            title: "Invoice & Tax Details",
-            fields: ["INVOICENO", "BILLDATE", "BILLNO", "UNITCODE", "TAXPER", "DISCPER", "HSNCODE", "BILLSTATUS"]
-        }
+    // Group fields into 3 columns in the exact order
+    const column1Fields = [
+        "ROWSIGN", "INVOICENO", "BILLDATE", "BILLNO", "VENDORCODE", "ORIONBARCODE", 
+        "PRODUCTCODE", "SUBPRODUCTCODE", "UNITCODE", "HSNCODE", "HSNTAXCODE"
     ];
 
-    const fieldSequence = invoiceFormFields.map(f => f.name);
+    const column2Fields = [
+        "PIECES", "WEIGHT", "PURRATE", "MRP", "SELLINGRATE", "MARKUPPER", 
+        "DISCPER", "TAXPER", "TAGGEN", "BILLSTATUS"
+    ];
+
+    const column3Fields = [
+        "AMOUNT", "MARKUPAMOUNT", "DISCOUNTAMOUNT", "TAXAMOUNT", 
+        "IGSTPER", "IGSTAMOUNT", "CGSTPER", "CGSTAMOUNT", "SGSTPER", "SGSTAMOUNT", 
+        "NETAMOUNT"
+    ];
+
+    const fieldSequence = [...column1Fields, ...column2Fields, ...column3Fields];
     const { register, focusNext } = useEnterNavigation(fieldSequence, handleSave);
 
-    // Show loading state
-    if (isLoading) {
+    // Show error state with retry option
+    if (isError) {
         return (
-            <Center h="200px">
-                <Spinner size="xl" />
+            <Center h="100vh">
+                <Alert
+                    status="error"
+                    variant="subtle"
+                    flexDirection="column"
+                    alignItems="center"
+                    justifyContent="center"
+                    textAlign="center"
+                    height="200px"
+                    borderRadius="lg"
+                    maxW="500px"
+                >
+                    <Alert.Icon boxSize="40px" mr={0} />
+                    <AlertTitle mt={4} mb={1} fontSize="lg">
+                        Error Loading Data
+                    </AlertTitle>
+                    <AlertDescription maxWidth="sm">
+                        {error instanceof Error ? error.message : "Failed to load invoice details"}
+                    </AlertDescription>
+                    <Button
+                        leftIcon={<AiOutlineReload />}
+                        colorScheme="red"
+                        variant="outline"
+                        mt={4}
+                        onClick={() => refetchInvoiceDetails()}
+                    >
+                        Try Again
+                    </Button>
+                </Alert>
             </Center>
         );
     }
 
-    // Show error state
-    if (error) {
+    // Show loading state
+    if (isLoading || vendorsLoading || productsLoading || subProductsLoading || barcodesLoading) {
         return (
             <Center h="200px">
-                <Text color="red.500">Error loading data: {error.message}</Text>
+                <VStack spacing={4}>
+                    <Spinner size="xl" thickness="4px" speed="0.65s" color="blue.500" />
+                    <Text color="gray.500">Loading invoice details...</Text>
+                </VStack>
             </Center>
         );
     }
@@ -650,25 +812,81 @@ function InvoicePage() {
                 message="Are you sure you want to delete this invoice detail? This action cannot be undone."
             />
 
+            {/* Product Selection Modal */}
+            <SelectionModal
+                isOpen={isProductModalOpen}
+                onClose={() => setIsProductModalOpen(false)}
+                items={products.map(p => ({
+                    ...p,
+                    id: p.PRODUCTCODE,
+                    name: p.PRODUCTNAME,
+                    code: p.PRODUCTCODE,
+                }))}
+                onSelect={handleProductSelect}
+                title="Select Product"
+                searchPlaceholder="Search by product name or code..."
+                searchKeys={["PRODUCTNAME", "PRODUCTCODE"]}
+                idKey="PRODUCTCODE"
+                nameKey="PRODUCTNAME"
+                codeKey="PRODUCTCODE"
+                columns={[
+                    { key: "PRODUCTCODE", label: "Code", width: "100px" },
+                    { key: "PRODUCTNAME", label: "Product Name", width: "1fr" },
+                    { key: "MRP", label: "MRP", width: "100px" },
+                    { key: "PURRATE", label: "Rate", width: "100px" },
+                ]}
+            />
+
+            {/* SubProduct Selection Modal */}
+            <SelectionModal
+                isOpen={isSubProductModalOpen}
+                onClose={() => setIsSubProductModalOpen(false)}
+                items={filteredSubProducts.map(sp => ({
+                    ...sp,
+                    id: sp.SUBPRODUCTCODE,
+                    name: sp.SUBPRODUCTNAME,
+                    code: sp.SUBPRODUCTCODE,
+                }))}
+                onSelect={handleSubProductSelect}
+                title="Select Sub Product"
+                searchPlaceholder="Search by sub product name or code..."
+                searchKeys={["SUBPRODUCTNAME", "SUBPRODUCTCODE"]}
+                idKey="SUBPRODUCTCODE"
+                nameKey="SUBPRODUCTNAME"
+                codeKey="SUBPRODUCTCODE"
+                columns={[
+                    { key: "SUBPRODUCTCODE", label: "Code", width: "100px" },
+                    { key: "SUBPRODUCTNAME", label: "Sub Product Name", width: "1fr" },
+                    { key: "MRP", label: "MRP", width: "100px" },
+                    { key: "PURRATE", label: "Rate", width: "100px" },
+                ]}
+            />
+
             <VStack spacing={6} align="stretch">
                 {/* ---------------- FORM CARD WITH 3-COLUMN LAYOUT ---------------- */}
                 <Card.Root variant="outline" bg={theme.colors.formColor} borderRadius="xl" border="1px solid #eef">
                     <CardHeader>
-                        <Text fontSize="md" fontWeight="600">
-                            INVOICE {editId ? 'EDIT' : 'DETAILS'}
-                        </Text>
+                        <HStack justify="space-between" align="center">
+                            <Text fontSize="md" fontWeight="600">
+                                INVOICE {editId ? 'EDIT' : 'DETAILS'}
+                            </Text>
+                            <HStack spacing={2} fontSize="sm" color="gray.500">
+                                <Kbd>F2</Kbd>
+                                <Text>on product/subproduct field to open selector</Text>
+                            </HStack>
+                        </HStack>
                     </CardHeader>
                     <CardBody>
                         <VStack spacing={6} align="stretch">
-                            {/* 3-Column Layout for Form Fields */}
+                            {/* 3-Column Layout with fields in exact order */}
                             <Grid templateColumns="repeat(3, 1fr)" gap={6}>
-                                {/* Column 1 - Basic Information */}
+                                {/* Column 1 - Basic Info */}
                                 <GridItem>
                                     <VStack align="stretch" spacing={4}>
                                         <Text fontSize="sm" fontWeight="500" color="gray.600" borderBottom="1px solid" borderColor="gray.200" pb={1}>
-                                            Basic Information
+                                            Invoice & Basic Info
                                         </Text>
-                                        {formSections[0].fields.map(fieldName => {
+                                        {column1Fields.map(fieldName => {
                                             const field = invoiceFormFields.find(f => f.name === fieldName);
                                             if (!field) return null;
                                             return (
@@ -680,6 +898,7 @@ function InvoicePage() {
                                                         register={register}
                                                         focusNext={focusNext}
                                                         errors={formErrors}
+                                                        onFieldFocus={handleInputFocus}
                                                     />
                                                 </Box>
                                             );
@@ -687,13 +906,13 @@ function InvoicePage() {
                                     </VStack>
                                 </GridItem>
 
-                                {/* Column 2 - Product Details & Rates */}
+                                {/* Column 2 - Product Details */}
                                 <GridItem>
                                     <VStack align="stretch" spacing={4}>
                                         <Text fontSize="sm" fontWeight="500" color="gray.600" borderBottom="1px solid" borderColor="gray.200" pb={1}>
-                                            Product Details & Rates
+                                            Product Details
                                         </Text>
-                                        {formSections[1].fields.map(fieldName => {
+                                        {column2Fields.map(fieldName => {
                                             const field = invoiceFormFields.find(f => f.name === fieldName);
                                             if (!field) return null;
                                             return (
@@ -705,6 +924,7 @@ function InvoicePage() {
                                                         register={register}
                                                         focusNext={focusNext}
                                                         errors={formErrors}
+                                                        onFieldFocus={handleInputFocus}
                                                     />
                                                 </Box>
                                             );
@@ -712,13 +932,13 @@ function InvoicePage() {
                                     </VStack>
                                 </GridItem>
 
-                                {/* Column 3 - Invoice & Tax Details */}
+                                {/* Column 3 - Calculations */}
                                 <GridItem>
                                     <VStack align="stretch" spacing={4}>
                                         <Text fontSize="sm" fontWeight="500" color="gray.600" borderBottom="1px solid" borderColor="gray.200" pb={1}>
-                                            Invoice & Tax Details
+                                            Calculations
                                         </Text>
-                                        {formSections[2].fields.map(fieldName => {
+                                        {column3Fields.map(fieldName => {
                                             const field = invoiceFormFields.find(f => f.name === fieldName);
                                             if (!field) return null;
                                             return (
@@ -730,6 +950,7 @@ function InvoicePage() {
                                                         register={register}
                                                         focusNext={focusNext}
                                                         errors={formErrors}
+                                                        onFieldFocus={handleInputFocus}
                                                     />
                                                 </Box>
                                             );
@@ -739,48 +960,6 @@ function InvoicePage() {
                             </Grid>
 
                             <Separator />
-
-                            {/* Calculated Values Summary - Full Width */}
-                            <Box>
-                                <Text fontSize="sm" fontWeight="500" mb={3} color="gray.600">Calculated Values</Text>
-                                <Grid templateColumns="repeat(4, 1fr)" gap={4}>
-                                    <Box p={3} bg="blue.50" borderRadius="lg">
-                                        <Text fontSize="xs" color="gray.600">Amount</Text>
-                                        <Text fontSize="md" fontWeight="bold" color="blue.700">₹{calculatedValues.AMOUNT.toFixed(2)}</Text>
-                                    </Box>
-                                    <Box p={3} bg="green.50" borderRadius="lg">
-                                        <Text fontSize="xs" color="gray.600">Tax Amount</Text>
-                                        <Text fontSize="md" fontWeight="bold" color="green.700">₹{calculatedValues.TAXAMOUNT.toFixed(2)}</Text>
-                                    </Box>
-                                    <Box p={3} bg="purple.50" borderRadius="lg">
-                                        <Text fontSize="xs" color="gray.600">Discount</Text>
-                                        <Text fontSize="md" fontWeight="bold" color="purple.700">-₹{calculatedValues.DISCOUNT.toFixed(2)}</Text>
-                                    </Box>
-                                    <Box p={3} bg="orange.50" borderRadius="lg">
-                                        <Text fontSize="xs" color="gray.600">Total Amount</Text>
-                                        <Text fontSize="md" fontWeight="bold" color="orange.700">₹{calculatedValues.TOTALAMOUNT.toFixed(2)}</Text>
-                                    </Box>
-                                </Grid>
-                            </Box>
-
-                            {/* GST Breakup - Full Width */}
-                            <Box>
-                                <Text fontSize="sm" fontWeight="500" mb={3} color="gray.600">GST Breakup</Text>
-                                <Grid templateColumns="repeat(3, 1fr)" gap={4}>
-                                    <Box p={2} bg="gray.50" borderRadius="lg" textAlign="center">
-                                        <Text fontSize="xs" color="gray.600">SGST</Text>
-                                        <Text fontSize="sm" fontWeight="bold">₹{calculatedValues.SGSTAMOUNT.toFixed(2)}</Text>
-                                    </Box>
-                                    <Box p={2} bg="gray.50" borderRadius="lg" textAlign="center">
-                                        <Text fontSize="xs" color="gray.600">CGST</Text>
-                                        <Text fontSize="sm" fontWeight="bold">₹{calculatedValues.CGSTAMOUNT.toFixed(2)}</Text>
-                                    </Box>
-                                    <Box p={2} bg="gray.50" borderRadius="lg" textAlign="center">
-                                        <Text fontSize="xs" color="gray.600">IGST</Text>
-                                        <Text fontSize="sm" fontWeight="bold">₹{calculatedValues.IGSTAMOUNT.toFixed(2)}</Text>
-                                    </Box>
-                                </Grid>
-                            </Box>
                         </VStack>
                     </CardBody>
                     <CardFooter>
@@ -854,7 +1033,6 @@ function InvoicePage() {
                                             />
                                         </Box>
                                     </Table.Cell>
-                                    <Table.Cell>{detail.IPID}</Table.Cell>
                                     <Table.Cell>{detail.INVOICENO}</Table.Cell>
                                     <Table.Cell>{detail.BILLDATE}</Table.Cell>
                                     <Table.Cell>{getVendorName(detail)}</Table.Cell>
@@ -862,15 +1040,21 @@ function InvoicePage() {
                                     <Table.Cell>{getSubProductName(detail)}</Table.Cell>
                                     <Table.Cell>{detail.PIECES}</Table.Cell>
                                     <Table.Cell>{detail.WEIGHT}</Table.Cell>
-                                    <Table.Cell>₹{detail.MRP}</Table.Cell>
                                     <Table.Cell>₹{detail.PURRATE}</Table.Cell>
-                                    <Table.Cell>₹{detail.SELLINGRATE}</Table.Cell>
+                                    <Table.Cell>₹{detail.MRP}</Table.Cell>
                                     <Table.Cell>₹{detail.AMOUNT?.toFixed(2)}</Table.Cell>
-                                    <Table.Cell>₹{detail.TAXAMOUNT?.toFixed(2)}</Table.Cell>
+                                    <Table.Cell>₹{detail.DISCOUNT?.toFixed(2) || '0.00'}</Table.Cell>
+                                    <Table.Cell>₹{detail.MARKUP?.toFixed(2) || '0.00'}</Table.Cell>
+                                    <Table.Cell>₹{detail.TAXAMOUNT?.toFixed(2) || '0.00'}</Table.Cell>
                                     <Table.Cell>₹{detail.TOTALAMOUNT?.toFixed(2)}</Table.Cell>
                                     <Table.Cell>
-                                        <Badge colorScheme={detail.BILLSTATUS === "PAID" ? "green" : "yellow"}>
-                                            {detail.BILLSTATUS}
+                                        <Badge colorScheme={detail.TAGGEN === 'Y' ? 'green' : 'gray'}>
+                                            {detail.TAGGEN || 'Y'}
+                                        </Badge>
+                                    </Table.Cell>
+                                    <Table.Cell>
+                                        <Badge colorScheme={detail.BILLSTATUS === 'PAID' ? 'green' : 'yellow'}>
+                                            {detail.BILLSTATUS || 'PENDING'}
                                         </Badge>
                                     </Table.Cell>
                                 </>

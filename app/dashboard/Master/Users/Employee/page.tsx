@@ -59,11 +59,12 @@ interface Designation {
 
 // Interface for employee form
 interface EmployeeFormData {
+    EMPUID?: string;   // ADD THIS
     EMPNAME: string;
     EMPSURNAME: string;
     EMPFATHERNAME: string;
     SALUTATION: string;
-    DESIGNATIONCODE: number | string; // Add designation field
+    DESIGNATION: string;
     DOORNO: string;
     STREET: string;
     ADDRESS: string;
@@ -74,7 +75,7 @@ interface EmployeeFormData {
     PHONENO: string;
     MOBILENO: string;
     ACTIVE: string;
-    CREATEDBY: number;
+    CREATEDBY?: number;
 }
 
 function EmployeeMaster() {
@@ -156,24 +157,25 @@ function EmployeeMaster() {
     ];
 
     /* -------------------- FORM STATE -------------------- */
-    const emptyForm: EmployeeFormData = {
-        EMPNAME: "",
-        EMPSURNAME: "",
-        EMPFATHERNAME: "",
-        SALUTATION: "",
-        DESIGNATIONCODE: "", // Add empty designation
-        DOORNO: "",
-        STREET: "",
-        ADDRESS: "",
-        AREA: "",
-        CITY: "",
-        STATE: "",
-        PINCODE: "",
-        PHONENO: "",
-        MOBILENO: "",
-        ACTIVE: "Y",
-        CREATEDBY: 1,
-    };
+const emptyForm: EmployeeFormData = {
+    EMPUID: "",
+    EMPNAME: "",
+    EMPSURNAME: "",
+    EMPFATHERNAME: "",
+    SALUTATION: "",
+    DESIGNATION: "",
+    DOORNO: "",
+    STREET: "",
+    ADDRESS: "",
+    AREA: "",
+    CITY: "",
+    STATE: "",
+    PINCODE: "",
+    PHONENO: "",
+    MOBILENO: "",
+    ACTIVE: "Y",
+    CREATEDBY: 1,
+};
 
     const [form, setForm] = useState<EmployeeFormData>(emptyForm);
     const [editIndex, setEditIndex] = useState<number | null>(null);
@@ -184,23 +186,23 @@ function EmployeeMaster() {
         if (editIndex !== null && employeeList[editIndex]) {
             const employeeToEdit = employeeList[editIndex];
             setForm({
-                EMPNAME: employeeToEdit.EMPNAME || "",
-                EMPSURNAME: employeeToEdit.EMPSURNAME || "",
-                EMPFATHERNAME: employeeToEdit.EMPFATHERNAME || "",
-                SALUTATION: employeeToEdit.SALUTATION || "",
-               DESIGNATIONCODE: employeeToEdit.DESIGNATIONCODE ?? "",
-                DOORNO: employeeToEdit.DOORNO || "",
-                STREET: employeeToEdit.STREET || "",
-                ADDRESS: employeeToEdit.ADDRESS || "",
-                AREA: employeeToEdit.AREA || "",
-                CITY: employeeToEdit.CITY || "",
-                STATE: employeeToEdit.STATE || "",
-                PINCODE: employeeToEdit.PINCODE || "",
-                PHONENO: employeeToEdit.PHONENO || "",
-                MOBILENO: employeeToEdit.MOBILENO || "",
-                ACTIVE: employeeToEdit.ACTIVE || "Y",
-                CREATEDBY: 1,
-            });
+    EMPUID: employeeToEdit.EMPUID,   // ADD THIS
+    EMPNAME: employeeToEdit.EMPNAME || "",
+    EMPSURNAME: employeeToEdit.EMPSURNAME || "",
+    EMPFATHERNAME: employeeToEdit.EMPFATHERNAME || "",
+    SALUTATION: employeeToEdit.SALUTATION || "",
+    DESIGNATION: employeeToEdit.DESIGNATION ?? "",
+    DOORNO: employeeToEdit.DOORNO || "",
+    STREET: employeeToEdit.STREET || "",
+    ADDRESS: employeeToEdit.ADDRESS || "",
+    AREA: employeeToEdit.AREA || "",
+    CITY: employeeToEdit.CITY || "",
+    STATE: employeeToEdit.STATE || "",
+    PINCODE: employeeToEdit.PINCODE || "",
+    PHONENO: employeeToEdit.PHONENO || "",
+    MOBILENO: employeeToEdit.MOBILENO || "",
+    ACTIVE: employeeToEdit.ACTIVE || "Y",
+});
             toastLoaded("Employee");
             ScrollToTop();
         }
@@ -239,7 +241,7 @@ function EmployeeMaster() {
             toastError("Father Name is required");
             return false;
         }
-        if (!form.DESIGNATIONCODE) {
+        if (!form.DESIGNATION) {
             toastError("Designation is required");
             return false;
         }
@@ -277,57 +279,55 @@ function EmployeeMaster() {
     };
 
     const handleSave = () => {
-        if (!validateForm()) return;
+    if (!validateForm()) return;
+    
 
-        const payload: EmployeeFormData = {
-            EMPNAME: String(form.EMPNAME).trim(),
-            EMPSURNAME: String(form.EMPSURNAME).trim(),
-            EMPFATHERNAME: String(form.EMPFATHERNAME).trim(),
-            SALUTATION: String(form.SALUTATION || ""),
-            DESIGNATIONCODE: Number(form.DESIGNATIONCODE), // Convert to number for API
-            DOORNO: String(form.DOORNO || ""),
-            STREET: String(form.STREET || ""),
-            ADDRESS: String(form.ADDRESS || ""),
-            AREA: String(form.AREA || ""),
-            CITY: String(form.CITY).trim(),
-            STATE: String(form.STATE).trim(),
-            PINCODE: String(form.PINCODE).trim(),
-            PHONENO: String(form.PHONENO || ""),
-            MOBILENO: String(form.MOBILENO).trim(),
-            ACTIVE: String(form.ACTIVE || "Y"),
-            CREATEDBY: 1,
-        };
-
-        if (editIndex !== null) {
-            const updatePayload = {
-                ...payload,
-                // Include EMPUID if your API requires it
-                // EMPUID: employeeList[editIndex].EMPUID
-            };
-            updateEmployee.mutate(updatePayload as Employee, {
-                onSuccess: () => {
-                    employeeRefetch();
-                    setHighlightedIndex(editIndex);
-                    resetForm();
-                },
-                onError: (error: any) => {
-                    console.error("Update error:", error);
-                    toastError("Failed to update employee");
-                }
-            });
-        } else {
-            createEmployee.mutate(payload as any, {
-                onSuccess: () => {
-                    employeeRefetch();
-                    resetForm();
-                },
-                onError: (error: any) => {
-                    console.error("Create error:", error);
-                    toastError("Failed to create employee");
-                }
-            });
-        }
+    const payload: EmployeeFormData = {
+         EMPUID: form.EMPUID,   // IMPORTANT
+        EMPNAME: String(form.EMPNAME).trim(),
+        EMPSURNAME: String(form.EMPSURNAME).trim(),
+        EMPFATHERNAME: String(form.EMPFATHERNAME).trim(),
+        SALUTATION: String(form.SALUTATION || ""),
+        DESIGNATION: String(form.DESIGNATION || ""), // send designation name
+        DOORNO: String(form.DOORNO || ""),
+        STREET: String(form.STREET || ""),
+        ADDRESS: String(form.ADDRESS || ""),
+        AREA: String(form.AREA || ""),
+        CITY: String(form.CITY).trim(),
+        STATE: String(form.STATE).trim(),
+        PINCODE: String(form.PINCODE).trim(),
+        PHONENO: String(form.PHONENO || ""),
+        MOBILENO: String(form.MOBILENO).trim(),
+        ACTIVE: String(form.ACTIVE || "Y"),
+       
     };
+    console.log("Payload data",payload)
+
+    if (editIndex !== null) {
+        updateEmployee.mutate(payload as Employee, {
+            onSuccess: () => {
+                employeeRefetch();
+                setHighlightedIndex(editIndex);
+                resetForm();
+            },
+            onError: (error: any) => {
+                console.error("Update error:", error);
+                toastError("Failed to update employee");
+            }
+        });
+    } else {
+        createEmployee.mutate(payload as any, {
+            onSuccess: () => {
+                employeeRefetch();
+                resetForm();
+            },
+            onError: (error: any) => {
+                console.error("Create error:", error);
+                toastError("Failed to create employee");
+            }
+        });
+    }
+};
 
     const handleEdit = (index: number) => {
         setEditIndex(index);
@@ -417,30 +417,30 @@ const getDesignationName = (code?: number | string) => {
                                         {isLoadingDesignations ? (
                                             <Spinner size="xs" />
                                         ) : (
-                                            <NativeSelect.Root size="xs" maxW="150px" fontSize="2xs">
-                                                <NativeSelect.Field
-                                                    value={form.DESIGNATIONCODE}
-                                                    onChange={(e) => handleChange("DESIGNATIONCODE", e.target.value)}
-                                                    css={{
-                                                        backgroundColor: "#eee",
-                                                        color: "#111827",
-                                                        border: "1px solid #e5e7eb",
-                                                        borderRadius: "20px",
-                                                        height: "30px",
-                                                        fontSize: "10px",
-                                                    }}
-                                                >
-                                                    <option value="">Select Designation</option>
-                                                    <For each={designationOptions}>
-                                                        {(item) => (
-                                                            <option key={item.value} value={item.value}>
-                                                                {item.label}
-                                                            </option>
-                                                        )}
-                                                    </For>
-                                                </NativeSelect.Field>
-                                                <NativeSelect.Indicator />
-                                            </NativeSelect.Root>
+                                        <NativeSelect.Root size="xs" maxW="150px" fontSize="2xs">
+  <NativeSelect.Field
+      value={form.DESIGNATION}
+      onChange={(e) => handleChange("DESIGNATION", e.target.value)}
+      css={{
+          backgroundColor: "#eee",
+          color: "#111827",
+          border: "1px solid #e5e7eb",
+          borderRadius: "20px",
+          height: "30px",
+          fontSize: "10px",
+      }}
+  >
+      <option value="">Select Designation</option>
+      <For each={designationOptions}>
+          {(item) => (
+              <option key={item.value} value={item.label}> {/* use label */}
+                  {item.label}
+              </option>
+          )}
+      </For>
+  </NativeSelect.Field>
+  <NativeSelect.Indicator />
+</NativeSelect.Root>
                                         )}
                                     </Box>
 
@@ -733,7 +733,7 @@ const getDesignationName = (code?: number | string) => {
                                     <Table.Cell>{employee.EMPSURNAME}</Table.Cell>
                                     <Table.Cell>{employee.EMPFATHERNAME}</Table.Cell>
                                     <Table.Cell>{employee.SALUTATION}</Table.Cell>
-                                    <Table.Cell>{getDesignationName(employee.DESIGNATIONCODE)}</Table.Cell> {/* Display designation name */}
+                                    <Table.Cell>{employee.DESIGNATION || "-"}</Table.Cell>
                                     <Table.Cell>{employee.DOORNO}</Table.Cell>
                                     <Table.Cell>{employee.STREET}</Table.Cell>
                                     <Table.Cell>{employee.ADDRESS}</Table.Cell>

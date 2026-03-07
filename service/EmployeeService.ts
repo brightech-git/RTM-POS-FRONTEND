@@ -24,6 +24,8 @@ export interface Employee {
     MOBILENO: string;
     ACTIVE: string;
     CREATEDBY: number;
+    DESIGNATION:string
+    EMPUID:string
     // Add EMPUID or other fields if needed
 }
 

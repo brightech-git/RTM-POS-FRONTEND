@@ -1,0 +1,281 @@
+// components/form/InputSelection.tsx
+"use client";
+
+import React, { useState, useRef, useEffect, forwardRef } from "react";
+import {
+    Input,
+    InputGroup,
+    InputRightElement,
+    IconButton,
+    FormControl,
+    FormLabel,
+    FormErrorMessage,
+    HStack,
+    Text,
+    Kbd,
+    Box,
+    Tooltip,
+    Spinner,
+    InputLeftElement,
+} from "@chakra-ui/react";
+import { IoSearch, IoClose, IoBarcode } from "react-icons/io5";
+import { useGlobalKey } from "@/components/key/useGlobalKey";
+import { SelectionModal, ColumnConfig } from "@/components/Modals/SelectionModal";
+
+export interface InputSelectionProps {
+    name: string;
+    label?: string;
+    value: string | number;
+    displayValue?: string;
+    placeholder?: string;
+    error?: string;
+    isDisabled?: boolean;
+    isRequired?: boolean;
+    autoFocus?: boolean;
+    size?: "xs" | "sm" | "md" | "lg";
+    items: any[];
+    modalTitle?: string;
+    modalSearchPlaceholder?: string;
+    searchKeys?: string[];
+    columns?: ColumnConfig[];
+    idKey?: string;
+    nameKey?: string;
+    codeKey?: string;
+    showCode?: boolean;
+    renderItem?: (item: any, isSelected: boolean) => React.ReactNode;
+    onSelect: (item: any) => void;
+    onChange?: (value: string) => void;
+    onSearch?: (value: string) => void;
+    onClear?: () => void;
+    onBlur?: () => void;
+    filterItems?: (items: any[]) => any[];
+    allowManualInput?: boolean;
+    inputType?: "text" | "number" | "tel";
+    pattern?: string;
+    maxLength?: number;
+    showShortcut?: boolean;
+    shortcutKey?: string;
+    leftIcon?: React.ReactElement;
+    inputProps?: React.InputHTMLAttributes<HTMLInputElement>;
+    isLoading?: boolean;
+}
+
+export const InputSelection = forwardRef<HTMLInputElement, InputSelectionProps>(({
+    name,
+    label,
+    value,
+    displayValue,
+    placeholder = "Enter or search...",
+    error,
+    isDisabled = false,
+    isRequired = false,
+    autoFocus = false,
+    size = "sm",
+    items,
+    modalTitle = "Select Item",
+    modalSearchPlaceholder = "Search...",
+    searchKeys = ["name", "code"],
+    columns,
+    idKey = "id",
+    nameKey = "name",
+    codeKey = "code",
+    showCode = true,
+    renderItem,
+    onSelect,
+    onChange,
+    onSearch,
+    onClear,
+    onBlur,
+    filterItems,
+    allowManualInput = true,
+    inputType = "text",
+    pattern,
+    maxLength,
+    showShortcut = true,
+    shortcutKey = "F2",
+    leftIcon,
+    inputProps = {},
+    isLoading = false,
+}, ref) => {
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [localDisplayValue, setLocalDisplayValue] = useState(displayValue || "");
+    const inputRef = useRef<HTMLInputElement>(null);
+    const combinedRef = (ref || inputRef) as React.RefObject<HTMLInputElement>;
+
+    // Update local display value when prop changes
+    useEffect(() => {
+        setLocalDisplayValue(displayValue || "");
+    }, [displayValue]);
+
+    // Handle manual input change
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newValue = e.target.value;
+        
+        if (!allowManualInput) return;
+        
+        if (inputType === "number" || inputType === "tel") {
+            // Only allow numbers
+            if (newValue === "" || /^\d*$/.test(newValue)) {
+                setLocalDisplayValue(newValue);
+                onChange?.(newValue);
+            }
+        } else {
+            setLocalDisplayValue(newValue);
+            onChange?.(newValue);
+        }
+    };
+
+    // Handle input key down
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            if (localDisplayValue && onSearch) {
+                onSearch(localDisplayValue);
+            }
+        }
+    };
+
+    // Handle F2 key to open modal
+    useGlobalKey(shortcutKey, (e) => {
+        if (!isDisabled && document.activeElement === combinedRef.current) {
+            e.preventDefault();
+            openModal();
+        }
+    }, `input-selection-${name}`);
+
+    // Open modal
+    const openModal = () => {
+        if (isDisabled) return;
+        setIsModalOpen(true);
+    };
+
+    // Handle item selection from modal
+    const handleSelect = (item: any) => {
+        onSelect(item);
+        setIsModalOpen(false);
+    };
+
+    // Handle clear
+    const handleClear = () => {
+        setLocalDisplayValue("");
+        onChange?.("");
+        onClear?.();
+    };
+
+    // Filter items for modal
+    const modalItems = React.useMemo(() => {
+        let filteredItems = [...items];
+        if (filterItems) {
+            filteredItems = filterItems(filteredItems);
+        }
+        return filteredItems;
+    }, [items, filterItems]);
+
+    // Determine if we have a value
+    const hasValue = value || localDisplayValue;
+
+    return (
+        <>
+            <FormControl isInvalid={!!error} isRequired={isRequired} isDisabled={isDisabled}>
+                {label && (
+                    <FormLabel htmlFor={name} fontSize="sm" fontWeight="medium" mb={1}>
+                        {label} {isRequired && <span style={{ color: 'red' }}>*</span>}
+                    </FormLabel>
+                )}
+                
+                <InputGroup size={size}>
+                    {leftIcon && (
+                        <InputGroup.LeftElement pointerEvents="none">
+                            {leftIcon}
+                        </InputGroup.LeftElement>
+                    )}
+                    
+                    <Input
+                        ref={combinedRef}
+                        id={name}
+                        name={name}
+                        type={inputType}
+                        value={localDisplayValue}
+                        onChange={handleInputChange}
+                        onKeyDown={handleKeyDown}
+                        onBlur={onBlur}
+                        placeholder={placeholder}
+                        disabled={isDisabled}
+                        autoFocus={autoFocus}
+                        pattern={pattern}
+                        maxLength={maxLength}
+                        bg="white"
+                        pr={hasValue ? "6rem" : "2.5rem"}
+                        pl={leftIcon ? "2.5rem" : undefined}
+                        {...inputProps}
+                    />
+                    
+                    <InputRightElement width={hasValue ? "6rem" : "2.5rem"}>
+                        <HStack >
+                            {hasValue && onClear && (
+                                <Tooltip label="Clear">
+                                    <IconButton
+                                        aria-label="Clear"
+                                        icon={<IoClose />}
+                                        size="xs"
+                                        variant="ghost"
+                                        colorScheme="red"
+                                        onClick={handleClear}
+                                    />
+                                </Tooltip>
+                            )}
+                            
+                            <Tooltip label={`Search (${shortcutKey})`}>
+                                <IconButton
+                                    aria-label="Search"
+                                    icon={isLoading ? <Spinner size="xs" /> : <IoSearch />}
+                                    size="xs"
+                                    colorScheme="blue"
+                                    variant="ghost"
+                                    onClick={openModal}
+                                    isDisabled={isDisabled}
+                                />
+                            </Tooltip>
+                        </HStack>
+                    </InputRightElement>
+                </InputGroup>
+
+                {error && (
+                    <FormErrorMessage fontSize="xs">{error}</FormErrorMessage>
+                )}
+
+                {showShortcut && !isDisabled && (
+                    <HStack mt={1}  fontSize="xs" color="gray.500">
+                        <Kbd>{shortcutKey}</Kbd>
+                        <Text>to open selector</Text>
+                        {onSearch && (
+                            <>
+                                <Kbd ml={2}>Enter</Kbd>
+                                <Text>to search</Text>
+                            </>
+                        )}
+                    </HStack>
+                )}
+            </FormControl>
+
+            {/* Selection Modal */}
+            <SelectionModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                items={modalItems}
+                onSelect={handleSelect}
+                title={modalTitle}
+                searchPlaceholder={modalSearchPlaceholder}
+                searchKeys={searchKeys}
+                columns={columns}
+                renderItem={renderItem}
+                idKey={idKey}
+                nameKey={nameKey}
+                codeKey={codeKey}
+                showCode={showCode}
+            />
+        </>
+    );
+});
+
+InputSelection.displayName = "InputSelection";
