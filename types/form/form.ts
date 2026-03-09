@@ -11,6 +11,7 @@ export interface FormField {
     colSpan?: number;       // for grid layout
     width?: string;
     isReadOnly?:boolean
+    dependsOn?:string;
 
     // Common props for all input types
     size?: "xs" | "sm" | "md" | "lg";

@@ -20,7 +20,8 @@ type SelectComboboxProps = {
     onEnter?: () => void;
     onKeyDown?: (e: React.KeyboardEvent) => void; // Add this prop
     ref?: React.Ref<HTMLInputElement>;
-    onBlur?:()=>void
+    onBlur?: () => void
+    maxWidth?: string | number;
 };
 
 export const SelectCombobox = forwardRef<HTMLInputElement, SelectComboboxProps>(({
@@ -34,7 +35,8 @@ export const SelectCombobox = forwardRef<HTMLInputElement, SelectComboboxProps>(
     disable,
     onEnter,
     onKeyDown, // Receive the onKeyDown from EnterWrapperon
-    onBlur
+    onBlur,
+    maxWidth
 
 }, ref) => {
     const { contains } = useFilter({ sensitivity: "base" });
@@ -141,10 +143,10 @@ export const SelectCombobox = forwardRef<HTMLInputElement, SelectComboboxProps>(
     };
 
     return (
-        <Field.Root>
+        <Field.Root maxW={maxWidth}>
             {label && <Field.Label fontSize="2xs">{label}</Field.Label>}
 
-            <Combobox.Root
+            <Combobox.Root 
                 key={`${editId ?? "null"}-${value ?? ""}`}
                 collection={collection}
                 value={value ? [value] : []}
@@ -169,6 +171,8 @@ export const SelectCombobox = forwardRef<HTMLInputElement, SelectComboboxProps>(
                     setHighlightedValue(e.highlightedValue);
                 }}
                 openOnClick={!disable}
+                maxW={maxWidth}
+              
             >
                 <Combobox.Control rounded='full'>
                     <Combobox.Input

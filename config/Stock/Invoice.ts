@@ -1,235 +1,247 @@
-// config/Stock/Invoice.ts
 import { FormField } from "@/types/form/form";
 
-export const InvoiceDetailsConfig = (
-    vendors: any[] = [],
-    products: any[] = [],
-    subProducts: any[] = []
-): FormField[] => [
-    {
-        name: "INVOICENO",
-        label: "Invoice No",
-        type: "text",
-        required: true,
-        size: "xs",
-        rounded: "full",
-        width: "150px"
-    },
-    {
-        name: "BILLDATE",
-        label: "Bill Date",
-        type: "date",
-        required: true,
-        size: "xs",
-        rounded: "full",
-        width: "150px",
-        dateFormat: "yyyy-MM-dd"
-    },
-    {
-        name: "VENDORCODE",
-        label: "Vendor Code",
-        required: true,
-        type: "select",
-        options: vendors.map(v => ({
-            value: v.VENDORCODE,
-            label: `${v.VENDORCODE} - ${v.VENDORNAME || 'Unknown'}`
-        })),
-        size: "xs",
-        rounded: "full",
-        width: "150px"
-    },
-    {
-        name: "ORIONBARCODE",
-        label: "Orion Barcode",
-        type: "text",
-        width: "150px",
-        size: "xs",
-        rounded: "full"
-    },
-    {
-        name: "PRODUCTCODE",
-        label: "Product Code",
-        required: true,
-        type: "select",
-        options: products.map(p => ({
-            value: p.PRODUCTCODE,
-            label: `${p.PRODUCTCODE} - ${p.PRODUCTNAME || 'Unknown'}`
-        })),
-        size: "xs",
-        rounded: "full",
-        width: "150px"
-    },
-    {
-        name: "SUBPRODUCTCODE",
-        label: "Sub Product Code",
-        type: "select",
-        options: subProducts.map(s => ({
-            value: s.SUBPRODUCTCODE,
-            label: `${s.SUBPRODUCTCODE} - ${s.SUBPRODUCTNAME || 'Unknown'}`
-        })),
-        size: "xs",
-        rounded: "full",
-        width: "150px"
-    },
-    {
-        name: "RATE",
-        label: "Rate",
-        type: "text",
-        size: "xs",
-        rounded: "full",
-        width: "100px",
-        isReadOnly: true,
+interface InvoiceConfigParams {
+    vendors?: any[];
+    products?: any[];
+    subProducts?: any[];
+    todayDate?: Date;
+}
+
+export const InvoiceDetailsConfig = ({
+    vendors = [],
+    products = [],
+    subProducts = [],
+    todayDate ,
+}: InvoiceConfigParams): FormField[] => {
+
+
+    return [
+        {
+            name: "INVOICENO",
+            label: "INVOICE NO",
+            type: "number",
+            required: true,
+            size: "xs",
+            rounded: "sm",
+            width: "150px",
+            
+        },
+        {
+            name: "BILLDATE",
+            label: "BILL DATE",
+            type: "date",
+            required: true,
+            size: "xs",
+            rounded: "sm",
+            width: "150px",
+            maxDate: todayDate
+          
+        },
        
-    },
-    {
-        name: "WEIGHT",
-        label: "Weight",
-        type: "text",
-        size: "xs",
-        rounded: "full",
-        width: "100px"
-    },
-    {
-        name: "PIECES",
-        label: "Pieces",
-        type: "text",
-        size: "xs",
-        rounded: "full",
-        width: "100px"
-    },
-    {
-        name: "PURRATE",
-        label: "Purchase Rate",
-        required: true,
-        type: "text",
-        size: "xs",
-        rounded: "full",
-        width: "120px"
-    },
-    {
-        name: "MRP",
-        label: "MRP",
-        required: true,
-        type: "text",
-        size: "xs",
-        rounded: "full",
-        width: "100px"
-    },
-    {
-        name: "SELLINGRATE",
-        label: "Selling Rate",
-        type: "text",
-        size: "xs",
-        rounded: "full",
-        width: "120px",
-        isReadOnly: true
-    },
-    {
-        name: "DISCPER",
-        label: "Discount %",
-        type: "text",
-        size: "xs",
-        rounded: "full",
-        width: "100px"
-    },
-    {
-        name: "DISCOUNTAMOUNT",
-        label: "Discount Amount",
-        type: "text",
-        size: "xs",
-        rounded: "full",
-        width: "120px",
-        isReadOnly: true
-    },
-    {
-        name: "MARKUPPER",
-        label: "Markup %",
-        type: "text",
-        size: "xs",
-        rounded: "full",
-        width: "100px"
-    },
-    {
-        name: "MARKUPAMOUNT",
-        label: "Markup Amount",
-        type: "text",
-        size: "xs",
-        rounded: "full",
-        width: "120px",
-        isReadOnly: true
-    },
-    {
-        name: "AMOUNT",
-        label: "Amount",
-        type: "text",
-        size: "xs",
-        rounded: "full",
-        width: "120px",
-        isReadOnly: true,
-       
-    },
-    {
-        name: "IGSTAMOUNT",
-        label: "IGST",
-        type: "text",
-        size: "xs",
-        rounded: "full",
-        width: "100px",
-        isReadOnly: true
-    },
-    {
-        name: "CGSTAMOUNT",
-        label: "CGST",
-        type: "text",
-        size: "xs",
-        rounded: "full",
-        width: "100px",
-        isReadOnly: true
-    },
-    {
-        name: "SGSTAMOUNT",
-        label: "SGST",
-        type: "text",
-        size: "xs",
-        rounded: "full",
-        width: "100px",
-        isReadOnly: true
-    },
-    {
-        name: "NETAMOUNT",
-        label: "Net Amount",
-        type: "text",
-        size: "xs",
-        rounded: "full",
-        width: "120px",
-        isReadOnly: true
-    },
-    {
-        name: "TAGGEN",
-        label: "Tag Gen",
-        type: "select",
-        options: [
-            { value: "Y", label: "Yes" },
-            { value: "N", label: "No" }
-        ],
-        size: "xs",
-        rounded: "full",
-        width: "100px"
-    },
-    {
-        name: "HSNCODE",
-        label: "HSN Code",
-        type: "text",
-        size: "xs",
-        rounded: "full",
-        width: "150px"
-    },
-    {
-        name: "HSNTAXCODE",
-        label: "HSN Tax Code",
-        type: "text",
-        size: "xs",
-        rounded: "full",
-        width: "150px"
-    }
-];
+        {
+            name: "VENDORCODE",
+            label: "VENDOR NAME",
+            required: true,
+            type: "combobox",
+            options: vendors.map(p => ({
+                value: p.value,
+                label: p.label,
+            })),
+            size: "xs",
+            rounded: "sm",
+            width: "200px",
+        },
+        {
+            name: "PRODUCTCODE",
+            label: "PRODUCT NAME",
+            required: true,
+            type: "combobox",
+            options: products.map(p => ({
+                value: p.value,
+                label: p.label,
+            })),
+            size: "xs",
+            rounded: "sm",
+            width: "200px",
+            
+        },
+        {
+            name: "SUBPRODUCTCODE",
+            label: "SUP PRODUCT NAME",
+            type: "combobox",
+            options: subProducts.map(p => ({
+                value: p.value,
+                label: p.label
+            })),
+            size: "xs",
+            rounded: "sm",
+            width: "200px",
+            dependsOn:"PRODUCTCODE"
+            
+        },
+        {
+            name: "RATE",
+            label: "PURCHASE RATE",
+            type: "number",
+            size: "xs",
+            rounded: "sm",
+            width: "100px",
+            isReadOnly: true,
+            disabled:true,
+            dependsOn:"SUBPRODUCTCODE"
+
+        },
+        {
+            name: "WEIGHT",
+            label: "WEIGHT",
+            type: "number",
+            size: "xs",
+            rounded: "sm",
+            width: "100px",
+            disabled:true,
+            dependsOn: "SUBPRODUCTCODE"
+        },
+        {
+            name: "PIECES",
+            label: "PICES",
+            type: "number",
+            size: "xs",
+            rounded: "sm",
+            width: "100px",
+            dependsOn: "SUBPRODUCTCODE"
+        },
+        {
+            name: "MRP",
+            label: "MRP RATE",
+            required: true,
+            type: "number",
+            size: "xs",
+            rounded: "sm",
+            width: "100px",
+            disabled:true,
+            dependsOn: "SUBPRODUCTCODE"
+        },
+        {
+            name: "SELLINGRATE",
+            label: "SELLING RATE",
+            type: "number",
+            size: "xs",
+            rounded: "sm",
+            width: "120px",
+            isReadOnly: true,
+            disabled:true,
+            dependsOn: "SUBPRODUCTCODE"
+        },
+        // {
+        //     name: "DISCPER",
+        //     label: "DISCOUNT %",
+        //     type: "number",
+        //     size: "xs",
+        //     rounded: "sm",
+        //     width: "100px",
+        //     dependsOn: "AMOUNT"
+        // },
+        // {
+        //     name: "DISCOUNTAMOUNT",
+        //     label: "DISCOUNT AMOUNT",
+        //     type: "number",
+        //     size: "xs",
+        //     rounded: "sm",
+        //     width: "120px",
+        //     disabled: true,
+        //     dependsOn: "SUBPRODUCTCODE"
+        // },
+        {
+            name: "MARKUPPER",
+            label: "MARKUP %",
+            type: "number",
+            size: "xs",
+            rounded: "sm",
+            width: "100px",
+            dependsOn: "SUBPRODUCTCODE"
+        },
+        {
+            name: "MARKUPAMOUNT",
+            label: "MARKUP AMOUNT",
+            type: "number",
+            size: "xs",
+            rounded: "sm",
+            width: "120px",
+            disabled: true,
+            dependsOn: "SUBPRODUCTCODE"
+        },
+        {
+            name: "AMOUNT",
+            label: "AMOUNT",
+            type: "number",
+            size: "xs",
+            rounded: "sm",
+            width: "120px",
+            disabled:true,
+            dependsOn: "SUBPRODUCTCODE"
+
+        },
+        {
+            name: "IGSTAMOUNT",
+            label: "IGST",
+            type: "number",
+            size: "xs",
+            rounded: "sm",
+            width: "100px",
+            disabled: true,
+            dependsOn: "SUBPRODUCTCODE"
+        },
+        {
+            name: "CGSTAMOUNT",
+            label: "CGST",
+            type: "number",
+            size: "xs",
+            rounded: "sm",
+            width: "100px",
+            disabled: true,
+            dependsOn: "SUBPRODUCTCODE"
+        },
+        {
+            name: "SGSTAMOUNT",
+            label: "SGST",
+            type: "number",
+            size: "xs",
+            rounded: "sm",
+            width: "100px",
+            disabled: true,
+            dependsOn: "SUBPRODUCTCODE"
+        },
+        {
+            name: "NETAMOUNT",
+            label: "NET AMOUNT",
+            type: "number",
+            size: "xs",
+            rounded: "sm",
+            width: "120px",
+            disabled: true,
+            dependsOn: "SUBPRODUCTCODE"
+        },
+        
+        {
+            name: "HSNCODE",
+            label: "HSN Code",
+            type: "number",
+            size: "xs",
+            rounded: "sm",
+            width: "150px",
+            dependsOn: "SUBPRODUCTCODE",
+            disabled:true
+        },
+        {
+            name: "HSNTAXCODE",
+            label: "HSN TAX CODE",
+            type: "number",
+            size: "xs",
+            rounded: "sm",
+            width: "150px",
+            dependsOn: "SUBPRODUCTCODE",
+            disabled:true
+        }
+    ];
+}
+    
