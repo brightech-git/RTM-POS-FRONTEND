@@ -4,6 +4,7 @@ import { Taged, TagedFilter } from "@/types/Tagged/Tagged";
 // 🔹 Get ALL
 export const getAllTaged = async (): Promise<Taged[]> => {
   const { data } = await axiosInstance.get("/taged/filter");
+  console.log("All Tagged Data",data)
   return data.data || [];
 };
 
@@ -18,6 +19,7 @@ export const syncTaged = async (filters: TagedFilter): Promise<Taged[]> => {
   if (filters.productCode) params.append("productCode", filters.productCode.toString());
 
   const { data } = await axiosInstance.post(`/taged/sync?${params.toString()}`);
+   console.log("All Sync Data",data)
 
   return data.data || [];
 };
