@@ -239,13 +239,14 @@ const creditCards = creditCardsData as CreditCard[];
                         <Fieldset.Root size="sm" width="100%">
                             <Fieldset.Content>
                                 <DynamicForm
-                                    fields={creditCardFormFields}
-                                    formData={form}
-                                    onChange={handleChange}
-                                    register={register}
-                                    focusNext={focusNext}
-                                    errors={formErrors}
-                                />
+  fields={creditCardFormFields}
+  formData={form}
+  onChange={handleChange}
+  register={register}
+  focusNext={focusNext}
+  errors={formErrors}
+  grid={{ columns: 1 }}
+/>
                             </Fieldset.Content>
                         </Fieldset.Root>
 

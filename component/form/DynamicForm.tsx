@@ -30,7 +30,7 @@ interface DynamicFormProps {
     disabled?: Record<string, boolean | undefined>;
     errors?: Record<string, string>;
     touchedFields?: Record<string, boolean>;
-    grid?: boolean; // ✅ New prop
+     grid?: boolean | { columns?: number };   // ✅ FIX
 }
 
 export const DynamicForm: React.FC<DynamicFormProps> = ({
@@ -78,8 +78,8 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
         const showError = touched[field.name] && errors[field.name];
 
         const setRef = (el: any) => {
-            if (el) register(field.name)(el);
-        };
+    register(field.name)(el);
+};
         const fieldComponent = () => {
             switch (field.type) {
 
@@ -293,50 +293,35 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
         );
     }
 
-    return (
-        <Grid gap={2} templateColumns="repeat(2, 1fr)">
-            {grid ? (
-                (() => {
-                    const half = Math.ceil(fields.length / 2);
-                    const firstColumnFields = fields.slice(0, half);
-                    const secondColumnFields = fields.slice(half);
+  const columns =
+  typeof grid === "object" && grid.columns
+    ? grid.columns
+    : 2;
 
-                    return (
-                        <>
-                            <Box display="flex" flexDirection="column" gap={2}>
-                                {firstColumnFields.map((field) => (
-                                    <Box key={field.name} display="flex" gap={2} alignItems="flex-start">
-                                        <Box minW="120px" fontSize="11px" pt={2} fontWeight="semibold">
-                                            {field.label} {field.required && <span style={{ color: "red", fontSize: '14px' }}>*</span>}
-                                        </Box>
-                                        <Box flex="1">{renderField(field)}</Box>
-                                    </Box>
-                                ))}
-                            </Box>
+return (
+  <Grid gap={2} templateColumns={`repeat(${columns}, 1fr)`}>
+    {fields.map((field) => {
+      const isFullRow = field.colSpan === 2;
 
-                            <Box display="flex" flexDirection="column" gap={2}>
-                                {secondColumnFields.map((field) => (
-                                    <Box key={field.name} display="flex" gap={2} alignItems="flex-start">
-                                        <Box minW="120px" fontSize="11px" pt={2} fontWeight="semibold">
-                                            {field.label} {field.required && <span style={{ color: "red", fontSize: '14px' }}>*</span>}
-                                        </Box>
-                                        <Box flex="1">{renderField(field)}</Box>
-                                    </Box>
-                                ))}
-                            </Box>
-                        </>
-                    );
-                })()
-            ) : (
-                fields.map((field) => (
-                    <Box key={field.name} display="flex" gap={2} alignItems="flex-start">
-                        <Box minW="120px" fontSize="11px" pt={2} fontWeight="semibold">
-                            {field.label} {field.required && <span style={{ color: "red" ,fontSize:'14px'}} >*</span>} 
-                        </Box>
-                        <Box flex="1">{renderField(field)}</Box>
-                    </Box>
-                ))
+      return (
+        <Box
+          key={field.name}
+          gridColumn={isFullRow ? "span 2" : "span 1"}
+          display="flex"
+          gap={2}
+          alignItems="flex-start"
+        >
+          <Box minW="120px" fontSize="11px" pt={2} fontWeight="semibold">
+            {field.label}{" "}
+            {field.required && (
+              <span style={{ color: "red", fontSize: "14px" }}>*</span>
             )}
-        </Grid>
-    );
+          </Box>
+
+          <Box flex="1">{renderField(field)}</Box>
+        </Box>
+      );
+    })}
+  </Grid>
+);
 };

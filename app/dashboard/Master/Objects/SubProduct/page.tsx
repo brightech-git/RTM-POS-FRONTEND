@@ -312,6 +312,7 @@ function SubProductMaster() {
                                     register={register}
                                     focusNext={focusNext}
                                     errors={formErrors}
+                                    grid={{ columns: 1 }}
                                 />
                             </Fieldset.Content>
                         </Fieldset.Root>

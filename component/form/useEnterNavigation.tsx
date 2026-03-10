@@ -20,17 +20,28 @@ export const useEnterNavigation = (
         inputRefs.current[fieldName] = el;
     };
 
-    const focusNext = (currentField: FieldName) => {
-        const currentIndex = fields.indexOf(currentField);
-        if (currentIndex === -1) return;
+   const focusNext = (currentField: FieldName) => {
+    const currentIndex = fields.indexOf(currentField);
+    if (currentIndex === -1) return;
 
-        if (currentIndex === fields.length - 1) {
-            if (onSubmit) onSubmit();
-        } else {
-            const nextField = fields[currentIndex + 1];
-            inputRefs.current[nextField]?.focus();
+    for (let i = currentIndex + 1; i < fields.length; i++) {
+        const nextField = fields[i];
+        const element = inputRefs.current[nextField] as HTMLInputElement | null;
+
+        if (
+            element &&
+            !element.disabled &&
+            !element.readOnly &&
+            element.offsetParent !== null // not hidden
+        ) {
+            element.focus();
+            return;
         }
-    };
+    }
+
+    // If no enabled fields found → submit
+    if (onSubmit) onSubmit();
+};
 
     const focusFirst = () => {
         if (fields.length > 0) {

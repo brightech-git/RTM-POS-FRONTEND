@@ -15,7 +15,7 @@ interface DatePickerInputProps {
     showTimeSelect?: boolean;
     onBlur?: () => void;
     onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
-    onFocus?:()=>void
+    onFocus?: () => void
 }
 
 const parseISOToDate = (iso?: string) => {
@@ -40,7 +40,7 @@ export const DatePickerInput = React.forwardRef<
             disabled = false,
             placeholder = "dd-mm-yyyy",
             dateFormat = "dd-MM-yyyy",
-            maxDate ,
+            maxDate,
             minDate,
             showTimeSelect = false,
             onBlur,
@@ -62,13 +62,15 @@ export const DatePickerInput = React.forwardRef<
                 return (
                     <Input
                         ref={(node) => {
-                            if (typeof forwardRef === "function") forwardRef(node);
-                            else if (forwardRef) forwardRef.current = node;
+                            if (forwardRef) {
+                                if (typeof forwardRef === "function") forwardRef(node);
+                                else forwardRef.current = node;
+                            }
 
-                            if (typeof ref === "function") ref(node);
-                            else if (ref)
-                                (ref as React.MutableRefObject<HTMLInputElement | null>).current =
-                                    node;
+                            if (ref) {
+                                if (typeof ref === "function") ref(node);
+                                else ref.current = node;
+                            }
                         }}
                         value={value}
                         size="sm"
@@ -79,23 +81,18 @@ export const DatePickerInput = React.forwardRef<
                             onClick?.(e);
                         }}
                         onChange={onChange}
+                        onFocus={() => setIsOpen(false)}
                         onBlur={(e) => {
                             dpBlur?.(e);
                             onBlur?.();
                         }}
                         onKeyDown={(e) => {
-
                             if (e.key === "Enter") {
                                 e.preventDefault();
-
-                                // close calendar
                                 setIsOpen(false);
-
-                                // move to next field
                                 onKeyDown?.(e);
                                 return;
                             }
-
                             dpKeyDown?.(e);
                         }}
                     />

@@ -300,6 +300,7 @@ const finalOrionBarcode =
                                     register={register}
                                     focusNext={focusNext}
                                     disabled={{ COMPANYID: !!editId }}
+                                    grid={{ columns: 1 }}
                                     // errors={errors}
                                 />
                             </Fieldset.Content>

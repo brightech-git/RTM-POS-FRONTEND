@@ -68,14 +68,14 @@ export const VendorConfig: FormField[] = [
     rounded: "full"
 },
 
-{
-    name: "HSNSTATECODE",
-    label: "HSN State Code",
-    type: "text",
-    width: "120px",
-    size: "xs",
-    rounded: "full"
-},
+// {
+//     name: "HSNSTATECODE",
+//     label: "HSN State Code",
+//     type: "text",
+//     width: "120px",
+//     size: "xs",
+//     rounded: "full"
+// },
 
 {
     name: "ADDRESS1",

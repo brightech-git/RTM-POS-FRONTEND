@@ -12,6 +12,7 @@ export interface FormField {
     width?: string;
     isReadOnly?:boolean
     dependsOn?:string;
+    onChange?:string;
 
     // Common props for all input types
     size?: "xs" | "sm" | "md" | "lg";

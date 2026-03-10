@@ -250,26 +250,26 @@ function VendorMaster() {
     };
 
     /* -------------------- HANDLERS -------------------- */
-const handleChange = (field: string | number, value: any) => {
-    setForm(prev => ({
-        ...prev,
-        [field]: value
-    }));
-
-    const fieldKey = String(field); // convert to string for Sets and objects
-
-    // Mark field as touched
-    setTouchedFields(prev => new Set(prev).add(fieldKey));
-
-    // Validate field on change if it's been touched
-    if (touchedFields.has(fieldKey)) {
-        const error = validateField(fieldKey, value);
-        setFormErrors(prev => ({
+    const handleChange = (field: string | number, value: any) => {
+        setForm(prev => ({
             ...prev,
-            [fieldKey]: error
+            [field]: value
         }));
-    }
-};
+
+        const fieldKey = String(field); // convert to string for Sets and objects
+
+        // Mark field as touched
+        setTouchedFields(prev => new Set(prev).add(fieldKey));
+
+        // Validate field on change if it's been touched
+        if (touchedFields.has(fieldKey)) {
+            const error = validateField(fieldKey, value);
+            setFormErrors(prev => ({
+                ...prev,
+                [fieldKey]: error
+            }));
+        }
+    };
 
     const handleBlur = (field: string) => {
         setTouchedFields(prev => new Set(prev).add(field));
@@ -487,12 +487,12 @@ const handleChange = (field: string | number, value: any) => {
     });
 
     // Split fields into two columns
-const chunkSize = Math.ceil(vendorFormFields.length / 4);
+    const chunkSize = Math.ceil(vendorFormFields.length / 4);
 
-const firstColumnFields = vendorFormFields.slice(0, chunkSize);
-const secondColumnFields = vendorFormFields.slice(chunkSize, chunkSize * 2);
-const ThirdColumnFields = vendorFormFields.slice(chunkSize * 2, chunkSize * 3);
-const FourthColumnFields = vendorFormFields.slice(chunkSize * 3);
+    const firstColumnFields = vendorFormFields.slice(0, chunkSize);
+    const secondColumnFields = vendorFormFields.slice(chunkSize, chunkSize * 2);
+    const ThirdColumnFields = vendorFormFields.slice(chunkSize * 2, chunkSize * 3);
+    const FourthColumnFields = vendorFormFields.slice(chunkSize * 3);
 
     const VendorColumns = [
         { key: "SNO", label: "S.No" },
@@ -546,7 +546,7 @@ const FourthColumnFields = vendorFormFields.slice(chunkSize * 3);
 
                         <Fieldset.Root size="sm" width="100%">
                             <Fieldset.Content>
-                                <SimpleGrid columns={{ base: 1, md: 4 }}  width="100%">
+                                <SimpleGrid columns={{ base: 1, md: 4 }} width="100%" gap={2}>
                                     <VStack align="stretch">
                                         <DynamicForm
                                             fields={firstColumnFields}
@@ -555,6 +555,7 @@ const FourthColumnFields = vendorFormFields.slice(chunkSize * 3);
                                             register={register}
                                             focusNext={focusNext}
                                             errors={formErrors}
+                                            grid={{ columns: 1 }}
                                         />
                                     </VStack>
 
@@ -566,9 +567,11 @@ const FourthColumnFields = vendorFormFields.slice(chunkSize * 3);
                                             register={register}
                                             focusNext={focusNext}
                                             errors={formErrors}
+                                            grid={{ columns: 1 }}
                                         />
                                     </VStack>
-                                     <VStack align="stretch">
+
+                                    <VStack align="stretch">
                                         <DynamicForm
                                             fields={ThirdColumnFields}
                                             formData={form}
@@ -576,9 +579,11 @@ const FourthColumnFields = vendorFormFields.slice(chunkSize * 3);
                                             register={register}
                                             focusNext={focusNext}
                                             errors={formErrors}
+                                            grid={{ columns: 1 }}
                                         />
                                     </VStack>
-                                     <VStack align="stretch">
+
+                                    <VStack align="stretch">
                                         <DynamicForm
                                             fields={FourthColumnFields}
                                             formData={form}
@@ -586,6 +591,7 @@ const FourthColumnFields = vendorFormFields.slice(chunkSize * 3);
                                             register={register}
                                             focusNext={focusNext}
                                             errors={formErrors}
+                                            grid={{ columns: 1 }}
                                         />
                                     </VStack>
                                 </SimpleGrid>

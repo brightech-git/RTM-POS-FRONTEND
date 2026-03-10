@@ -1,13 +1,13 @@
 import { axiosInstance } from "@/api/axiosInstance";
 import { Taged, TagedFilter } from "@/types/Tagged/Tagged";
 
-// 🔹 Get ALL (no filters)
+// 🔹 Get ALL
 export const getAllTaged = async (): Promise<Taged[]> => {
   const { data } = await axiosInstance.get("/taged/filter");
-  return data;
+  return data.data || [];
 };
 
-// 🔹 Sync Taged
+// 🔹 Sync
 export const syncTaged = async (filters: TagedFilter): Promise<Taged[]> => {
   const params = new URLSearchParams();
 
@@ -18,10 +18,11 @@ export const syncTaged = async (filters: TagedFilter): Promise<Taged[]> => {
   if (filters.productCode) params.append("productCode", filters.productCode.toString());
 
   const { data } = await axiosInstance.post(`/taged/sync?${params.toString()}`);
-  return data;
+
+  return data.data || [];
 };
 
-// 🔹 Filter Taged
+// 🔹 Filter
 export const filterTaged = async (filters: TagedFilter): Promise<Taged[]> => {
   const params = new URLSearchParams();
 
@@ -32,5 +33,6 @@ export const filterTaged = async (filters: TagedFilter): Promise<Taged[]> => {
   if (filters.productCode) params.append("productCode", filters.productCode.toString());
 
   const { data } = await axiosInstance.get(`/taged/filter?${params.toString()}`);
-  return data;
+
+  return data.data || [];
 };

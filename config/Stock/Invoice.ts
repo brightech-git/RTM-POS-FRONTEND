@@ -5,6 +5,8 @@ interface InvoiceConfigParams {
   products?: any[];
   subProducts?: any[];
   todayDate?: Date;
+   isProductDisabled?: boolean;
+  isSubProductDisabled?: boolean;
 }
 
 export const InvoiceDetailsConfig = ({
@@ -12,6 +14,7 @@ export const InvoiceDetailsConfig = ({
   products = [],
   subProducts = [],
   todayDate,
+  
 }: InvoiceConfigParams): FormField[] => {
   return [
     {
@@ -46,7 +49,7 @@ export const InvoiceDetailsConfig = ({
       })),
       size: "xs",
       rounded: "sm",
-      width: "200px",
+      width: "300px",
       colSpan: 2,
     },
     {
@@ -56,7 +59,8 @@ export const InvoiceDetailsConfig = ({
       type: "number",
       size: "xs",
       rounded: "sm",
-      width: "150px",
+     width: "300px",
+      colSpan: 2,
     },
     {
       name: "PRODUCTCODE",
@@ -69,7 +73,7 @@ export const InvoiceDetailsConfig = ({
       })),
       size: "xs",
       rounded: "sm",
-      width: "200px",
+     width: "300px",
       colSpan: 2,
     },
     {
@@ -82,7 +86,7 @@ export const InvoiceDetailsConfig = ({
       })),
       size: "xs",
       rounded: "sm",
-      width: "200px",
+      width: "300px",
       dependsOn: "PRODUCTCODE",
       colSpan: 2,
     },
@@ -124,6 +128,16 @@ export const InvoiceDetailsConfig = ({
       size: "xs",
       rounded: "sm",
       width: "100px",
+      disabled: true,
+      dependsOn: "SUBPRODUCTCODE",
+    },
+     {
+      name: "AMOUNT",
+      label: "AMOUNT",
+      type: "number",
+      size: "xs",
+      rounded: "sm",
+      width: "120px",
       disabled: true,
       dependsOn: "SUBPRODUCTCODE",
     },
@@ -176,13 +190,14 @@ export const InvoiceDetailsConfig = ({
     //     disabled: true,
     //     dependsOn: "SUBPRODUCTCODE"
     // },
+   
     {
-      name: "AMOUNT",
-      label: "AMOUNT",
+      name: "SGSTAMOUNT",
+      label: "SGST",
       type: "number",
       size: "xs",
       rounded: "sm",
-      width: "120px",
+      width: "100px",
       disabled: true,
       dependsOn: "SUBPRODUCTCODE",
     },
@@ -196,19 +211,10 @@ export const InvoiceDetailsConfig = ({
       disabled: true,
       dependsOn: "SUBPRODUCTCODE",
     },
+    
     {
       name: "CGSTAMOUNT",
       label: "CGST",
-      type: "number",
-      size: "xs",
-      rounded: "sm",
-      width: "100px",
-      disabled: true,
-      dependsOn: "SUBPRODUCTCODE",
-    },
-    {
-      name: "SGSTAMOUNT",
-      label: "SGST",
       type: "number",
       size: "xs",
       rounded: "sm",
