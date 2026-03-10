@@ -180,12 +180,12 @@ function OrionBarcodeMaster() {
     }, [highlightedId]);
 
     /* -------------------- HANDLERS -------------------- */
-const handleChange = (field: string, value: any) => {
+const handleChange = (field: string | number, value: any) => {
     console.log("Field changed:", field, value);
 
     setForm(prev => ({
         ...prev,
-        [field]: value
+        [field]: value // ✅ works because object keys in JS can be strings or numbers
     }));
 };
 

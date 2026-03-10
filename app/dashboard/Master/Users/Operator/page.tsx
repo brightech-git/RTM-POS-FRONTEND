@@ -74,7 +74,7 @@ interface Employee {
     MOBILENO?: string;
     ACTIVE?: string;
     CREATEDBY?: number;
-    EMPUID?: number; // This might be the employee code/id
+    EMPUID?: number | string;
     EMP_CODE?: string; // Some APIs use this
     EMPCODE?: string; // Some APIs use this
 }
@@ -95,8 +95,6 @@ export default function OperatorMaster() {
 
     /* -------------------- EMPLOYEE OPTIONS FOR DROPDOWN -------------------- */
     const employeeOptions = employees.map((emp: Employee) => {
-        // Try different possible employee code fields
-        // From your EmployeeMaster, the employee might have EMPUID as the unique identifier
         const empCode = emp.EMP_CODE || emp.EMPCODE || emp.EMPUID?.toString() || '';
         
         // Combine first name and surname for full name

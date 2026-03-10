@@ -59,7 +59,7 @@ export default function LoginPage() {
         });
         console.log(success,'success');
 
-        if (!success?.success) {
+        if (!success?.message) {
             toaster.create({
                 type: "error",
                 title: success.message,

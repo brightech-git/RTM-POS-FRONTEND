@@ -26,6 +26,7 @@ export interface Company {
     PORTNO?: string;
     SERVERNAME?: string;
     USERID?: string;
+    id?:number
     
 }
 
@@ -34,15 +35,18 @@ export interface CompanyResponse {
     message?: string;
     status?: string;
 }
+export interface ApiResponse<T> {
+    data: T;
+    message?: string;
+    status?: string;
+}
 
 export const CompanyService = {
     // Get All Companies
-    getAll: async (): Promise<CompanyResponse> => {
-        const { data } = await axiosInstance.get("/company/all");
-         console.log("Company data",data)
-        return data;
-       
-    },
+   getAll: async (): Promise<ApiResponse<Company[]>> => {
+    const { data } = await axiosInstance.get("/company/all");
+    return data;
+},
 
     // Get Company By Code
     getByCode: async (code: string): Promise<{ data: Company }> => {

@@ -14,8 +14,10 @@ export interface AuthUser {
 export interface AuthContextType {
     user: AuthUser | null;
     loading: boolean;
-    userId: number |string | null;
-    login: (payload: LoginPayload) => Promise<ApiResponse>;
+    userId: number | string | null;
+
+    // Specify T for ApiResponse
+    login: (payload: LoginPayload) => Promise<ApiResponse<AuthUser>>;
     logout: () => void;
     refreshUser?: (uid: number) => Promise<void>;
     company: () => Promise<void>;

@@ -37,19 +37,19 @@ function CompanyMaster() {
     const { theme } = useTheme();
     const router = useRouter();
     const { setData, setColumns, setShowSno, title } = usePrint();
-    
+
     /* -------------------- API HOOKS -------------------- */
     const { data, isLoading, refetch: companyRefetch } = useAllCompanies();
-    
+
     const { mutate: createCompany, isPending: isCreating } = useCreateCompany();
     const { mutate: updateCompany, isPending: isUpdating } = useUpdateCompany();
 
     const [editId, setEditId] = useState<string | null>(null);
     const [highlightedId, setHighlightedId] = useState<string | null>(null);
-    
+
     // Get USERID from localStorage
     const [userId, setUserId] = useState<string>("");
-    
+
     useEffect(() => {
         // Get user from localStorage on component mount
         if (typeof window !== 'undefined') {
@@ -66,7 +66,7 @@ function CompanyMaster() {
             }
         }
     }, []);
-    
+
     /* -------------------- FORM STATE - Only Payload Fields -------------------- */
     const [form, setForm] = useState<Partial<Company>>({
         COMPANYCODE: "",
@@ -94,18 +94,16 @@ function CompanyMaster() {
     }, [userId]);
 
     /* -------------------- GET COMPANY BY ID - FIXED -------------------- */
-    // Only call the hook when editId exists
-    const { data: companyData, refetch: fetchCompanyById } = useCompanyById(editId || '', {
-        enabled: !!editId,
-    });
-    
+
+    const { data: companyData, refetch: fetchCompanyById } = useCompanyById(editId || '');
+
     const company = companyData?.data;
 
     // Use useEffect to load company data when company changes
     useEffect(() => {
         if (company) {
             console.log("Loading company data for edit:", company);
-            
+
             setForm({
                 COMPANYCODE: company.COMPANYCODE || "",
                 COMPANYNAME: company.COMPANYNAME || "",
@@ -122,7 +120,7 @@ function CompanyMaster() {
                 PORTNO: company.PORTNO || "",
                 USERID: String(userId)
             });
-            
+
             // Show toast after company data is loaded
             setTimeout(() => {
                 toastLoaded("Company");
@@ -134,7 +132,7 @@ function CompanyMaster() {
     // Alternative: If the above doesn't work, use this approach to manually fetch
     const handleEditClick = (company: Company) => {
         setEditId(company.COMPANYCODE);
-        
+
         // Manually set form data from the company object in the list
         // This ensures data loads immediately without waiting for API
         setForm({
@@ -153,7 +151,7 @@ function CompanyMaster() {
             PORTNO: company.PORTNO || "",
             USERID: String(userId)
         });
-        
+
         // Optional: Still fetch from API to get latest data
         if (company.COMPANYCODE) {
             fetchCompanyById();
@@ -207,7 +205,7 @@ function CompanyMaster() {
             toastError("Company Name is required");
             return false;
         }
-        
+
         // Optional validations
         if (form.PINCODE) {
             const pinRegex = /^[0-9]{6}$/;
@@ -216,7 +214,7 @@ function CompanyMaster() {
                 return false;
             }
         }
-        
+
         if (form.MOBILENO) {
             const phoneRegex = /^[0-9]{10}$/;
             if (!phoneRegex.test(form.MOBILENO)) {
@@ -224,7 +222,7 @@ function CompanyMaster() {
                 return false;
             }
         }
-        
+
         return true;
     };
 
@@ -252,7 +250,7 @@ function CompanyMaster() {
 
         if (editId) {
             updateCompany(
-                { id: editId, ...payload },
+                { id: Number(editId), ...payload },
                 {
                     onSuccess: () => {
                         companyRefetch();
@@ -281,7 +279,7 @@ function CompanyMaster() {
     ];
 
     // Map companies for display
-    const companies = (data || []).map((c: any) => ({
+    const companies = (data?.data || []).map((c: Company) => ({
         COMPANYCODE: c.COMPANYCODE,
         COMPANYNAME: c.COMPANYNAME,
         COMPANYSHORTNAME: c.COMPANYSHORTNAME || "",
@@ -296,6 +294,7 @@ function CompanyMaster() {
         SERVERNAME: c.SERVERNAME || "",
         PORTNO: c.PORTNO || "",
         USERID: c.USERID || "",
+         ACTIVE: c.ACTIVE || "Y", // <-- provide default if missing
     }));
 
     /* -------------------- EXPORT HANDLER -------------------- */
@@ -451,7 +450,7 @@ function CompanyMaster() {
                                             type="text"
                                         />
                                     </Box>
-                                    
+
                                     {/* Hidden fields for PASSWORD, SERVERNAME, PORTNO, USERID */}
                                     <input type="hidden" name="PASSWORD" value="" />
                                     <input type="hidden" name="SERVERNAME" value="" />
@@ -521,8 +520,8 @@ function CompanyMaster() {
                                     <Table.Cell>{company.COMPANYSHORTNAME}</Table.Cell>
                                     <Table.Cell>
                                         <Box display="flex" justifyContent="center">
-                                            <FaEdit 
-                                                onClick={() => handleEditClick(company)} 
+                                            <FaEdit
+                                                onClick={() => handleEditClick(company)}
                                                 cursor="pointer"
                                                 color={theme.colors.primaryText}
                                             />

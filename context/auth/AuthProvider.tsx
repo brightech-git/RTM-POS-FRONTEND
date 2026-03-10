@@ -42,38 +42,37 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     }, []);
 
     // 🔐 LOGIN
-    const login = async (payload: LoginPayload) => {
-        setLoading(true);
-        
-        const res = await authService.login(payload);
-      
-        console.log(res,'resres')
-        // ❌ LOGIN FAILED
-        if (!res.data) {
-            setLoading(false);
-            return {
-                success: false,
-                message: res.message,
-            };
-        }
+   const login = async (payload: LoginPayload): Promise<ApiResponse<AuthUser>> => {
+    setLoading(true);
+    
+    const res = await authService.login(payload);
 
-        // ✅ SAFE ACCESS
-        const userId = res.data.OPER_CODE;
-        const isAdmin = res.data.ISADMIN;
-
-        setStorage("userId", String(userId));
-        setStorage("admin" ,isAdmin);
-        setUserId(userId);
-        setUser(res.data);
-
-        // await refreshUser(userId);
-
+    // ❌ LOGIN FAILED
+    if (!res.data) {
         setLoading(false);
         return {
-            success: true,
+            data: {} as AuthUser,   // Or `null` if you allow it
             message: res.message,
+            status: "error",
         };
+    }
+
+    // ✅ LOGIN SUCCESS
+    const userId = res.data.OPER_CODE;
+    const isAdmin = res.data.ISADMIN;
+
+    setStorage("userId", String(userId));
+    setStorage("admin", isAdmin);
+    setUserId(userId);
+    setUser(res.data);
+
+    setLoading(false);
+    return {
+        data: res.data,        // Must include `data`
+        message: res.message,
+        status: "success",
     };
+};
 
 
 

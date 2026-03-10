@@ -37,7 +37,7 @@ import { useDebounce } from "@/hooks/Debounce/useDebounce";
 import { usePrint } from "@/context/print/usePrintContext";
 import { useRouter } from "next/navigation";
 import { useAllTaged, useFilterTaged, useSyncTaged } from "@/hooks/Tagged/useTagged";
-import { TagedUIFilter } from "@/types/Tagged/Tagged";
+import { TagedUIFilter ,Taged} from "@/types/Tagged/Tagged";
 import { toaster, Toaster } from "@/components/ui/toaster";
 
 // ─── Interfaces (unchanged) ───────────────────────────────────────────────
@@ -362,38 +362,45 @@ export default function TaggedListPage() {
       : null
   );
 
-  const transformApiData = useCallback(
-    (apiResponse: { message: string; data: ApiTagedItem[] } | ApiTagedItem[]): TaggedRow[] => {
-      if (!apiResponse) return [];
-      const items: ApiTagedItem[] = Array.isArray(apiResponse)
-        ? apiResponse
-        : Array.isArray(apiResponse.data)
-        ? apiResponse.data
-        : [];
-      return items.map((item) => ({
-        rowSign: item.ROWSIGN || "",
-        billNo: item.BILLNO || 0,
-        billDate: item.BILLDATE || "",
-        vendorCode: item.VENDORCODE || 0,
-        barcode: item.ORIONBARCODE || "—",
-        productCode: item.PRODUCTCODE || 0,
-        subProductCode: item.SUBPRODUCTCODE || 0,
-        purRate: item.PURRATE || 0,
-        pieces: item.PIECES || 0,
-        weight: item.WEIGHT || 0,
-        discount: item.DISCOUNT,
-        sellingRate: item.SELLINGRATE || 0,
-        markup: item.MARKUP,
-        amount: item.AMOUNT,
-        mrp: item.MRP || 0,
-        billStatus: item.BILLSTATUS,
-        invoiceNo: item.INVOICENO || "—",
-        totalAmount: item.TOTALAMOUNT || 0,
-        taxAmount: item.TAXAMOUNT || 0,
-      }));
-    },
-    []
-  );
+const transformApiData = useCallback(
+  (apiResponse: { message: string; data: ApiTagedItem[] } | ApiTagedItem[] | Taged[] | undefined): TaggedRow[] => {
+    if (!apiResponse) return [];
+    
+    let items: ApiTagedItem[] = [];
+    
+    // Handle if it's an array (could be ApiTagedItem[] or Taged[])
+    if (Array.isArray(apiResponse)) {
+      items = apiResponse as ApiTagedItem[];
+    } 
+    // Handle if it's an object with message and data
+    else if (apiResponse && 'data' in apiResponse && Array.isArray(apiResponse.data)) {
+      items = apiResponse.data;
+    }
+    
+    return items.map((item) => ({
+      rowSign: item.ROWSIGN || "",
+      billNo: item.BILLNO || 0,
+      billDate: item.BILLDATE || "",
+      vendorCode: item.VENDORCODE || 0,
+      barcode: item.ORIONBARCODE || "—",
+      productCode: item.PRODUCTCODE || 0,
+      subProductCode: item.SUBPRODUCTCODE || 0,
+      purRate: item.PURRATE || 0,
+      pieces: item.PIECES || 0,
+      weight: item.WEIGHT || 0,
+      discount: item.DISCOUNT,
+      sellingRate: item.SELLINGRATE || 0,
+      markup: item.MARKUP,
+      amount: item.AMOUNT,
+      mrp: item.MRP || 0,
+      billStatus: item.BILLSTATUS,
+      invoiceNo: item.INVOICENO || "—",
+      totalAmount: item.TOTALAMOUNT || 0,
+      taxAmount: item.TAXAMOUNT || 0,
+    }));
+  },
+  []
+);
 
   const invoiceList = useMemo(() => {
     const sourceData = hasActiveFilters ? filteredData : allTagedData;
@@ -494,65 +501,42 @@ const handleSync = useCallback(async () => {
     vendorCode: filters.vendorCode !== "ALL" ? parseInt(filters.vendorCode) : undefined,
     productCode: filters.productCode ? parseInt(filters.productCode) : undefined,
   };
-  
-  console.log('1. Sync filters:', syncFilters);
-  
+
   const loadingToastId = toaster.create({
     title: "Syncing…",
     description: "Please wait while invoices are being synced",
     type: "loading",
     duration: 30000,
   });
-  
+
   try {
-    console.log('2. Calling sync mutation...');
     const response = await syncMutation.mutateAsync(syncFilters);
-    
-    console.log('3. Full sync response:', response);
-    console.log('4. Is response an array?', Array.isArray(response));
-    
     toaster.dismiss(loadingToastId);
-    
-    // The response is directly the array of synced items
+
     if (Array.isArray(response) && response.length > 0) {
-      console.log('5. Response is array with length:', response.length);
-      console.log('6. First item:', response[0]);
-      
-      const modalItems: SyncModalItem[] = response.map((item) => {
-        console.log('7. Mapping item:', item);
-        console.log('8. Item properties:', Object.keys(item));
-        
-        return {
-          billNo: item.BILLNO,
-          tagNo: item.TAGGEN, // Using TAGGEN for tag number
-          pieces: item.PIECES,
-          isSelected: true,
-          copies: item.PIECES, // Default copies to pieces
-        };
-      });
-      
-      console.log('9. Modal items created:', modalItems);
-      
+      const modalItems: SyncModalItem[] = response.map((item) => ({
+  billNo: item.billNo ?? 0,       // default to 0 if undefined
+  tagNo: item.TAGGEN ?? "",       // default to empty string
+  pieces: item.pieces ?? 0,
+  isSelected: true,
+  copies: item.pieces ?? 0,
+}));
+
       setSyncModalItems(modalItems);
-      setSyncMessage(`Successfully synced ${response.length} items`); // Custom message
+      setSyncMessage(`Successfully synced ${response.length} items`);
       setIsSyncModalOpen(true);
-      
     } else {
-      console.log('10. No items in response or not an array');
       toaster.success({
         title: "Success",
         description: "No items to sync",
         duration: 3000,
       });
     }
-    
-    console.log('11. Refreshing data...');
+
     if (hasActiveFilters) await refetchFiltered();
     else await refetchAll();
-    console.log('12. Data refreshed');
-    
+
   } catch (error: any) {
-    console.log('13. Error in sync:', error);
     toaster.dismiss(loadingToastId);
     toaster.error({
       title: "Sync Failed",
