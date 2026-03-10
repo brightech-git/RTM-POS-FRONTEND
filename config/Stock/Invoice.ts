@@ -1,247 +1,251 @@
 import { FormField } from "@/types/form/form";
 
 interface InvoiceConfigParams {
-    vendors?: any[];
-    products?: any[];
-    subProducts?: any[];
-    todayDate?: Date;
+  vendors?: any[];
+  products?: any[];
+  subProducts?: any[];
+  todayDate?: Date;
 }
 
 export const InvoiceDetailsConfig = ({
-    vendors = [],
-    products = [],
-    subProducts = [],
-    todayDate ,
+  vendors = [],
+  products = [],
+  subProducts = [],
+  todayDate,
 }: InvoiceConfigParams): FormField[] => {
+  return [
+    {
+      name: "INVOICENO",
+      label: "INVOICE NO",
+      type: "number",
+      required: true,
+      size: "xs",
+      rounded: "sm",
+      width: "150px",
+    },
+    {
+      name: "BILLDATE",
+      label: "BILL DATE",
+      type: "date",
+      required: true,
+      size: "xs",
+      rounded: "sm",
+      width: "200px",
+      maxDate: todayDate,
+      colSpan: 2,
+    },
 
+    {
+      name: "VENDORCODE",
+      label: "VENDOR NAME",
+      required: true,
+      type: "combobox",
+      options: vendors.map((p) => ({
+        value: p.value,
+        label: p.label,
+      })),
+      size: "xs",
+      rounded: "sm",
+      width: "200px",
+      colSpan: 2,
+    },
+    {
+      name: "ORIONBARCODE",
+      label: "ORION BARCODE",
+      required: true,
+      type: "number",
+      size: "xs",
+      rounded: "sm",
+      width: "150px",
+    },
+    {
+      name: "PRODUCTCODE",
+      label: "PRODUCT NAME",
+      required: true,
+      type: "combobox",
+      options: products.map((p) => ({
+        value: p.value,
+        label: p.label,
+      })),
+      size: "xs",
+      rounded: "sm",
+      width: "200px",
+      colSpan: 2,
+    },
+    {
+      name: "SUBPRODUCTCODE",
+      label: "SUP PRODUCT NAME",
+      type: "combobox",
+      options: subProducts.map((p) => ({
+        value: p.value,
+        label: p.label,
+      })),
+      size: "xs",
+      rounded: "sm",
+      width: "200px",
+      dependsOn: "PRODUCTCODE",
+      colSpan: 2,
+    },
+    {
+      name: "RATE",
+      label: "PURCHASE RATE",
+      type: "number",
+      size: "xs",
+      rounded: "sm",
+      width: "100px",
+      isReadOnly: true,
+      disabled: true,
+      dependsOn: "SUBPRODUCTCODE",
+    },
+    {
+      name: "WEIGHT",
+      label: "WEIGHT",
+      type: "number",
+      size: "xs",
+      rounded: "sm",
+      width: "100px",
+      disabled: true,
+      dependsOn: "SUBPRODUCTCODE",
+    },
+    {
+      name: "PIECES",
+      label: "PICES",
+      type: "number",
+      size: "xs",
+      rounded: "sm",
+      width: "100px",
+      dependsOn: "SUBPRODUCTCODE",
+    },
+    {
+      name: "MRP",
+      label: "MRP RATE",
+      required: true,
+      type: "number",
+      size: "xs",
+      rounded: "sm",
+      width: "100px",
+      disabled: true,
+      dependsOn: "SUBPRODUCTCODE",
+    },
+    {
+      name: "SELLINGRATE",
+      label: "SELLING RATE",
+      type: "number",
+      size: "xs",
+      rounded: "sm",
+      width: "120px",
+      isReadOnly: true,
+      disabled: true,
+      dependsOn: "SUBPRODUCTCODE",
+    },
+    // {
+    //     name: "DISCPER",
+    //     label: "DISCOUNT %",
+    //     type: "number",
+    //     size: "xs",
+    //     rounded: "sm",
+    //     width: "100px",
+    //     dependsOn: "AMOUNT"
+    // },
+    // {
+    //     name: "DISCOUNTAMOUNT",
+    //     label: "DISCOUNT AMOUNT",
+    //     type: "number",
+    //     size: "xs",
+    //     rounded: "sm",
+    //     width: "120px",
+    //     disabled: true,
+    //     dependsOn: "SUBPRODUCTCODE"
+    // },
+    // {
+    //     name: "MARKUPPER",
+    //     label: "MARKUP %",
+    //     type: "number",
+    //     size: "xs",
+    //     rounded: "sm",
+    //     width: "100px",
+    //     dependsOn: "SUBPRODUCTCODE"
+    // },
+    // {
+    //     name: "MARKUPAMOUNT",
+    //     label: "MARKUP AMOUNT",
+    //     type: "number",
+    //     size: "xs",
+    //     rounded: "sm",
+    //     width: "120px",
+    //     disabled: true,
+    //     dependsOn: "SUBPRODUCTCODE"
+    // },
+    {
+      name: "AMOUNT",
+      label: "AMOUNT",
+      type: "number",
+      size: "xs",
+      rounded: "sm",
+      width: "120px",
+      disabled: true,
+      dependsOn: "SUBPRODUCTCODE",
+    },
+    {
+      name: "IGSTAMOUNT",
+      label: "IGST",
+      type: "number",
+      size: "xs",
+      rounded: "sm",
+      width: "100px",
+      disabled: true,
+      dependsOn: "SUBPRODUCTCODE",
+    },
+    {
+      name: "CGSTAMOUNT",
+      label: "CGST",
+      type: "number",
+      size: "xs",
+      rounded: "sm",
+      width: "100px",
+      disabled: true,
+      dependsOn: "SUBPRODUCTCODE",
+    },
+    {
+      name: "SGSTAMOUNT",
+      label: "SGST",
+      type: "number",
+      size: "xs",
+      rounded: "sm",
+      width: "100px",
+      disabled: true,
+      dependsOn: "SUBPRODUCTCODE",
+    },
+    {
+      name: "NETAMOUNT",
+      label: "NET AMOUNT",
+      type: "number",
+      size: "xs",
+      rounded: "sm",
+      width: "120px",
+      disabled: true,
+      dependsOn: "SUBPRODUCTCODE",
+    },
 
-    return [
-        {
-            name: "INVOICENO",
-            label: "INVOICE NO",
-            type: "number",
-            required: true,
-            size: "xs",
-            rounded: "sm",
-            width: "150px",
-            
-        },
-        {
-            name: "BILLDATE",
-            label: "BILL DATE",
-            type: "date",
-            required: true,
-            size: "xs",
-            rounded: "sm",
-            width: "150px",
-            maxDate: todayDate
-          
-        },
-       
-        {
-            name: "VENDORCODE",
-            label: "VENDOR NAME",
-            required: true,
-            type: "combobox",
-            options: vendors.map(p => ({
-                value: p.value,
-                label: p.label,
-            })),
-            size: "xs",
-            rounded: "sm",
-            width: "200px",
-        },
-        {
-            name: "PRODUCTCODE",
-            label: "PRODUCT NAME",
-            required: true,
-            type: "combobox",
-            options: products.map(p => ({
-                value: p.value,
-                label: p.label,
-            })),
-            size: "xs",
-            rounded: "sm",
-            width: "200px",
-            
-        },
-        {
-            name: "SUBPRODUCTCODE",
-            label: "SUP PRODUCT NAME",
-            type: "combobox",
-            options: subProducts.map(p => ({
-                value: p.value,
-                label: p.label
-            })),
-            size: "xs",
-            rounded: "sm",
-            width: "200px",
-            dependsOn:"PRODUCTCODE"
-            
-        },
-        {
-            name: "RATE",
-            label: "PURCHASE RATE",
-            type: "number",
-            size: "xs",
-            rounded: "sm",
-            width: "100px",
-            isReadOnly: true,
-            disabled:true,
-            dependsOn:"SUBPRODUCTCODE"
-
-        },
-        {
-            name: "WEIGHT",
-            label: "WEIGHT",
-            type: "number",
-            size: "xs",
-            rounded: "sm",
-            width: "100px",
-            disabled:true,
-            dependsOn: "SUBPRODUCTCODE"
-        },
-        {
-            name: "PIECES",
-            label: "PICES",
-            type: "number",
-            size: "xs",
-            rounded: "sm",
-            width: "100px",
-            dependsOn: "SUBPRODUCTCODE"
-        },
-        {
-            name: "MRP",
-            label: "MRP RATE",
-            required: true,
-            type: "number",
-            size: "xs",
-            rounded: "sm",
-            width: "100px",
-            disabled:true,
-            dependsOn: "SUBPRODUCTCODE"
-        },
-        {
-            name: "SELLINGRATE",
-            label: "SELLING RATE",
-            type: "number",
-            size: "xs",
-            rounded: "sm",
-            width: "120px",
-            isReadOnly: true,
-            disabled:true,
-            dependsOn: "SUBPRODUCTCODE"
-        },
-        // {
-        //     name: "DISCPER",
-        //     label: "DISCOUNT %",
-        //     type: "number",
-        //     size: "xs",
-        //     rounded: "sm",
-        //     width: "100px",
-        //     dependsOn: "AMOUNT"
-        // },
-        // {
-        //     name: "DISCOUNTAMOUNT",
-        //     label: "DISCOUNT AMOUNT",
-        //     type: "number",
-        //     size: "xs",
-        //     rounded: "sm",
-        //     width: "120px",
-        //     disabled: true,
-        //     dependsOn: "SUBPRODUCTCODE"
-        // },
-        {
-            name: "MARKUPPER",
-            label: "MARKUP %",
-            type: "number",
-            size: "xs",
-            rounded: "sm",
-            width: "100px",
-            dependsOn: "SUBPRODUCTCODE"
-        },
-        {
-            name: "MARKUPAMOUNT",
-            label: "MARKUP AMOUNT",
-            type: "number",
-            size: "xs",
-            rounded: "sm",
-            width: "120px",
-            disabled: true,
-            dependsOn: "SUBPRODUCTCODE"
-        },
-        {
-            name: "AMOUNT",
-            label: "AMOUNT",
-            type: "number",
-            size: "xs",
-            rounded: "sm",
-            width: "120px",
-            disabled:true,
-            dependsOn: "SUBPRODUCTCODE"
-
-        },
-        {
-            name: "IGSTAMOUNT",
-            label: "IGST",
-            type: "number",
-            size: "xs",
-            rounded: "sm",
-            width: "100px",
-            disabled: true,
-            dependsOn: "SUBPRODUCTCODE"
-        },
-        {
-            name: "CGSTAMOUNT",
-            label: "CGST",
-            type: "number",
-            size: "xs",
-            rounded: "sm",
-            width: "100px",
-            disabled: true,
-            dependsOn: "SUBPRODUCTCODE"
-        },
-        {
-            name: "SGSTAMOUNT",
-            label: "SGST",
-            type: "number",
-            size: "xs",
-            rounded: "sm",
-            width: "100px",
-            disabled: true,
-            dependsOn: "SUBPRODUCTCODE"
-        },
-        {
-            name: "NETAMOUNT",
-            label: "NET AMOUNT",
-            type: "number",
-            size: "xs",
-            rounded: "sm",
-            width: "120px",
-            disabled: true,
-            dependsOn: "SUBPRODUCTCODE"
-        },
-        
-        {
-            name: "HSNCODE",
-            label: "HSN Code",
-            type: "number",
-            size: "xs",
-            rounded: "sm",
-            width: "150px",
-            dependsOn: "SUBPRODUCTCODE",
-            disabled:true
-        },
-        {
-            name: "HSNTAXCODE",
-            label: "HSN TAX CODE",
-            type: "number",
-            size: "xs",
-            rounded: "sm",
-            width: "150px",
-            dependsOn: "SUBPRODUCTCODE",
-            disabled:true
-        }
-    ];
-}
-    
+    // {
+    //     name: "HSNCODE",
+    //     label: "HSN Code",
+    //     type: "number",
+    //     size: "xs",
+    //     rounded: "sm",
+    //     width: "150px",
+    //     dependsOn: "SUBPRODUCTCODE",
+    //     disabled:true
+    // },
+    // {
+    //     name: "HSNTAXCODE",
+    //     label: "HSN TAX CODE",
+    //     type: "number",
+    //     size: "xs",
+    //     rounded: "sm",
+    //     width: "150px",
+    //     dependsOn: "SUBPRODUCTCODE",
+    //     disabled:true
+    // }
+  ];
+};

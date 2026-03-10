@@ -16,5 +16,4 @@ export interface NonTagedFilter {
   vendorCode?: number;
   productCode?: number;
 }
-
 export type AllNonTaged = NonTaged[];

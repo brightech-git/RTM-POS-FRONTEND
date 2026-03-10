@@ -46,6 +46,7 @@ type CapitalizedInputProps<T> = {
     minWidth?: string;
     noBorder?:boolean;
     onBlur?:()=>void;
+    onFocus?:()=>void,
 };
 
 export function CapitalizedInput<T>({

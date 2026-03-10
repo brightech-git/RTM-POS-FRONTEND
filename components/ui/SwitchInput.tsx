@@ -11,6 +11,7 @@ interface SwitchInputProps {
     labels?: { on: string; off: string };
     size?: "xs" | "sm" | "md" | "lg";
     onBlur?: () => void;
+    onFocus?:()=>void
 }
 
 export const SwitchInput = React.forwardRef<HTMLDivElement, SwitchInputProps>(({

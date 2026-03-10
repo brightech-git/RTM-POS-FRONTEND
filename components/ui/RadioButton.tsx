@@ -15,6 +15,7 @@ interface RadioProps {
     size?: "xs" | "sm" | "md" | "lg";
     onKeyDown?: (e: React.KeyboardEvent) => void;
     onBlur?: () => void;
+    onFocus?:()=>void
 }
 
 const RadioButton = React.forwardRef<HTMLDivElement, RadioProps>(({

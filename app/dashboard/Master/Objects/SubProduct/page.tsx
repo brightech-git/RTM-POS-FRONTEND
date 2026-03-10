@@ -295,9 +295,9 @@ function SubProductMaster() {
                 message="Are you sure you want to delete this sub product? This action cannot be undone."
             />
 
-            <Grid templateColumns={{ base: "1fr", lg: "1fr 2fr" }} gap={2}>
+            <Grid templateColumns={{ base: "1fr", lg: "1fr 1fr" }} gap={2}>
                 {/* ---------------- FORM ---------------- */}
-                <GridItem>
+                <GridItem >
                     <VStack bg={theme.colors.formColor} p={2} borderRadius="xl" border="1px solid #eef">
                         <Text fontSize="small" fontWeight="600">
                             SUB PRODUCT {editId ? 'EDIT' : 'CREATION'}
@@ -321,7 +321,7 @@ function SubProductMaster() {
                                 <AiOutlineSave /> {editId ? "Update" : "Save"}
                             </Button>
                             <Button size="xs" colorPalette="blue" onClick={resetForm}>
-                                <IoIosExit /> Exit
+                                <IoIosExit /> Clear
                             </Button>
                         </HStack>
                     </VStack>

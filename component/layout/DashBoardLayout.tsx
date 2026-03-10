@@ -18,6 +18,7 @@ const normalizePath = (path?: string) =>
 const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
     const { theme } = useTheme();
     const { sidebarConfig, sidebarCollapsed } = useSidebar();
+    
     const [isOpen, setIsOpen] = useState(false);
     const [isDesktop] = useMediaQuery(["(min-width: 768px)"]);
 

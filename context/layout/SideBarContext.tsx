@@ -84,7 +84,6 @@ interface SidebarConfig {
 }
 
 interface SidebarContextType {
-  // State
   currentSection: string;
   setCurrentSection: (section: string) => void;
   expandedNodes: Record<string, boolean>;
@@ -93,14 +92,14 @@ interface SidebarContextType {
   sidebarConfig: SidebarConfig;
   sidebarCollapsed: boolean;
 
-  // Actions
+  setSidebarCollapsed: (collapsed: boolean) => void; // ✅ ADD THIS
+
   toggleSidebar: () => void;
   updateSidebarConfig: (config: Partial<SidebarConfig>) => void;
   expandAll: () => void;
   collapseAll: () => void;
   searchMenu: (query: string) => MenuItem[];
 
-  // Derived
   isMobile: boolean;
   activeRoute: string;
   setActiveRoute: (route: string) => void;
@@ -214,6 +213,7 @@ export const SidebarProvider = ({ children }: { children: ReactNode }) => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [activeRoute, setActiveRoute] = useState("");
   const [isMobile, setIsMobile] = useState(false);
+  
 
   // Initialize from localStorage and set up event listeners
   useEffect(() => {
@@ -330,6 +330,7 @@ export const SidebarProvider = ({ children }: { children: ReactNode }) => {
   }, [menuData]);
 
   // Memoized context value
+  
   const contextValue = useMemo<SidebarContextType>(() => ({
     // State
     currentSection,
@@ -339,6 +340,7 @@ export const SidebarProvider = ({ children }: { children: ReactNode }) => {
     menuData,
     sidebarConfig,
     sidebarCollapsed,
+    setSidebarCollapsed, // ✅ ADD THIS
 
     // Actions
     toggleSidebar,

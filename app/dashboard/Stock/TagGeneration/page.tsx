@@ -13,7 +13,6 @@ import {
   NativeSelect,
   For,
   Flex,
-  Checkbox,
   Badge,
   Spinner,
   Dialog,
@@ -29,10 +28,64 @@ import { useTheme } from "@/context/theme/themeContext";
 import { useDebounce } from "@/hooks/Debounce/useDebounce";
 import { usePrint } from "@/context/print/usePrintContext";
 import { useRouter } from "next/navigation";
-import { useAllNonTaged, useSyncNonTaged } from "@/hooks/NonTagged/useNonTagged";
+import { useAllTaged, useFilterTaged, useSyncTaged } from "@/hooks/Tagged/useTagged";
+import { Taged, TagedUIFilter } from "@/types/Tagged/Tagged";
 
-// ─── Types ─────────────────────────────────────────────────────────────────
-interface NonTaggedRow {
+// ─── Interface for API Response ────────────────────────────────────────────
+interface ApiTagedItem {
+  AMOUNT: number;
+  BILLDATE: string;
+  BILLNO: number;
+  BILLSTATUS: string;
+  BILLTYPE: string;
+  CGSTAMOUNT: number | null;
+  CGSTPER: number | null;
+  CGSTTAXCODE: null;
+  CREATEDBY: number;
+  CREATEDDATE: string;
+  CREATEDTIME: string;
+  DISCOUNT: number | null;
+  DISCPER: number | null;
+  ENTRYORDER: number;
+  HSNCALC: string;
+  HSNCODE: string;
+  HSNTAXCODE: number;
+  IGSTAMOUNT: number | null;
+  IGSTPER: number | null;
+  IGSTTAXCODE: null;
+  INVOICENO: string;
+  IPID: number;
+  MARKUP: number;
+  MARKUPPER: number;
+  MRP: number;
+  ORIONBARCODE: string;
+  PIECES: number;
+  PRODUCTCODE: number;
+  PRODUCTNAME: null;
+  PURRATE: number;
+  ROWSIGN: string;
+  SELLINGRATE: number;
+  SGSTAMOUNT: number | null;
+  SGSTPER: number | null;
+  SGSTTAXCODE: null;
+  SRVAMOUNT: null;
+  SRVPER: null;
+  SRVTAXCODE: null;
+  SUBPRODUCTCODE: number;
+  SUBPRODUCTNAME: null;
+  TAGGEN: string;
+  TAXAMOUNT: number;
+  TAXCALC: string;
+  TAXPER: number;
+  TOTALAMOUNT: number;
+  UNIQUEKEY: string;
+  UNITCODE: number;
+  VENDORCODE: number;
+  WEIGHT: number;
+}
+
+// ─── Transformed Row Interface ─────────────────────────────────────────────
+interface TaggedRow {
   rowSign: string;
   billNo: number;
   billDate: string;
@@ -50,22 +103,10 @@ interface NonTaggedRow {
   mrp: number;
   billStatus: string;
   issRec: string;
+  invoiceNo: string;
+  totalAmount: number;
+  taxAmount: number;
 }
-
-interface FilterState {
-  vendorCode: string;
-  fromDate: string;
-  toDate: string;
-  billNo: string;
-  productCode: string;
-}
-
-// ─── Vendor Options from API ───────────────────────────────────────────────
-const vendorOptions = [
-  { label: "ALL VENDORS", value: "ALL" },
-  { label: "Vendor 1", value: "1" },
-  { label: "Vendor 2", value: "2" },
-];
 
 // ─── Stat Card ──────────────────────────────────────────────────────────────
 const StatCard = ({
@@ -98,29 +139,61 @@ const FieldLabel = ({ children }: { children: React.ReactNode }) => (
 );
 
 // ─── Main Page ──────────────────────────────────────────────────────────────
-export default function NonTaggedListPage() {
+export default function TaggedListPage() {
   const { theme } = useTheme();
   const router = useRouter();
   const { setData, setColumns, setShowSno, title } = usePrint();
 
-  // Sync mutation
-  const syncMutation = useSyncNonTaged();
+  // Filter state
+  const [filters, setFilters] = useState<TagedUIFilter>({
+    fromDate: "",
+    toDate: "",
+    billNo: "",
+    vendorCode: "ALL",
+    productCode: ""
+  });
 
-  // Use React Query hooks
-  const { data: apiData, isLoading, refetch } = useAllNonTaged();
-  
+  const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  const [hoveredRow, setHoveredRow] = useState<string | null>(null);
+
+  // React Query hooks
+  const { data: allTagedData, isLoading: isLoadingAll, refetch: refetchAll } = useAllTaged();
+  const syncMutation = useSyncTaged();
+
+  // Filter query - only enabled when filters are applied
+  const hasActiveFilters = useMemo(() => {
+    return filters.fromDate !== "" ||
+      filters.toDate !== "" ||
+      filters.billNo !== "" ||
+      (filters.vendorCode !== "ALL" && filters.vendorCode !== "") ||
+      filters.productCode !== "";
+  }, [filters]);
+
+  const {
+    data: filteredData,
+    isLoading: isLoadingFiltered,
+    refetch: refetchFiltered
+  } = useFilterTaged(hasActiveFilters ? {
+    fromDate: filters.fromDate || undefined,
+    toDate: filters.toDate || undefined,
+    billNo: filters.billNo ? parseInt(filters.billNo) : undefined,
+    vendorCode: filters.vendorCode !== "ALL" ? parseInt(filters.vendorCode) : undefined,
+    productCode: filters.productCode ? parseInt(filters.productCode) : undefined,
+  } : null);
+
   // Transform API data to match our interface
-  const invoiceList = useMemo(() => {
-    if (!apiData || !Array.isArray(apiData)) return [];
+  const transformApiData = useCallback((items: ApiTagedItem[] | undefined): TaggedRow[] => {
+    if (!items || !Array.isArray(items)) return [];
 
-    return apiData.map((item: any) => ({
+    return items.map((item) => ({
       rowSign: item.ROWSIGN,
-      billNo: item.BILLNO,
-      billDate: item.BILLDATE,
-      vendorCode: item.VENDORCODE,
+      billNo: item.BILLNO || 0,
+      billDate: item.BILLDATE || "",
+      vendorCode: item.VENDORCODE || 0,
       barcode: item.ORIONBARCODE || "",
-      productCode: item.PRODUCTCODE,
-      subProductCode: item.SUBPRODUCTCODE,
+      productCode: item.PRODUCTCODE || 0,
+      subProductCode: item.SUBPRODUCTCODE || 0,
       purRate: item.PURRATE || 0,
       pieces: item.PIECES || 0,
       weight: item.WEIGHT || 0,
@@ -129,53 +202,44 @@ export default function NonTaggedListPage() {
       markup: item.MARKUP || 0,
       amount: item.AMOUNT || 0,
       mrp: item.MRP || 0,
-      billStatus: item.BILLSTATUS,
-      issRec: item.ISSREC,
+      billStatus: item.BILLSTATUS || "",
+      issRec: "", // Not in API response
+      invoiceNo: item.INVOICENO || "",
+      totalAmount: item.TOTALAMOUNT || 0,
+      taxAmount: item.TAXAMOUNT || 0,
     }));
-  }, [apiData]);
+  }, []);
 
-  const [filters, setFilters] = useState<FilterState>({ 
-    vendorCode: "ALL", 
-    fromDate: "", 
-    toDate: "", 
-    billNo: "",
-    productCode: "" 
-  });
-  
-  const [searchTerm, setSearchTerm] = useState("");
-  const debouncedSearchTerm = useDebounce(searchTerm, 300);
-  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
-  const [selectAll, setSelectAll] = useState(false);
-  const [hoveredRow, setHoveredRow] = useState<string | null>(null);
-  
-  // Sync dialog state
-  const [syncDialogOpen, setSyncDialogOpen] = useState(false);
-  const [syncDateRange, setSyncDateRange] = useState({ from: "", to: "" });
+  // Determine which data to display
+  const invoiceList = useMemo(() => {
+    const sourceData = hasActiveFilters ? filteredData : allTagedData;
+    return transformApiData(sourceData as ApiTagedItem[]);
+  }, [allTagedData, filteredData, hasActiveFilters, transformApiData]);
 
-  // Apply client-side filtering
+  const isLoading = isLoadingAll || (hasActiveFilters && isLoadingFiltered);
+
+  // Get unique vendor codes for filter dropdown
+  const vendorOptions = useMemo(() => {
+    const vendors = new Set<number>();
+    if (allTagedData) {
+      (allTagedData as ApiTagedItem[]).forEach(item => {
+        if (item.VENDORCODE) vendors.add(item.VENDORCODE);
+      });
+    }
+
+    return [
+      { label: "ALL VENDORS", value: "ALL" },
+      ...Array.from(vendors).sort().map(code => ({
+        label: `Vendor ${code}`,
+        value: code.toString()
+      }))
+    ];
+  }, [allTagedData]);
+
+  // Apply client-side search filtering
   const filteredInvoices = useMemo(() => {
     let filtered = [...invoiceList];
-    
-    if (filters.vendorCode !== "ALL") {
-      filtered = filtered.filter(inv => inv.vendorCode.toString() === filters.vendorCode);
-    }
-    
-    if (filters.fromDate) {
-      filtered = filtered.filter(inv => new Date(inv.billDate) >= new Date(filters.fromDate));
-    }
-    
-    if (filters.toDate) {
-      filtered = filtered.filter(inv => new Date(inv.billDate) <= new Date(filters.toDate));
-    }
-    
-    if (filters.billNo) {
-      filtered = filtered.filter(inv => inv.billNo.toString().includes(filters.billNo));
-    }
-    
-    if (filters.productCode) {
-      filtered = filtered.filter(inv => inv.productCode.toString().includes(filters.productCode));
-    }
-    
+
     if (debouncedSearchTerm.trim()) {
       const s = debouncedSearchTerm.toLowerCase();
       filtered = filtered.filter(inv =>
@@ -183,69 +247,45 @@ export default function NonTaggedListPage() {
         inv.barcode?.toLowerCase().includes(s) ||
         inv.vendorCode.toString().includes(s) ||
         inv.productCode.toString().includes(s) ||
-        inv.subProductCode.toString().includes(s)
+        inv.subProductCode.toString().includes(s) ||
+        inv.invoiceNo.toLowerCase().includes(s)
       );
     }
-    
+
     return filtered;
-  }, [invoiceList, filters, debouncedSearchTerm]);
+  }, [invoiceList, debouncedSearchTerm]);
 
-  // Handle select all
-  useEffect(() => {
-    if (selectAll) {
-      setSelectedRows(new Set(filteredInvoices.map(inv => inv.rowSign)));
-    } else {
-      setSelectedRows(new Set());
-    }
-  }, [selectAll, filteredInvoices]);
-
-  const handleSelectRow = useCallback((rowSign: string, checked: boolean) => {
-    setSelectedRows(prev => {
-      const next = new Set(prev);
-      checked ? next.add(rowSign) : next.delete(rowSign);
-      setSelectAll(next.size === filteredInvoices.length && filteredInvoices.length > 0);
-      return next;
-    });
-  }, [filteredInvoices.length]);
-
-  // Calculate totals for selected rows
-  const totals = useMemo(() => {
-    const sel = invoiceList.filter(inv => selectedRows.has(inv.rowSign));
-    return {
-      totalPcs: sel.reduce((a, b) => a + b.pieces, 0),
-      totalWt: sel.reduce((a, b) => a + b.weight, 0),
-      totalAmt: sel.reduce((a, b) => a + b.amount, 0),
-      rowCount: sel.length,
-    };
-  }, [invoiceList, selectedRows]);
-
-  const handleFilterChange = useCallback((field: keyof FilterState, value: string) => {
+  const handleFilterChange = useCallback((field: keyof TagedUIFilter, value: string) => {
     setFilters(prev => ({ ...prev, [field]: value }));
   }, []);
 
   const clearFilters = useCallback(() => {
-    setFilters({ 
-      vendorCode: "ALL", 
-      fromDate: "", 
-      toDate: "", 
+    setFilters({
+      fromDate: "",
+      toDate: "",
       billNo: "",
-      productCode: "" 
+      vendorCode: "ALL",
+      productCode: ""
     });
     setSearchTerm("");
   }, []);
 
   const handleView = useCallback(async () => {
-    await refetch();
-    toaster.success({ title: "Refreshed", description: "Invoice list updated." });
-  }, [refetch]);
+    if (hasActiveFilters) {
+      await refetchFiltered();
+    } else {
+      await refetchAll();
+    }
+    toaster.success({ title: "Refreshed", description: "Tagged list updated." });
+  }, [hasActiveFilters, refetchFiltered, refetchAll]);
 
   const handleExport = useCallback((option: string) => {
-    const sel = invoiceList.filter(inv => selectedRows.has(inv.rowSign));
-    setData(sel.length > 0 ? sel : filteredInvoices);
+    setData(filteredInvoices);
     setColumns([
       { key: "billNo", label: "Bill No" },
       { key: "billDate", label: "Date" },
       { key: "vendorCode", label: "Vendor Code" },
+      { key: "invoiceNo", label: "Invoice No" },
       { key: "barcode", label: "Barcode" },
       { key: "productCode", label: "Product Code" },
       { key: "subProductCode", label: "Sub Product" },
@@ -256,49 +296,54 @@ export default function NonTaggedListPage() {
       { key: "sellingRate", label: "Sell Rate" },
       { key: "markup", label: "Markup" },
       { key: "amount", label: "Amount" },
+      { key: "taxAmount", label: "Tax" },
+      { key: "totalAmount", label: "Total" },
       { key: "mrp", label: "MRP" },
       { key: "billStatus", label: "Status" },
     ]);
     setShowSno(true);
-    title?.("Non-Tagged Invoice List");
+    title?.("Tagged Invoice List");
     router.push(`/print?export=${option}`);
-  }, [invoiceList, filteredInvoices, selectedRows, setData, setColumns, setShowSno, title, router]);
+  }, [filteredInvoices, setData, setColumns, setShowSno, title, router]);
 
-  // Handle sync
+  // Handle sync with loading alert
   const handleSync = useCallback(async () => {
-    if (!syncDateRange.from || !syncDateRange.to) {
-      toaster.error({ 
-        title: "Error", 
-        description: "Please select both from and to dates" 
-      });
-      return;
-    }
+    const syncToastId = toaster.loading({
+      title: "Syncing...",
+      description: "Please wait while invoices are being synced",
+      duration: null, // This makes it persist until closed
+    });
 
     try {
-      await syncMutation.mutateAsync({
-        from: syncDateRange.from,
-        to: syncDateRange.to
+      await syncMutation.mutateAsync({}); // no params
+
+      // Close the loading toast
+      toaster.dismiss(syncToastId);
+      
+      toaster.success({
+        title: "Success",
+        description: "Invoices synced successfully",
+        duration: 3000,
       });
-      
-      setSyncDialogOpen(false);
-      setSyncDateRange({ from: "", to: "" });
-      setSelectedRows(new Set());
-      setSelectAll(false);
-      
-      toaster.success({ 
-        title: "Success", 
-        description: "Invoices synced successfully" 
-      });
-      
-      // Refresh the list
-      refetch();
+
+      // Refresh list
+      if (hasActiveFilters) {
+        await refetchFiltered();
+      } else {
+        await refetchAll();
+      }
+
     } catch (error) {
-      toaster.error({ 
-        title: "Error", 
-        description: "Failed to sync invoices" 
+      // Close the loading toast
+      toaster.dismiss(syncToastId);
+      
+      toaster.error({
+        title: "Error",
+        description: "Failed to sync invoices",
+        duration: 3000,
       });
     }
-  }, [syncDateRange, syncMutation, refetch]);
+  }, [syncMutation, hasActiveFilters, refetchFiltered, refetchAll]);
 
   const inputStyle = {
     size: "xs" as const,
@@ -313,16 +358,13 @@ export default function NonTaggedListPage() {
   };
 
   const activeFilters = [
-    filters.vendorCode !== "ALL",
-    !!filters.fromDate,
-    !!filters.toDate,
-    !!filters.billNo,
-    !!filters.productCode,
+    hasActiveFilters,
     !!searchTerm,
   ].filter(Boolean).length;
 
   // Format date for display
   const formatDate = (dateString: string) => {
+    if (!dateString) return "";
     const date = new Date(dateString);
     return date.toLocaleDateString('en-GB', {
       day: '2-digit',
@@ -330,6 +372,18 @@ export default function NonTaggedListPage() {
       year: 'numeric'
     }).replace(/ /g, '-');
   };
+
+  // Calculate totals for all filtered invoices
+  const totals = useMemo(() => {
+    return {
+      totalPcs: filteredInvoices.reduce((a, b) => a + b.pieces, 0),
+      totalWt: filteredInvoices.reduce((a, b) => a + b.weight, 0),
+      totalAmt: filteredInvoices.reduce((a, b) => a + b.amount, 0),
+      totalTax: filteredInvoices.reduce((a, b) => a + b.taxAmount, 0),
+      totalMrp: filteredInvoices.reduce((a, b) => a + (b.mrp * b.pieces), 0),
+      rowCount: filteredInvoices.length,
+    };
+  }, [filteredInvoices]);
 
   return (
     <Box
@@ -339,65 +393,6 @@ export default function NonTaggedListPage() {
       fontFamily="'DM Sans', 'Segoe UI', sans-serif"
     >
       <Toaster />
-
-      {/* Sync Dialog */}
-      <Dialog.Root open={syncDialogOpen} onOpenChange={e => setSyncDialogOpen(e.open)}>
-        <Portal>
-          <Dialog.Backdrop />
-          <Dialog.Positioner>
-            <Dialog.Content>
-              <Dialog.Header>
-                <Dialog.Title>Sync Invoices</Dialog.Title>
-                <Dialog.CloseTrigger />
-              </Dialog.Header>
-              <Dialog.Body>
-                <VStack gap={4}>
-                  <Text fontSize="sm" color="gray.600">
-                    Selected {selectedRows.size} invoice(s) will be synced for the date range below.
-                  </Text>
-                  
-                  <Field.Root required>
-                    <Field.Label>From Date</Field.Label>
-                    <Input
-                      type="date"
-                      value={syncDateRange.from}
-                      onChange={e => setSyncDateRange(prev => ({ ...prev, from: e.target.value }))}
-                      size="sm"
-                    />
-                  </Field.Root>
-
-                  <Field.Root required>
-                    <Field.Label>To Date</Field.Label>
-                    <Input
-                      type="date"
-                      value={syncDateRange.to}
-                      onChange={e => setSyncDateRange(prev => ({ ...prev, to: e.target.value }))}
-                      size="sm"
-                    />
-                  </Field.Root>
-                </VStack>
-              </Dialog.Body>
-              <Dialog.Footer>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => setSyncDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  colorPalette="blue" 
-                  size="sm" 
-                  onClick={handleSync}
-                  loading={syncMutation.isPending}
-                >
-                  Sync Now
-                </Button>
-              </Dialog.Footer>
-            </Dialog.Content>
-          </Dialog.Positioner>
-        </Portal>
-      </Dialog.Root>
 
       <VStack gap={3} align="stretch" maxW="1400px" mx="auto">
 
@@ -421,24 +416,23 @@ export default function NonTaggedListPage() {
                 </Badge>
               )}
             </HStack>
-           
+
             <HStack>
-              {/* Save/Sync Button - Shows only when rows are selected */}
-              {selectedRows.size > 0 && (
-                <Button
-                  size="xs"
-                  colorPalette="green"
-                  borderRadius="6px"
-                  fontSize="11px"
-                  fontWeight="600"
-                  h="28px"
-                  px={3}
-                  onClick={() => setSyncDialogOpen(true)}
-                  _hover={{ bg: "green.600" }}
-                >
-                  <AiOutlineSave style={{ marginRight: 4 }} /> Sync ({selectedRows.size})
-                </Button>
-              )}
+              {/* Save/Sync Button */}
+              <Button
+                size="xs"
+                colorPalette="green"
+                borderRadius="6px"
+                fontSize="11px"
+                fontWeight="600"
+                h="28px"
+                px={3}
+                onClick={handleSync}
+                loading={syncMutation.isPending}
+                _hover={{ bg: "green.600" }}
+              >
+                <AiOutlineSave style={{ marginRight: 4 }} /> Sync
+              </Button>
               <Button
                 size="xs"
                 variant="outline"
@@ -558,7 +552,7 @@ export default function NonTaggedListPage() {
             <GridItem>
               <FieldLabel>Search</FieldLabel>
               <Input
-                placeholder="Bill No, Barcode..."
+                placeholder="Bill No, Barcode, Invoice No..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
                 {...inputStyle}
@@ -607,27 +601,7 @@ export default function NonTaggedListPage() {
             bg="gray.50"
           >
             <HStack gap={2}>
-              <Checkbox.Root
-                checked={selectAll}
-                onCheckedChange={e => setSelectAll(!!e.checked)}
-                size="xs"
-              >
-                <Checkbox.HiddenInput />
-                <Checkbox.Control
-                  borderRadius="4px"
-                  borderColor="gray.300"
-                  bg="white"
-                  _checked={{ bg: "blue.600", borderColor: "blue.600" }}
-                />
-                <Checkbox.Label>
-                  <Text fontSize="11px" fontWeight="600" color="gray.600">All</Text>
-                </Checkbox.Label>
-              </Checkbox.Root>
-              {selectedRows.size > 0 && (
-                <Badge colorPalette="blue" variant="subtle" borderRadius="full" fontSize="9px" px={1.5}>
-                  {selectedRows.size} selected
-                </Badge>
-              )}
+              <Text fontSize="11px" fontWeight="600" color="gray.600">Tagged Invoices</Text>
             </HStack>
 
             <HStack gap={2}>
@@ -641,17 +615,15 @@ export default function NonTaggedListPage() {
           </Flex>
 
           {/* Table */}
-          <Box overflowX="auto">
+          <Box overflowX="auto" maxH="calc(100vh - 350px)" overflowY="auto">
             <Table.Root variant="outline" style={{ borderCollapse: "collapse", width: "100%" }}>
-              <Table.Header>
+              <Table.Header style={{ position: "sticky", top: 0, zIndex: 1 }}>
                 <Table.Row bg="#1e3a5f">
-                  <Table.ColumnHeader w="36px" px={2} py={2} borderRight="1px solid rgba(255,255,255,0.1)">
-                    {/* checkbox col */}
-                  </Table.ColumnHeader>
                   {[
                     { label: "Bill No", align: "left" },
                     { label: "Date", align: "left" },
-                    { label: "Vendor Code", align: "left" },
+                    { label: "Vendor", align: "left" },
+                    { label: "Invoice No", align: "left" },
                     { label: "Barcode", align: "left" },
                     { label: "Product", align: "left" },
                     { label: "Sub Product", align: "left" },
@@ -662,6 +634,8 @@ export default function NonTaggedListPage() {
                     { label: "Sell Rate", align: "right" },
                     { label: "Markup", align: "right" },
                     { label: "Amount", align: "right" },
+                    { label: "Tax", align: "right" },
+                    { label: "Total", align: "right" },
                     { label: "MRP", align: "right" },
                     { label: "Status", align: "center" },
                   ].map((col, i) => (
@@ -687,7 +661,7 @@ export default function NonTaggedListPage() {
               <Table.Body>
                 {isLoading ? (
                   <Table.Row>
-                    <Table.Cell colSpan={16} textAlign="center" py={8}>
+                    <Table.Cell colSpan={18} textAlign="center" py={8}>
                       <VStack gap={1.5}>
                         <Spinner size="sm" color="blue.500" />
                         <Text fontSize="xs" color="gray.400">Loading invoices…</Text>
@@ -696,7 +670,7 @@ export default function NonTaggedListPage() {
                   </Table.Row>
                 ) : filteredInvoices.length === 0 ? (
                   <Table.Row>
-                    <Table.Cell colSpan={16} textAlign="center" py={8}>
+                    <Table.Cell colSpan={18} textAlign="center" py={8}>
                       <VStack gap={0.5}>
                         <Text fontSize="sm" fontWeight="600" color="gray.400">No invoices found</Text>
                         <Text fontSize="xs" color="gray.300">Try adjusting your filters</Text>
@@ -705,33 +679,16 @@ export default function NonTaggedListPage() {
                   </Table.Row>
                 ) : (
                   filteredInvoices.map((row, idx) => {
-                    const isSelected = selectedRows.has(row.rowSign);
                     const isHovered = hoveredRow === row.rowSign;
                     return (
                       <Table.Row
                         key={row.rowSign}
-                        bg={isSelected ? "blue.50" : isHovered ? "gray.50" : idx % 2 === 0 ? "white" : "#fafbfc"}
+                        bg={isHovered ? "gray.50" : idx % 2 === 0 ? "white" : "#fafbfc"}
                         onMouseEnter={() => setHoveredRow(row.rowSign)}
                         onMouseLeave={() => setHoveredRow(null)}
                         transition="background 0.12s"
                         borderBottom="1px solid #f0f2f5"
-                        style={isSelected ? { outline: "1px solid #3b82f6", outlineOffset: "-1px" } : {}}
                       >
-                        <Table.Cell px={2} py={1.5} borderRight="1px solid #f0f2f5">
-                          <Checkbox.Root
-                            checked={isSelected}
-                            onCheckedChange={e => handleSelectRow(row.rowSign, !!e.checked)}
-                            size="xs"
-                          >
-                            <Checkbox.HiddenInput />
-                            <Checkbox.Control
-                              borderRadius="4px"
-                              borderColor="gray.300"
-                              _checked={{ bg: "blue.600", borderColor: "blue.600" }}
-                            />
-                          </Checkbox.Root>
-                        </Table.Cell>
-
                         <Table.Cell px={2} py={1.5} borderRight="1px solid #f0f2f5">
                           <Text fontSize="11px" fontWeight="700" color="blue.600">
                             #{row.billNo}
@@ -745,6 +702,12 @@ export default function NonTaggedListPage() {
                         <Table.Cell px={2} py={1.5} borderRight="1px solid #f0f2f5">
                           <Text fontSize="11px" fontWeight="600" color="gray.700">
                             {row.vendorCode}
+                          </Text>
+                        </Table.Cell>
+
+                        <Table.Cell px={2} py={1.5} borderRight="1px solid #f0f2f5">
+                          <Text fontSize="11px" color="gray.600">
+                            {row.invoiceNo}
                           </Text>
                         </Table.Cell>
 
@@ -814,8 +777,20 @@ export default function NonTaggedListPage() {
                         </Table.Cell>
 
                         <Table.Cell px={2} py={1.5} borderRight="1px solid #f0f2f5" textAlign="right">
-                          <Text fontSize="11px" fontWeight="700" color={isSelected ? "blue.600" : "gray.800"}>
+                          <Text fontSize="11px" fontWeight="700" color="gray.800">
                             ₹{row.amount.toFixed(2)}
+                          </Text>
+                        </Table.Cell>
+
+                        <Table.Cell px={2} py={1.5} borderRight="1px solid #f0f2f5" textAlign="right">
+                          <Text fontSize="11px" fontWeight="500" color="gray.600">
+                            ₹{row.taxAmount.toFixed(2)}
+                          </Text>
+                        </Table.Cell>
+
+                        <Table.Cell px={2} py={1.5} borderRight="1px solid #f0f2f5" textAlign="right">
+                          <Text fontSize="11px" fontWeight="600" color="green.600">
+                            ₹{row.totalAmount.toFixed(2)}
                           </Text>
                         </Table.Cell>
 
@@ -846,9 +821,9 @@ export default function NonTaggedListPage() {
         </Box>
 
         {/* ── Summary Stats ── */}
-        <Grid templateColumns="repeat(4, 1fr)" gap={2}>
+        <Grid templateColumns="repeat(5, 1fr)" gap={2}>
           <StatCard
-            label="Selected"
+            label="Total Records"
             value={totals.rowCount}
             accent="#6366f1"
           />
@@ -866,6 +841,11 @@ export default function NonTaggedListPage() {
             label="Total Amount"
             value={`₹ ${totals.totalAmt.toFixed(2)}`}
             accent="#f59e0b"
+          />
+          <StatCard
+            label="Total Tax"
+            value={`₹ ${totals.totalTax.toFixed(2)}`}
+            accent="#ec4899"
           />
         </Grid>
 

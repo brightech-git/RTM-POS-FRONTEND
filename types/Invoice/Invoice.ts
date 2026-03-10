@@ -1,6 +1,7 @@
 export interface InvoiceDetails {
 
     ROWSIGN?: string;
+    
 
     VENDORCODE: number;
     ORIONBARCODE?: string;

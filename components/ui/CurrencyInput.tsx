@@ -14,6 +14,7 @@ interface CurrencyInputProps {
     onBlur?: () => void;
     onKeyDown?: (e: React.KeyboardEvent) => void;
     autoFocus?: boolean;
+    onFocus?:()=>void
 }
 
 export const CurrencyInput = React.forwardRef<HTMLInputElement, CurrencyInputProps>(({

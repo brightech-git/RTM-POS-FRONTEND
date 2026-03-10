@@ -22,6 +22,7 @@ type NativeSelectWrapperProps = {
     className?: string;
     css?: any;
     onBlur?:()=>void;
+    onFocus?:()=>void
 };
 
 export const NativeSelectWrapper = forwardRef<HTMLSelectElement, NativeSelectWrapperProps>(({

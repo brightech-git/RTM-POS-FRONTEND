@@ -283,10 +283,10 @@ const finalOrionBarcode =
     return (
         <Box fontWeight="semibold" bg={theme.colors.primary} color={theme.colors.secondary}>
             <Toaster />
-            <Grid templateColumns={{ base: "1fr", lg: "1fr 2fr" }} gap={2}>
+            <Grid templateColumns={{ base: "1fr", lg: "1fr 1fr" }} gap={2}>
                 {/* ---------------- FORM ---------------- */}
-                <GridItem>
-                    <VStack bg={theme.colors.formColor} p={2} borderRadius="xl" border="1px solid #eef">
+                <GridItem >
+                    <VStack bg={theme.colors.formColor}  p={3} borderRadius="xl" border="1px solid #eef">
                         <Text fontSize="small" fontWeight="600">
                             PRODUCT CREATION
                         </Text>

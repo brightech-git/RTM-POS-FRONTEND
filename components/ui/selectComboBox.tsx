@@ -22,6 +22,7 @@ type SelectComboboxProps = {
     ref?: React.Ref<HTMLInputElement>;
     onBlur?: () => void
     maxWidth?: string | number;
+    onFocus?:()=>void
 };
 
 export const SelectCombobox = forwardRef<HTMLInputElement, SelectComboboxProps>(({

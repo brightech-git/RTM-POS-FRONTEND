@@ -12,6 +12,7 @@ interface BarcodeInputProps {
     onBlur?: () => void;
     onKeyDown?: (e: React.KeyboardEvent) => void;
     autoFocus?: boolean;
+    onFocus?:()=>void
 }
 
 export const BarcodeInput = React.forwardRef<HTMLInputElement, BarcodeInputProps>(({

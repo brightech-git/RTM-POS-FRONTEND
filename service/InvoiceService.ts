@@ -22,25 +22,18 @@ export const getInvoiceDetailsById = async (id: string) => {
     }
 };
 
-export const createInvoiceDetails = async (
-    invoice: InvoiceDetails,
-    createdBy: number
-) => {
-    try {
-        const { data } = await axiosInstance.post(
-            "/invoice-details/create",
-            invoice,
-            {
-                headers: {
-                    CREATEDBY: createdBy
-                }
-            }
-        );
-        return data;
-    } catch (error) {
-        console.error("Error creating invoice detail:", error);
-        throw error;
-    }
+// service/InvoiceService.ts
+export const createInvoiceDetails = async (invoices: InvoiceDetails[]) => {
+  try {
+    const { data } = await axiosInstance.post(
+      "/invoice-details/create",
+      invoices // <-- raw array
+    );
+    return data;
+  } catch (error) {
+    console.error("Error creating invoice detail:", error);
+    throw error;
+  }
 };
 
 export const updateInvoiceDetails = async (

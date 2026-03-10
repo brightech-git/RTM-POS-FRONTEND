@@ -9,6 +9,7 @@ interface ColorPickerInputProps {
     placeholder?: string;
     onBlur?: () => void;
     onKeyDown?: (e: React.KeyboardEvent) => void;
+    onFocus?:()=>void
 }
 
 export const ColorPickerInput = React.forwardRef<HTMLInputElement, ColorPickerInputProps>(({

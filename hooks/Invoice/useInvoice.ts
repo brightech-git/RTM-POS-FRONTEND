@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { InvoiceDetails } from "@/types/Invoice/Invoice";
 
 import {
     getAllInvoiceDetails,
@@ -25,18 +26,18 @@ export const useInvoiceDetailsById = (id: string) => {
     });
 };
 
+// hooks/useInvoice.ts
 export const useCreateInvoiceDetails = () => {
+  const queryClient = useQueryClient();
 
-    const queryClient = useQueryClient();
+  return useMutation({
+    // mutationFn now directly takes an array of InvoiceDetails
+    mutationFn: (invoices: InvoiceDetails[]) => createInvoiceDetails(invoices),
 
-    return useMutation({
-        mutationFn: ({ invoice, createdBy }: { invoice: any; createdBy: number }) =>
-            createInvoiceDetails(invoice, createdBy),
-
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["invoice-details"] });
-        }
-    });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invoice-details"] });
+    },
+  });
 };
 
 export const useUpdateInvoiceDetails = () => {

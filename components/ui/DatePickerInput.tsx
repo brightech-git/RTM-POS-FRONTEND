@@ -15,6 +15,7 @@ interface DatePickerInputProps {
     showTimeSelect?: boolean;
     onBlur?: () => void;
     onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+    onFocus?:()=>void
 }
 
 const parseISOToDate = (iso?: string) => {

@@ -421,7 +421,7 @@ const handleChange = (field: string, value: any) => {
                 message="Are you sure you want to delete this barcode? This action cannot be undone."
             />
 
-            <Grid templateColumns={{ base: "1fr", lg: "1fr 2fr" }} gap={2}>
+            <Grid templateColumns={{ base: "1fr", lg: "1fr 1fr" }} gap={2}>
                 {/* ---------------- FORM ---------------- */}
                 <GridItem>
                     <VStack bg={theme.colors.formColor} p={2} borderRadius="xl" border="1px solid #eef">

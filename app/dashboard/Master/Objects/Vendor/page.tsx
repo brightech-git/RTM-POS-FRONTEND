@@ -487,8 +487,12 @@ const handleChange = (field: string | number, value: any) => {
     });
 
     // Split fields into two columns
-    const firstColumnFields = vendorFormFields.slice(0, 13);
-    const secondColumnFields = vendorFormFields.slice(13, 26);
+const chunkSize = Math.ceil(vendorFormFields.length / 4);
+
+const firstColumnFields = vendorFormFields.slice(0, chunkSize);
+const secondColumnFields = vendorFormFields.slice(chunkSize, chunkSize * 2);
+const ThirdColumnFields = vendorFormFields.slice(chunkSize * 2, chunkSize * 3);
+const FourthColumnFields = vendorFormFields.slice(chunkSize * 3);
 
     const VendorColumns = [
         { key: "SNO", label: "S.No" },
@@ -542,7 +546,7 @@ const handleChange = (field: string | number, value: any) => {
 
                         <Fieldset.Root size="sm" width="100%">
                             <Fieldset.Content>
-                                <SimpleGrid columns={{ base: 1, md: 2 }}  width="100%">
+                                <SimpleGrid columns={{ base: 1, md: 4 }}  width="100%">
                                     <VStack align="stretch">
                                         <DynamicForm
                                             fields={firstColumnFields}
@@ -557,6 +561,26 @@ const handleChange = (field: string | number, value: any) => {
                                     <VStack align="stretch">
                                         <DynamicForm
                                             fields={secondColumnFields}
+                                            formData={form}
+                                            onChange={handleChange}
+                                            register={register}
+                                            focusNext={focusNext}
+                                            errors={formErrors}
+                                        />
+                                    </VStack>
+                                     <VStack align="stretch">
+                                        <DynamicForm
+                                            fields={ThirdColumnFields}
+                                            formData={form}
+                                            onChange={handleChange}
+                                            register={register}
+                                            focusNext={focusNext}
+                                            errors={formErrors}
+                                        />
+                                    </VStack>
+                                     <VStack align="stretch">
+                                        <DynamicForm
+                                            fields={FourthColumnFields}
                                             formData={form}
                                             onChange={handleChange}
                                             register={register}
