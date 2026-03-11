@@ -14,7 +14,8 @@ export const InvoiceDetailsConfig = ({
   products = [],
   subProducts = [],
   todayDate,
-  
+  isProductDisabled,
+  isSubProductDisabled,
 }: InvoiceConfigParams): FormField[] => {
   return [
     {
@@ -76,7 +77,7 @@ export const InvoiceDetailsConfig = ({
      width: "300px",
       colSpan: 2,
     },
-    {
+   {
       name: "SUBPRODUCTCODE",
       label: "SUP PRODUCT NAME",
       type: "combobox",
@@ -89,6 +90,8 @@ export const InvoiceDetailsConfig = ({
       width: "300px",
       dependsOn: "PRODUCTCODE",
       colSpan: 2,
+      required: false, // Explicitly set as not required
+      disabled: isSubProductDisabled, // Use the prop
     },
     {
       name: "RATE",
@@ -99,7 +102,7 @@ export const InvoiceDetailsConfig = ({
       width: "100px",
       isReadOnly: true,
       disabled: true,
-      dependsOn: "SUBPRODUCTCODE",
+      dependsOn: "PRODUCTCODE",
     },
     {
       name: "WEIGHT",
@@ -109,7 +112,7 @@ export const InvoiceDetailsConfig = ({
       rounded: "sm",
       width: "100px",
       disabled: true,
-      dependsOn: "SUBPRODUCTCODE",
+      dependsOn: "PRODUCTCODE",
     },
     {
       name: "PIECES",
@@ -118,7 +121,7 @@ export const InvoiceDetailsConfig = ({
       size: "xs",
       rounded: "sm",
       width: "100px",
-      dependsOn: "SUBPRODUCTCODE",
+      dependsOn: "PRODUCTCODE",
     },
     {
       name: "MRP",
@@ -129,7 +132,7 @@ export const InvoiceDetailsConfig = ({
       rounded: "sm",
       width: "100px",
       disabled: true,
-      dependsOn: "SUBPRODUCTCODE",
+      dependsOn: "PRODUCTCODE",
     },
      {
       name: "AMOUNT",
@@ -139,7 +142,7 @@ export const InvoiceDetailsConfig = ({
       rounded: "sm",
       width: "120px",
       disabled: true,
-      dependsOn: "SUBPRODUCTCODE",
+      dependsOn: "PRODUCTCODE",
     },
     {
       name: "SELLINGRATE",
@@ -150,7 +153,7 @@ export const InvoiceDetailsConfig = ({
       width: "120px",
       isReadOnly: true,
       disabled: true,
-      dependsOn: "SUBPRODUCTCODE",
+      dependsOn: "PRODUCTCODE",
     },
     // {
     //     name: "DISCPER",
@@ -169,7 +172,7 @@ export const InvoiceDetailsConfig = ({
     //     rounded: "sm",
     //     width: "120px",
     //     disabled: true,
-    //     dependsOn: "SUBPRODUCTCODE"
+    //     dependsOn: "PRODUCTCODE"
     // },
     // {
     //     name: "MARKUPPER",
@@ -178,7 +181,7 @@ export const InvoiceDetailsConfig = ({
     //     size: "xs",
     //     rounded: "sm",
     //     width: "100px",
-    //     dependsOn: "SUBPRODUCTCODE"
+    //     dependsOn: "PRODUCTCODE"
     // },
     // {
     //     name: "MARKUPAMOUNT",
@@ -188,7 +191,7 @@ export const InvoiceDetailsConfig = ({
     //     rounded: "sm",
     //     width: "120px",
     //     disabled: true,
-    //     dependsOn: "SUBPRODUCTCODE"
+    //     dependsOn: "PRODUCTCODE"
     // },
    
     {
@@ -199,7 +202,7 @@ export const InvoiceDetailsConfig = ({
       rounded: "sm",
       width: "100px",
       disabled: true,
-      dependsOn: "SUBPRODUCTCODE",
+      dependsOn: "PRODUCTCODE",
     },
     {
       name: "IGSTAMOUNT",
@@ -209,7 +212,7 @@ export const InvoiceDetailsConfig = ({
       rounded: "sm",
       width: "100px",
       disabled: true,
-      dependsOn: "SUBPRODUCTCODE",
+      dependsOn: "PRODUCTCODE",
     },
     
     {
@@ -220,7 +223,7 @@ export const InvoiceDetailsConfig = ({
       rounded: "sm",
       width: "100px",
       disabled: true,
-      dependsOn: "SUBPRODUCTCODE",
+      dependsOn: "PRODUCTCODE",
     },
     {
       name: "NETAMOUNT",
@@ -230,7 +233,7 @@ export const InvoiceDetailsConfig = ({
       rounded: "sm",
       width: "120px",
       disabled: true,
-      dependsOn: "SUBPRODUCTCODE",
+      dependsOn: "PRODUCTCODE",
     },
 
     // {
@@ -240,7 +243,7 @@ export const InvoiceDetailsConfig = ({
     //     size: "xs",
     //     rounded: "sm",
     //     width: "150px",
-    //     dependsOn: "SUBPRODUCTCODE",
+    //     dependsOn: "PRODUCTCODE",
     //     disabled:true
     // },
     // {
@@ -250,7 +253,7 @@ export const InvoiceDetailsConfig = ({
     //     size: "xs",
     //     rounded: "sm",
     //     width: "150px",
-    //     dependsOn: "SUBPRODUCTCODE",
+    //     dependsOn: "PRODUCTCODE",
     //     disabled:true
     // }
   ];

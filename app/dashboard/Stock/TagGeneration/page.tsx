@@ -14,7 +14,6 @@ import {
   Spinner,
   Flex,
   Checkbox,
-  Stack,
 } from "@chakra-ui/react";
 import { Table } from "@chakra-ui/react/table";
 import {
@@ -27,17 +26,15 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@chakra-ui/react/dialog";
-import { Alert } from "@chakra-ui/react";
 import { AiOutlineSearch, AiOutlineReload, AiOutlineSave, AiOutlinePrinter } from "react-icons/ai";
-import { FaPrint, FaFileExcel, FaCheckCircle, FaLayerGroup } from "react-icons/fa";
+import { FaCheckCircle, FaLayerGroup } from "react-icons/fa";
 import { MdFilterList, MdTune } from "react-icons/md";
-import { HiSparkles } from "react-icons/hi2";
 import { useTheme } from "@/context/theme/themeContext";
 import { useDebounce } from "@/hooks/Debounce/useDebounce";
 import { usePrint } from "@/context/print/usePrintContext";
 import { useRouter } from "next/navigation";
 import { useAllTaged, useFilterTaged, useSyncTaged } from "@/hooks/Tagged/useTagged";
-import { TagedUIFilter ,Taged} from "@/types/Tagged/Tagged";
+import { TagedUIFilter, Taged } from "@/types/Tagged/Tagged";
 import { toaster, Toaster } from "@/components/ui/toaster";
 
 // ─── Interfaces (unchanged) ───────────────────────────────────────────────
@@ -119,11 +116,6 @@ interface SyncResponseItem {
   WEIGHT: number;
 }
 
-interface SyncResponse {
-  message: string;
-  data: SyncResponseItem[];
-}
-
 interface TaggedRow {
   rowSign: string;
   billNo: number;
@@ -152,6 +144,7 @@ interface SyncModalItem {
   pieces: number;
   isSelected: boolean;
   copies: number;
+  sellingRate: number;
 }
 
 // ─── Design Tokens ────────────────────────────────────────────────────────
@@ -335,7 +328,6 @@ export default function TaggedListPage() {
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [syncModalItems, setSyncModalItems] = useState<SyncModalItem[]>([]);
-  const [syncMessage, setSyncMessage] = useState("");
 
   const { data: allTagedData, isLoading: isLoadingAll, refetch: refetchAll } = useAllTaged();
   const syncMutation = useSyncTaged();
@@ -353,54 +345,51 @@ export default function TaggedListPage() {
   const { data: filteredData, isLoading: isLoadingFiltered, refetch: refetchFiltered } = useFilterTaged(
     hasActiveFilters
       ? {
-          fromDate: filters.fromDate || undefined,
-          toDate: filters.toDate || undefined,
-          billNo: filters.billNo ? parseInt(filters.billNo) : undefined,
-          vendorCode: filters.vendorCode !== "ALL" ? parseInt(filters.vendorCode) : undefined,
-          productCode: filters.productCode ? parseInt(filters.productCode) : undefined,
-        }
+        fromDate: filters.fromDate || undefined,
+        toDate: filters.toDate || undefined,
+        billNo: filters.billNo ? parseInt(filters.billNo) : undefined,
+        vendorCode: filters.vendorCode !== "ALL" ? parseInt(filters.vendorCode) : undefined,
+        productCode: filters.productCode ? parseInt(filters.productCode) : undefined,
+      }
       : null
   );
 
-const transformApiData = useCallback(
-  (apiResponse: { message: string; data: ApiTagedItem[] } | ApiTagedItem[] | Taged[] | undefined): TaggedRow[] => {
-    if (!apiResponse) return [];
-    
-    let items: ApiTagedItem[] = [];
-    
-    // Handle if it's an array (could be ApiTagedItem[] or Taged[])
-    if (Array.isArray(apiResponse)) {
-      items = apiResponse as ApiTagedItem[];
-    } 
-    // Handle if it's an object with message and data
-    else if (apiResponse && 'data' in apiResponse && Array.isArray(apiResponse.data)) {
-      items = apiResponse.data;
-    }
-    
-    return items.map((item) => ({
-      rowSign: item.ROWSIGN || "",
-      billNo: item.BILLNO || 0,
-      billDate: item.BILLDATE || "",
-      vendorCode: item.VENDORCODE || 0,
-      barcode: item.ORIONBARCODE || "—",
-      productCode: item.PRODUCTCODE || 0,
-      subProductCode: item.SUBPRODUCTCODE || 0,
-      purRate: item.PURRATE || 0,
-      pieces: item.PIECES || 0,
-      weight: item.WEIGHT || 0,
-      discount: item.DISCOUNT,
-      sellingRate: item.SELLINGRATE || 0,
-      markup: item.MARKUP,
-      amount: item.AMOUNT,
-      mrp: item.MRP || 0,
-      billStatus: item.BILLSTATUS,
-      invoiceNo: item.INVOICENO || "—",
-      totalAmount: item.TOTALAMOUNT || 0,
-      taxAmount: item.TAXAMOUNT || 0,
-    }));
-  },
-  []
-);
+  const transformApiData = useCallback(
+    (apiResponse: { message: string; data: ApiTagedItem[] } | ApiTagedItem[] | Taged[] | undefined): TaggedRow[] => {
+      if (!apiResponse) return [];
+
+      let items: ApiTagedItem[] = [];
+
+      if (Array.isArray(apiResponse)) {
+        items = apiResponse as ApiTagedItem[];
+      } else if (apiResponse && 'data' in apiResponse && Array.isArray(apiResponse.data)) {
+        items = apiResponse.data;
+      }
+
+      return items.map((item) => ({
+        rowSign: item.ROWSIGN || "",
+        billNo: item.BILLNO || 0,
+        billDate: item.BILLDATE || "",
+        vendorCode: item.VENDORCODE || 0,
+        barcode: item.ORIONBARCODE || "—",
+        productCode: item.PRODUCTCODE || 0,
+        subProductCode: item.SUBPRODUCTCODE || 0,
+        purRate: item.PURRATE || 0,
+        pieces: item.PIECES || 0,
+        weight: item.WEIGHT || 0,
+        discount: item.DISCOUNT,
+        sellingRate: item.SELLINGRATE || 0,
+        markup: item.MARKUP,
+        amount: item.AMOUNT,
+        mrp: item.MRP || 0,
+        billStatus: item.BILLSTATUS,
+        invoiceNo: item.INVOICENO || "—",
+        totalAmount: item.TOTALAMOUNT || 0,
+        taxAmount: item.TAXAMOUNT || 0,
+      }));
+    },
+    []
+  );
 
   const invoiceList = useMemo(() => {
     const sourceData = hasActiveFilters ? filteredData : allTagedData;
@@ -463,88 +452,58 @@ const transformApiData = useCallback(
     }
   }, [hasActiveFilters, refetchFiltered, refetchAll]);
 
-  const handleExport = useCallback(
-    (option: string) => {
-      setData(filteredInvoices);
-      setColumns([
-        { key: "billNo", label: "Bill No" },
-        { key: "billDate", label: "Date" },
-        { key: "vendorCode", label: "Vendor Code" },
-        { key: "invoiceNo", label: "Invoice No" },
-        { key: "barcode", label: "Barcode" },
-        { key: "productCode", label: "Product Code" },
-        { key: "subProductCode", label: "Sub Product" },
-        { key: "purRate", label: "Pur Rate" },
-        { key: "pieces", label: "Pcs" },
-        { key: "weight", label: "Wt" },
-        { key: "discount", label: "Disc" },
-        { key: "sellingRate", label: "Sell Rate" },
-        { key: "markup", label: "Markup" },
-        { key: "amount", label: "Amount" },
-        { key: "taxAmount", label: "Tax" },
-        { key: "totalAmount", label: "Total" },
-        { key: "mrp", label: "MRP" },
-        { key: "billStatus", label: "Status" },
-      ]);
-      setShowSno(true);
-      title?.("Tagged Invoice List");
-      router.push(`/print?export=${option}`);
-    },
-    [filteredInvoices, setData, setColumns, setShowSno, title, router]
-  );
+  const handleSync = useCallback(async () => {
+    const syncFilters = {
+      fromDate: filters.fromDate || undefined,
+      toDate: filters.toDate || undefined,
+      billNo: filters.billNo ? parseInt(filters.billNo) : undefined,
+      vendorCode: filters.vendorCode !== "ALL" ? parseInt(filters.vendorCode) : undefined,
+      productCode: filters.productCode ? parseInt(filters.productCode) : undefined,
+    };
 
-const handleSync = useCallback(async () => {
-  const syncFilters = {
-    fromDate: filters.fromDate || undefined,
-    toDate: filters.toDate || undefined,
-    billNo: filters.billNo ? parseInt(filters.billNo) : undefined,
-    vendorCode: filters.vendorCode !== "ALL" ? parseInt(filters.vendorCode) : undefined,
-    productCode: filters.productCode ? parseInt(filters.productCode) : undefined,
-  };
+    const loadingToastId = toaster.create({
+      title: "Syncing…",
+      description: "Please wait while invoices are being synced",
+      type: "loading",
+      duration: 30000,
+    });
 
-  const loadingToastId = toaster.create({
-    title: "Syncing…",
-    description: "Please wait while invoices are being synced",
-    type: "loading",
-    duration: 30000,
-  });
+    try {
+      const response = await syncMutation.mutateAsync(syncFilters);
+      toaster.dismiss(loadingToastId);
 
-  try {
-    const response = await syncMutation.mutateAsync(syncFilters);
-    toaster.dismiss(loadingToastId);
+      if (Array.isArray(response) && response.length > 0) {
+        const modalItems: SyncModalItem[] = response.map((item) => ({
+          billNo: item.BILLNO ?? 0,
+          tagNo: item.TAGNO ?? item.TAGGEN ?? "",
+          pieces: Number(item.PIECES ?? 0),
+          isSelected: true,
+          copies: Number(item.PIECES ?? 0),
+          sellingRate: item.SELLINGRATE ?? 0,
+        }));
 
-    if (Array.isArray(response) && response.length > 0) {
-      const modalItems: SyncModalItem[] = response.map((item) => ({
-  billNo: item.billNo ?? 0,       // default to 0 if undefined
-  tagNo: item.TAGGEN ?? "",       // default to empty string
-  pieces: item.pieces ?? 0,
-  isSelected: true,
-  copies: item.pieces ?? 0,
-}));
+        setSyncModalItems(modalItems);
+        setIsSyncModalOpen(true);
+      } else {
+        toaster.success({
+          title: "Success",
+          description: "No items to sync",
+          duration: 3000,
+        });
+      }
 
-      setSyncModalItems(modalItems);
-      setSyncMessage(`Successfully synced ${response.length} items`);
-      setIsSyncModalOpen(true);
-    } else {
-      toaster.success({
-        title: "Success",
-        description: "No items to sync",
-        duration: 3000,
+      if (hasActiveFilters) await refetchFiltered();
+      else await refetchAll();
+
+    } catch (error: any) {
+      toaster.dismiss(loadingToastId);
+      toaster.error({
+        title: "Sync Failed",
+        description: error?.response?.data?.message || "Failed to sync invoices. Please try again.",
+        duration: 5000,
       });
     }
-
-    if (hasActiveFilters) await refetchFiltered();
-    else await refetchAll();
-
-  } catch (error: any) {
-    toaster.dismiss(loadingToastId);
-    toaster.error({
-      title: "Sync Failed",
-      description: error?.response?.data?.message || "Failed to sync invoices. Please try again.",
-      duration: 5000,
-    });
-  }
-}, [syncMutation, filters, hasActiveFilters, refetchFiltered, refetchAll]);
+  }, [syncMutation, filters, hasActiveFilters, refetchFiltered, refetchAll]);
 
   const handleSelectAll = useCallback((checked: boolean) => {
     setSyncModalItems((prev) => prev.map((item) => ({ ...item, isSelected: checked })));
@@ -560,33 +519,36 @@ const handleSync = useCallback(async () => {
 
   const handlePrintSelected = useCallback(() => {
     const selectedItems = syncModalItems.filter((item) => item.isSelected);
+
     if (selectedItems.length === 0) {
-      toaster.warning({ title: "No items selected", description: "Please select at least one item to print", duration: 3000 });
+      toaster.warning({
+        title: "No items selected",
+        description: "Please select at least one item to print",
+        duration: 3000
+      });
       return;
     }
+
     const printData = selectedItems.flatMap((item) =>
       Array(item.copies)
         .fill(null)
-        .map((_, idx) => ({
+        .map(() => ({
           billNo: item.billNo,
           tagNo: item.tagNo,
-          pieces: item.pieces,
-          copyNo: idx + 1,
-          totalCopies: item.copies,
+          sellingRate: item.sellingRate,
         }))
     );
+
     setData(printData);
     setColumns([
-      { key: "billNo", label: "Bill No" },
       { key: "tagNo", label: "Tag No" },
-      { key: "pieces", label: "Pieces" },
-      { key: "copyNo", label: "Copy" },
-      { key: "totalCopies", label: "Total Copies" },
+      { key: "billNo", label: "Bill No" },
+      { key: "sellingRate", label: "Rate" },
     ]);
-    setShowSno(true);
+    setShowSno(false);
     title?.("Tagged Items Print");
     setIsSyncModalOpen(false);
-    router.push(`/print?export=print&type=tags`);
+    router.push("/TagPrint");
   }, [syncModalItems, setData, setColumns, setShowSno, title, router]);
 
   const formatDate = (dateString: string) => {
@@ -677,80 +639,60 @@ const handleSync = useCallback(async () => {
     <>
       <Toaster />
 
-      {/* ── Sync Modal (Chakra v3 Dialog) ── */}
+      {/* ── Sync Modal ── */}
       <DialogRoot
-  open={isSyncModalOpen}
-  onOpenChange={(e) => setIsSyncModalOpen(e.open)}
-  size="xl"
-  scrollBehavior="inside"
->
-  <DialogContent
-    borderRadius="20px"
-    boxShadow="0 24px 80px rgba(15,30,53,0.22), 0 8px 24px rgba(15,30,53,0.12)"
-    border="1px solid"
-    borderColor={tokens.borderLight}
-    overflow="hidden"
-  >
-    {/* Modal Header */}
-    <DialogHeader
-      px={6}
-      py={4}
-      bg={tokens.headerBg}
-      borderBottom="none"
-    >
-      <HStack gap={3}>
-        <Box
-          w="36px"
-          h="36px"
-          borderRadius="10px"
-          bg="rgba(255,255,255,0.15)"
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-          color="white"
-          fontSize="16px"
+        open={isSyncModalOpen}
+        onOpenChange={(e) => setIsSyncModalOpen(e.open)}
+        size="sm"
+        scrollBehavior="inside"
+      >
+        <DialogContent
+          borderRadius="20px"
+          boxShadow="0 24px 80px rgba(15,30,53,0.22), 0 8px 24px rgba(15,30,53,0.12)"
+          border="1px solid"
+          borderColor={tokens.borderLight}
+          overflow="hidden"
         >
-          <FaCheckCircle />
-        </Box>
-        <Box>
-          <DialogTitle fontSize="15px" fontWeight="800" color="white" letterSpacing="-0.01em">
-            Sync Successful
-          </DialogTitle>
-          <DialogDescription fontSize="10px" color="rgba(255,255,255,0.55)" fontWeight="500" mt="1px">
-            Select items and configure copies to print
-          </DialogDescription>
-        </Box>
-      </HStack>
-    </DialogHeader>
-    
-    <DialogCloseTrigger
-      color="rgba(255,255,255,0.6)"
-      _hover={{ color: "white", bg: "rgba(255,255,255,0.1)" }}
-      top={3}
-      right={4}
-      borderRadius="8px"
-    />
-
-    <DialogBody px={6} py={5}>
-            {/* Alert */}
-            {/* <Alert
-              status="success"
-              mb={5}
-              borderRadius="12px"
-              bg="#f0fdf7"
-              border="1px solid #a7f3d0"
-              px={4}
-              py={3}
-            >
-              <Box>
-                <Text fontSize="12px" fontWeight="700" color="#065f46" mb="2px">
-                  Sync Completed
-                </Text>
-                <Text fontSize="11px" color="#047857">{syncMessage}</Text>
+          <DialogHeader
+            px={6}
+            py={4}
+            bg={tokens.headerBg}
+            borderBottom="none"
+          >
+            <HStack gap={3}>
+              <Box
+                w="36px"
+                h="36px"
+                borderRadius="10px"
+                bg="rgba(255,255,255,0.15)"
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                color="white"
+                fontSize="16px"
+              >
+                <FaCheckCircle />
               </Box>
-            </Alert> */}
+              <Box>
+                <DialogTitle fontSize="15px" fontWeight="800" color="white" letterSpacing="-0.01em">
+                  Sync Successful
+                </DialogTitle>
+                <DialogDescription fontSize="10px" color="rgba(255,255,255,0.55)" fontWeight="500" mt="1px">
+                  Select items and configure copies to print
+                </DialogDescription>
+              </Box>
+            </HStack>
+          </DialogHeader>
 
-            {/* Select All Header */}
+          <DialogCloseTrigger
+            color="rgba(255,255,255,0.6)"
+            _hover={{ color: "white", bg: "rgba(255,255,255,0.1)" }}
+            top={3}
+            right={4}
+            borderRadius="8px"
+          />
+
+          <DialogBody px={6} py={5}>
             <Flex
               align="center"
               justify="space-between"
@@ -766,8 +708,8 @@ const handleSync = useCallback(async () => {
                   (syncModalItems.every((i) => i.isSelected)
                     ? true
                     : syncModalItems.some((i) => i.isSelected)
-                    ? "indeterminate"
-                    : false)
+                      ? "indeterminate"
+                      : false)
                 }
                 onCheckedChange={(e) => handleSelectAll(!!e.checked)}
               >
@@ -791,102 +733,52 @@ const handleSync = useCallback(async () => {
               </Text>
             </Flex>
 
-            {/* Items List */}
-            <VStack gap={2.5} align="stretch" maxH="380px" overflowY="auto"
-              css={{
-                "&::-webkit-scrollbar": { width: "4px" },
-                "&::-webkit-scrollbar-track": { background: tokens.surfaceAlt, borderRadius: "4px" },
-                "&::-webkit-scrollbar-thumb": { background: tokens.border, borderRadius: "4px" },
-              }}
-            >
+            <VStack gap={2} align="stretch" maxH="260px" overflowY="auto">
               {syncModalItems.map((item, index) => (
-                <Box
+                <Flex
                   key={index}
-                  p={3.5}
-                  border="1.5px solid"
-                  borderColor={item.isSelected ? tokens.accent : tokens.borderLight}
-                  borderRadius="12px"
-                  bg={item.isSelected ? "#f0f7ff" : "white"}
-                  transition="all 0.15s ease"
-                  _hover={{ borderColor: tokens.accent, bg: "#f5f9ff" }}
+                  p={2}
+                  border="1px solid"
+                  borderColor={tokens.borderLight}
+                  borderRadius="8px"
+                  align="center"
+                  justify="space-between"
+                  fontSize="12px"
+                  bg="white"
                 >
-                  <Grid templateColumns="auto 1fr auto auto" gap={3} alignItems="center">
-                    <Checkbox.Root
-                      size="sm"
-                      checked={item.isSelected}
-                      onCheckedChange={(e) => handleSelectItem(index, !!e.checked)}
-                    >
-                      <Checkbox.HiddenInput />
-                      <Checkbox.Control
-                        borderRadius="5px"
-                        borderColor={tokens.border}
-                        _checked={{ bg: tokens.accent, borderColor: tokens.accent }}
-                      />
-                    </Checkbox.Root>
+                  <Checkbox.Root
+                    size="sm"
+                    checked={item.isSelected}
+                    onCheckedChange={(e) => handleSelectItem(index, !!e.checked)}
+                  >
+                    <Checkbox.HiddenInput />
+                    <Checkbox.Control />
+                  </Checkbox.Root>
 
-                    <Grid templateColumns="repeat(3, 1fr)" gap={3}>
-                      {[
-                        { label: "Bill No", value: `#${item.billNo}`, bold: true, color: tokens.accent },
-                        { label: "Tag No", value: item.tagNo, bold: true },
-                        { label: "Pieces", value: item.pieces, bold: true },
-                      ].map((f) => (
-                        <Box key={f.label}>
-                          <Text fontSize="9px" color={tokens.textLight} fontWeight="600" letterSpacing="0.08em" textTransform="uppercase" mb="2px">
-                            {f.label}
-                          </Text>
-                          <Text fontSize="12px" fontWeight={f.bold ? "700" : "500"} color={f.color || tokens.text}>
-                            {f.value}
-                          </Text>
-                        </Box>
-                      ))}
-                    </Grid>
+                  <Text fontWeight="700" color={tokens.accent}>
+                    #{item.billNo}
+                  </Text>
 
-                    <Box>
-                      <Text fontSize="9px" color={tokens.textLight} fontWeight="600" letterSpacing="0.08em" textTransform="uppercase" mb="4px">
-                        Copies
-                      </Text>
-                      <Input
-                        type="number"
-                        size="xs"
-                        width="70px"
-                        min={1}
-                        value={item.copies}
-                        onChange={(e) => handleCopiesChange(index, parseInt(e.target.value) || 1)}
-                        disabled={!item.isSelected}
-                        borderRadius="7px"
-                        borderColor={tokens.border}
-                        fontSize="12px"
-                        fontWeight="700"
-                        textAlign="center"
-                        h="28px"
-                        _focus={{ borderColor: tokens.accent, boxShadow: `0 0 0 2px ${tokens.accentGlow}` }}
-                        _disabled={{ opacity: 0.4, cursor: "not-allowed" }}
-                      />
-                    </Box>
+                  <Text fontWeight="600">{item.tagNo}</Text>
 
-                    <Box
-                      px={2}
-                      py={1}
+                  <Flex align="center" gap={2}>
+                    <Text color={tokens.textMid}>{item.pieces} pcs</Text>
+                    <Input
+                      type="number"
+                      size="xs"
+                      width="60px"
+                      value={item.copies}
+                      onChange={(e) => handleCopiesChange(index, parseInt(e.target.value) || 1)}
+                      min={1}
+                      max={99}
                       borderRadius="6px"
-                      bg={item.copies === item.pieces ? "#dcfce7" : "#fff7ed"}
-                      border="1px solid"
-                      borderColor={item.copies === item.pieces ? "#bbf7d0" : "#fed7aa"}
-                    >
-                      <Text
-                        fontSize="9px"
-                        fontWeight="700"
-                        color={item.copies === item.pieces ? "#166534" : "#9a3412"}
-                        letterSpacing="0.04em"
-                      >
-                        {item.copies === item.pieces ? "DEFAULT" : "CUSTOM"}
-                      </Text>
-                    </Box>
-                  </Grid>
-                </Box>
+                      borderColor={tokens.border}
+                    />
+                  </Flex>
+                </Flex>
               ))}
             </VStack>
 
-            {/* Summary Row */}
             <Grid templateColumns="repeat(3, 1fr)" gap={3} mt={5} p={4} bg={tokens.surface} borderRadius="12px" border="1px solid" borderColor={tokens.borderLight}>
               {[
                 { label: "Total Items", value: syncModalItems.length, color: tokens.violet },
@@ -939,9 +831,9 @@ const handleSync = useCallback(async () => {
                 Print Selected ({syncModalItems.filter((i) => i.isSelected).length})
               </Button>
             </HStack>
-           </DialogFooter>
-  </DialogContent>
-</DialogRoot>
+          </DialogFooter>
+        </DialogContent>
+      </DialogRoot>
 
       {/* ── Page Container ── */}
       <Box
@@ -1026,7 +918,7 @@ const handleSync = useCallback(async () => {
               badge={activeFilters}
               right={
                 <HStack gap={2}>
-                  {/* Sync */}
+                  {/* Sync Button - Only action button remaining */}
                   <Button
                     size="xs"
                     h="30px"
@@ -1045,41 +937,7 @@ const handleSync = useCallback(async () => {
                   >
                     <AiOutlineSave style={{ fontSize: 12 }} /> Sync
                   </Button>
-                  {/* Excel */}
-                  <Button
-                    size="xs"
-                    h="30px"
-                    px={3.5}
-                    borderRadius="8px"
-                    fontSize="11px"
-                    fontWeight="700"
-                    variant="outline"
-                    borderColor={tokens.border}
-                    color={tokens.textMid}
-                    onClick={() => handleExport("excel")}
-                    _hover={{ bg: "#f0fdf4", borderColor: "#4ade80", color: "#166534" }}
-                    gap={1.5}
-                  >
-                    <FaFileExcel style={{ fontSize: 11 }} /> Excel
-                  </Button>
-                  {/* Print */}
-                  <Button
-                    size="xs"
-                    h="30px"
-                    px={3.5}
-                    borderRadius="8px"
-                    fontSize="11px"
-                    fontWeight="700"
-                    variant="outline"
-                    borderColor={tokens.border}
-                    color={tokens.textMid}
-                    onClick={() => handleExport("pdf")}
-                    _hover={{ bg: "#eff6ff", borderColor: tokens.accent, color: tokens.accent }}
-                    gap={1.5}
-                  >
-                    <FaPrint style={{ fontSize: 11 }} /> Print
-                  </Button>
-                  {/* Reset */}
+                  {/* Reset Button */}
                   <Button
                     size="xs"
                     h="26px"
@@ -1100,7 +958,6 @@ const handleSync = useCallback(async () => {
             />
 
             <Grid templateColumns={{ base: "1fr", md: "repeat(6, 1fr) auto" }} gap={2.5} alignItems="end">
-              {/* Vendor */}
               <GridItem>
                 <FieldLabel>Vendor</FieldLabel>
                 <select
@@ -1116,31 +973,26 @@ const handleSync = useCallback(async () => {
                 </select>
               </GridItem>
 
-              {/* From Date */}
               <GridItem>
                 <FieldLabel>From</FieldLabel>
                 <Input type="date" value={filters.fromDate} onChange={(e) => handleFilterChange("fromDate", e.target.value)} {...inputStyle} />
               </GridItem>
 
-              {/* To Date */}
               <GridItem>
                 <FieldLabel>To</FieldLabel>
                 <Input type="date" value={filters.toDate} onChange={(e) => handleFilterChange("toDate", e.target.value)} {...inputStyle} />
               </GridItem>
 
-              {/* Bill No */}
               <GridItem>
                 <FieldLabel>Bill No</FieldLabel>
                 <Input placeholder="e.g. 16" value={filters.billNo} onChange={(e) => handleFilterChange("billNo", e.target.value)} {...inputStyle} />
               </GridItem>
 
-              {/* Product Code */}
               <GridItem>
                 <FieldLabel>Product Code</FieldLabel>
                 <Input placeholder="e.g. 3" value={filters.productCode} onChange={(e) => handleFilterChange("productCode", e.target.value)} {...inputStyle} />
               </GridItem>
 
-              {/* Search */}
               <GridItem>
                 <FieldLabel>Search</FieldLabel>
                 <Input
@@ -1151,7 +1003,6 @@ const handleSync = useCallback(async () => {
                 />
               </GridItem>
 
-              {/* View Button */}
               <GridItem>
                 <Button
                   size="xs"
@@ -1185,7 +1036,6 @@ const handleSync = useCallback(async () => {
             borderColor={tokens.borderLight}
             overflow="hidden"
           >
-            {/* Table Toolbar */}
             <Flex
               px={5}
               py={3}
@@ -1332,21 +1182,18 @@ const handleSync = useCallback(async () => {
                           borderColor={tokens.borderLight}
                           _last={{ borderBottom: "none" }}
                         >
-                          {/* Bill No */}
                           <Table.Cell px={4} py={2} borderRight="1px solid" borderColor={tokens.borderLight}>
                             <Text fontSize="11px" fontWeight="800" color={tokens.accent}>
                               #{row.billNo}
                             </Text>
                           </Table.Cell>
 
-                          {/* Date */}
                           <Table.Cell px={3} py={2} borderRight="1px solid" borderColor={tokens.borderLight} whiteSpace="nowrap">
                             <Text fontSize="11px" color={tokens.textMid} fontWeight="500">
                               {formatDate(row.billDate)}
                             </Text>
                           </Table.Cell>
 
-                          {/* Vendor */}
                           <Table.Cell px={3} py={2} borderRight="1px solid" borderColor={tokens.borderLight}>
                             <Box
                               display="inline-flex"
@@ -1364,14 +1211,12 @@ const handleSync = useCallback(async () => {
                             </Box>
                           </Table.Cell>
 
-                          {/* Invoice No */}
                           <Table.Cell px={3} py={2} borderRight="1px solid" borderColor={tokens.borderLight}>
                             <Text fontSize="11px" color={tokens.textMid} fontWeight="500">
                               {row.invoiceNo || "—"}
                             </Text>
                           </Table.Cell>
 
-                          {/* Barcode */}
                           <Table.Cell px={3} py={2} borderRight="1px solid" borderColor={tokens.borderLight}>
                             {row.barcode && row.barcode !== "—" ? (
                               <Box
@@ -1393,83 +1238,70 @@ const handleSync = useCallback(async () => {
                             )}
                           </Table.Cell>
 
-                          {/* Product */}
                           <Table.Cell px={3} py={2} borderRight="1px solid" borderColor={tokens.borderLight} textAlign="right">
                             <Text fontSize="11px" fontWeight="600" color={tokens.text}>{row.productCode}</Text>
                           </Table.Cell>
 
-                          {/* Sub Product */}
                           <Table.Cell px={3} py={2} borderRight="1px solid" borderColor={tokens.borderLight} textAlign="right">
                             <Text fontSize="11px" color={tokens.textMid}>{row.subProductCode}</Text>
                           </Table.Cell>
 
-                          {/* Pur Rate */}
                           <Table.Cell px={3} py={2} borderRight="1px solid" borderColor={tokens.borderLight} textAlign="right">
                             <Text fontSize="11px" fontWeight="500" color={tokens.text}>
                               {row.purRate ? row.purRate.toFixed(2) : "0.00"}
                             </Text>
                           </Table.Cell>
 
-                          {/* Pcs */}
                           <Table.Cell px={3} py={2} borderRight="1px solid" borderColor={tokens.borderLight} textAlign="right">
                             <Text fontSize="11px" fontWeight="700" color={tokens.text}>{row.pieces || 0}</Text>
                           </Table.Cell>
 
-                          {/* Weight */}
                           <Table.Cell px={3} py={2} borderRight="1px solid" borderColor={tokens.borderLight} textAlign="right">
                             <Text fontSize="11px" color={tokens.textMid}>
                               {row.weight ? row.weight.toFixed(3) : "0.000"}
                             </Text>
                           </Table.Cell>
 
-                          {/* Discount */}
                           <Table.Cell px={3} py={2} borderRight="1px solid" borderColor={tokens.borderLight} textAlign="right">
                             <Text fontSize="11px" fontWeight="600" color={row.discount && row.discount > 0 ? "#ea580c" : tokens.textLight}>
                               {row.discount && row.discount > 0 ? row.discount.toFixed(2) : "—"}
                             </Text>
                           </Table.Cell>
 
-                          {/* Sell Rate */}
                           <Table.Cell px={3} py={2} borderRight="1px solid" borderColor={tokens.borderLight} textAlign="right">
                             <Text fontSize="11px" fontWeight="500" color={tokens.text}>
                               {row.sellingRate ? row.sellingRate.toFixed(2) : "0.00"}
                             </Text>
                           </Table.Cell>
 
-                          {/* Markup */}
                           <Table.Cell px={3} py={2} borderRight="1px solid" borderColor={tokens.borderLight} textAlign="right">
                             <Text fontSize="11px" fontWeight="600" color={row.markup && row.markup > 0 ? tokens.green : tokens.textLight}>
                               {row.markup && row.markup > 0 ? `+${row.markup.toFixed(2)}` : "—"}
                             </Text>
                           </Table.Cell>
 
-                          {/* Amount */}
                           <Table.Cell px={3} py={2} borderRight="1px solid" borderColor={tokens.borderLight} textAlign="right">
                             <Text fontSize="11px" fontWeight="700" color={tokens.text}>
                               {formatCurrency(row.amount)}
                             </Text>
                           </Table.Cell>
 
-                          {/* Tax */}
                           <Table.Cell px={3} py={2} borderRight="1px solid" borderColor={tokens.borderLight} textAlign="right">
                             <Text fontSize="11px" color={tokens.textMid}>{formatCurrency(row.taxAmount)}</Text>
                           </Table.Cell>
 
-                          {/* Total */}
                           <Table.Cell px={3} py={2} borderRight="1px solid" borderColor={tokens.borderLight} textAlign="right">
                             <Text fontSize="11px" fontWeight="800" color={tokens.green}>
                               {formatCurrency(row.totalAmount)}
                             </Text>
                           </Table.Cell>
 
-                          {/* MRP */}
                           <Table.Cell px={3} py={2} borderRight="1px solid" borderColor={tokens.borderLight} textAlign="right">
                             <Text fontSize="11px" fontWeight="500" color={tokens.textMid}>
                               {formatCurrency(row.mrp)}
                             </Text>
                           </Table.Cell>
 
-                          {/* Status */}
                           <Table.Cell px={4} py={2} textAlign="center">
                             <Box
                               display="inline-flex"

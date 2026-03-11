@@ -503,49 +503,71 @@ export default function InvoiceMaster() {
 
       // Handle subproduct selection
       if (field === "SUBPRODUCTCODE") {
-        updated.SUBPRODUCTCODE = value;
+  updated.SUBPRODUCTCODE = value;
 
-        const selected = filteredProducts?.find(
-          (p: any) => p?.subProductCode?.toString() === value?.toString()
-        );
+  if (value) {
+    // Subproduct is selected
+    const selected = filteredProducts?.find(
+      (p: any) => p?.subProductCode?.toString() === value?.toString()
+    );
 
-        if (selected) {
-          setSelectedSubProduct(selected);
+    if (selected) {
+      setSelectedSubProduct(selected);
 
-          // Check if important values are missing
-          if (
-            selected.purRate == null ||
-            selected.mrp == null ||
-            selected.sellingRate == null
-          ) {
-            toaster.create({
-              title: "Product Data Missing",
-              description: "Purchase rate / MRP / Selling rate is not set in the product.",
-              type: "warning",
-              duration: 4000,
-            });
-          }
-
-          const pieces = Number(updated.PIECES || 0);
-          const rate = Number(selected.purRate || 0);
-          const discPer = Number(updated.DISCPER || 0);
-
-          const taxes = calculateTaxes(pieces, rate, discPer, selected);
-
-          return {
-            ...updated,
-            PRODUCTCODE: selected.productCode?.toString() || "",
-            ORIONBARCODE: formData.ORIONBARCODE || "",
-            RATE: selected.purRate ?? "",
-            WEIGHT: selected.weight ?? "",
-            MRP: selected.mrp ?? "",
-            SELLINGRATE: selected.sellingRate ?? "",
-            HSNCODE: selected.hsnCode || "",
-            HSNTAXCODE: selected.hsnTaxCode?.toString() || "0",
-            ...taxes,
-          };
-        }
+      // Check if important values are missing
+      if (
+        selected.purRate == null ||
+        selected.mrp == null ||
+        selected.sellingRate == null
+      ) {
+        toaster.create({
+          title: "Product Data Missing",
+          description: "Purchase rate / MRP / Selling rate is not set in the product.",
+          type: "warning",
+          duration: 4000,
+        });
       }
+
+      const pieces = Number(updated.PIECES || 0);
+      const rate = Number(selected.purRate || 0);
+      const discPer = Number(updated.DISCPER || 0);
+
+      const taxes = calculateTaxes(pieces, rate, discPer, selected);
+
+      return {
+        ...updated,
+        PRODUCTCODE: selected.productCode?.toString() || "",
+        ORIONBARCODE: formData.ORIONBARCODE || "",
+        RATE: selected.purRate ?? "",
+        WEIGHT: selected.weight ?? "",
+        MRP: selected.mrp ?? "",
+        SELLINGRATE: selected.sellingRate ?? "",
+        HSNCODE: selected.hsnCode || "",
+        HSNTAXCODE: selected.hsnTaxCode?.toString() || "0",
+        ...taxes,
+      };
+    }
+  } else {
+    // Subproduct is cleared/deselected
+    setSelectedSubProduct(null);
+    // Clear subproduct-specific fields
+    return {
+      ...updated,
+      SUBPRODUCTCODE: "",
+      RATE: "",
+      WEIGHT: "",
+      MRP: "",
+      SELLINGRATE: "",
+      HSNCODE: "",
+      HSNTAXCODE: "",
+      AMOUNT: 0,
+      IGSTAMOUNT: 0,
+      CGSTAMOUNT: 0,
+      SGSTAMOUNT: 0,
+      NETAMOUNT: 0,
+    };
+  }
+}
 
       // Calculate taxes when relevant fields change
       if (["PIECES", "RATE", "DISCPER"].includes(String(field)) && selectedSubProduct) {
@@ -606,51 +628,66 @@ export default function InvoiceMaster() {
   }), []);
 
   // Validate form
-  const validateForm = useCallback((): boolean => {
-    if (!formData.VENDORCODE) {
-      toaster.create({
-        title: "Validation Error",
-        description: "Please select a vendor",
-        type: "warning",
-        duration: 3000,
-      });
-      return false;
-    }
+const validateForm = useCallback((): boolean => {
+  if (!formData.VENDORCODE) {
+    toaster.create({
+      title: "Validation Error",
+      description: "Please select a vendor",
+      type: "warning",
+      duration: 3000,
+    });
+    return false;
+  }
 
-    if (!formData.SUBPRODUCTCODE) {
-      toaster.create({
-        title: "Validation Error",
-        description: "Please select a subproduct",
-        type: "warning",
-        duration: 3000,
-      });
-      return false;
-    }
+    // if (!formData.SUBPRODUCTCODE) {
+    //   toaster.create({
+    //     title: "Validation Error",
+    //     description: "Please select a subproduct",
+    //     type: "warning",
+    //     duration: 3000,
+    //   });
+    //   return false;
+    // }
 
-    if (!formData.PIECES || Number(formData.PIECES) <= 0) {
-      toaster.create({
-        title: "Validation Error",
-        description: "Please enter valid quantity",
-        type: "warning",
-        duration: 3000,
-      });
-      return false;
-    }
+ if (!formData.PIECES || Number(formData.PIECES) <= 0) {
+    toaster.create({
+      title: "Validation Error",
+      description: "Please enter valid quantity",
+      type: "warning",
+      duration: 3000,
+    });
+    return false;
+  }
 
-    return true;
-  }, [formData.VENDORCODE, formData.SUBPRODUCTCODE, formData.PIECES]);
+  return true;
+}, [formData.VENDORCODE, formData.PIECES]);
 
   // Add/Update item
-  const handleAddItem = useCallback(() => {
+
+  console.log("Calling add item1");
+  const addItemRef = useRef(false);
+  
+  console.log("Calling add item2");
+
+const handleAddItem = useCallback(() => {
+  if (addItemRef.current) return;
+  addItemRef.current = true;
+
+  try {
     if (!validateForm()) return;
 
-    const selected = filteredProducts?.find(
-      (f: SubProduct) => f && f.subProductCode?.toString() === formData.SUBPRODUCTCODE
-    );
+    // Handle case when no subproduct is selected
+    let selected = null;
+    if (formData.SUBPRODUCTCODE) {
+      selected = filteredProducts?.find(
+        (f: SubProduct) => f && f.subProductCode?.toString() === formData.SUBPRODUCTCODE
+      );
+    }
 
+    // If no subproduct selected, create a basic item with available data
     const newItem: InvoiceItem = {
       sno: editingIndex !== null ? editingIndex + 1 : invoiceItems.length + 1,
-      productName: selected?.subProductName || "",
+      productName: selected?.subProductName || formData.PRODUCTCODE || "Unknown Product",
       vendorName: vendors.find(v => v.value === formData.VENDORCODE)?.label || "",
       qty: Number(formData.PIECES),
       uom: selected?.uom || "",
@@ -669,7 +706,7 @@ export default function InvoiceMaster() {
       BILLDATE: formData.BILLDATE,
       ORIONBARCODE: formData.ORIONBARCODE,
       PRODUCTCODE: formData.PRODUCTCODE,
-      SUBPRODUCTCODE: formData.SUBPRODUCTCODE,
+      SUBPRODUCTCODE: formData.SUBPRODUCTCODE || "", // Allow empty string
       RATE: Number(formData.RATE),
       WEIGHT: Number(formData.WEIGHT),
       MRP: Number(formData.MRP),
@@ -704,20 +741,18 @@ export default function InvoiceMaster() {
       duration: 2000,
     });
 
-    // Clear form but preserve vendor, invoice no, and date
-    setFormData(prev => ({
-      ...initialFormData,
-      BILLDATE: prev.BILLDATE,
-
-    }));
-
-    // Reset disabled states
+    setFormData(prev => ({ ...initialFormData, BILLDATE: prev.BILLDATE }));
     setIsProductDisabled(false);
     setIsSubProductDisabled(false);
     setSelectedSubProduct(null);
     setEditingIndex(null);
     setSubProducts([]);
-  }, [formData, filteredProducts, vendors, editingIndex, invoiceItems.length, validateForm]);
+  } finally {
+    setTimeout(() => {
+      addItemRef.current = false;
+    }, 50);
+  }
+}, [formData, filteredProducts, vendors, editingIndex, invoiceItems.length, validateForm]);
 
   // Edit item
   const handleEditItem = useCallback((index: number) => {
@@ -813,7 +848,7 @@ export default function InvoiceMaster() {
 
       return {
         VENDORCODE: Number(item.VENDORCODE || formData.VENDORCODE),
-       ORIONBARCODE: item.ORIONBARCODE || formData.ORIONBARCODE || "", // <- always form value or empty string
+        ORIONBARCODE: item.ORIONBARCODE || formData.ORIONBARCODE || "", // <- always form value or empty string
         PRODUCTCODE: Number(item.PRODUCTCODE || 0),
         SUBPRODUCTCODE: Number(item.SUBPRODUCTCODE || 0),
 
@@ -874,7 +909,7 @@ export default function InvoiceMaster() {
 
   // Navigation
   const fieldSequence = useMemo(() => fields.map(f => f.name), [fields]);
-  const { register, focusNext } = useEnterNavigation(fieldSequence, handleAddItem);
+  const { register, focusNext } = useEnterNavigation(fieldSequence, () => handleAddItem());
 
   // Totals
   const totalNetAmount = useMemo(() =>

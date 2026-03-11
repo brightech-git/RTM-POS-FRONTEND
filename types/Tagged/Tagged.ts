@@ -73,6 +73,11 @@ export interface Taged {
   billStatus?: string;
   issRec?: string;
   TAGGEN?: string;
+  BILLNO?:number;
+  TAGNO?:string;
+  PIECES?:number;
+  SELLINGRATE?:number;
+  
 }
 
 // Filter interfaces
