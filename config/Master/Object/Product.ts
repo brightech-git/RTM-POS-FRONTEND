@@ -78,9 +78,9 @@ export const ProductConfig = (product:string,  editId: string|number|null): Form
     required: true,
     type: "select",
     options: TagType,
-    defaultValue: "S",
+    defaultValue: "B",
     size: "xs",
-    disabled: product === "N",
+    // disabled: product === "N",
      width: '200px',
 },
 {
@@ -91,7 +91,7 @@ export const ProductConfig = (product:string,  editId: string|number|null): Form
     options: YesOrNo,
     defaultValue: "Y",
     size: "xs",
-    disabled: product === "N",
+    // disabled: product === "N",
      width: '200px',
 },
     {

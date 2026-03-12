@@ -83,10 +83,16 @@ function RateMaster() {
     const [filteredSubProducts, setFilteredSubProducts] = useState<any[]>([]);
 
     // Prepare products with string values for the dropdown
-    const productsForDropdown = products.map((p: any) => ({
+  const productsForDropdown = products
+    .filter((p: any) => p.ORIONBARCODE === "N") // only N
+    .map((p: any) => ({
         ...p,
         PRODUCTCODE: p.PRODUCTCODE.toString()
     }));
+    const filteredRates = rates.filter(
+    (r: any) => r.product?.ORIONBARCODE === "N"
+);
+
 
     // Filter subproducts when product changes
     useEffect(() => {
@@ -205,83 +211,81 @@ function RateMaster() {
         ScrollToTop();
     };
 
-    const handleSave = () => {
-        console.log("rate form data",form)
-        const errors: Record<string, string> = {};
+const handleSave = () => {
+    console.log("rate form data", form);
+    const errors: Record<string, string> = {};
 
-        // Validation
-        if (!form.PRODUCTCODE) errors.PRODUCTCODE = "Product is required";
-        if (!form.PURRATE) errors.PURRATE = "Purchase Rate is required";
-        if (!form.MRP) errors.MRP = "MRP is required";
-        if (!form.SELLINGRATE) errors.SELLINGRATE = "Selling Rate is required";
-        if (!form.ACTIVE?.trim()) errors.ACTIVE = "Active selection is required";
+    // Validation
+    if (!form.PRODUCTCODE) errors.PRODUCTCODE = "Product is required";
+    if (!form.PURRATE) errors.PURRATE = "Purchase Rate is required";
+    if (!form.MRP) errors.MRP = "MRP is required";
+    if (!form.SELLINGRATE) errors.SELLINGRATE = "Selling Rate is required";
+    if (!form.ACTIVE?.trim()) errors.ACTIVE = "Active selection is required";
 
-        // Validate that PURRATE, MRP, SELLINGRATE are valid numbers
-        if (form.PURRATE && isNaN(Number(form.PURRATE))) {
-            errors.PURRATE = "Purchase Rate must be a number";
-        }
-        if (form.MRP && isNaN(Number(form.MRP))) {
-            errors.MRP = "MRP must be a number";
-        }
-        if (form.SELLINGRATE && isNaN(Number(form.SELLINGRATE))) {
-            errors.SELLINGRATE = "Selling Rate must be a number";
-        }
+    // Validate numeric fields
+    if (form.PURRATE && isNaN(Number(form.PURRATE))) {
+        errors.PURRATE = "Purchase Rate must be a number";
+    }
+    if (form.MRP && isNaN(Number(form.MRP))) {
+        errors.MRP = "MRP must be a number";
+    }
+    if (form.SELLINGRATE && isNaN(Number(form.SELLINGRATE))) {
+        errors.SELLINGRATE = "Selling Rate must be a number";
+    }
 
-        setFormErrors(errors);
+    setFormErrors(errors);
 
-        if (Object.keys(errors).length > 0) {
-            return;
-        }
+    // ✅ Show validation errors in toast
+    if (Object.keys(errors).length > 0) {
+        const firstErrorMessage = Object.values(errors)[0]; // show first error
+        toastError(firstErrorMessage); // using your existing toast function
+        return;
+    }
 
-        const payload: Rate = {
-            PURRATE: Number(form.PURRATE),
-            MRP: Number(form.MRP),
-            SELLINGRATE: Number(form.SELLINGRATE),
-            ACTIVE: form.ACTIVE,
-        };
+    // If no errors, continue saving...
+    const payload: Rate = {
+        PURRATE: Number(form.PURRATE),
+        MRP: Number(form.MRP),
+        SELLINGRATE: Number(form.SELLINGRATE),
+        ACTIVE: form.ACTIVE,
+    };
 
-        if (editId) {
-            // Update existing rate
-            console.log("Updating rate with ID:", editId, "Payload:", payload);
-            updateRate({
-                ...payload,
-                RATEID: Number(editId)
-            }, {
+    if (editId) {
+        updateRate(
+            { ...payload, RATEID: Number(editId) },
+            {
                 onSuccess: () => {
                     refetchRates();
                     resetForm();
                     setHighlightedId(Number(editId));
                     toastUpdated("Rate");
                 },
-                onError: (error) => {
-                    console.error('Update error:', error);
-                    toastError("Failed to update rate");
-                },
-            });
-        } else {
-            // Create new rate
-            createRate({
+                onError: () => toastError("Failed to update rate"),
+            }
+        );
+    } else {
+        createRate(
+            {
                 rate: payload,
                 productCode: Number(form.PRODUCTCODE),
-              subProductCode:
-    form.SUBPRODUCTCODE ||
-    filteredSubProducts.length === 1
-        ? Number(form.SUBPRODUCTCODE || filteredSubProducts[0]?.SUBPRODUCTCODE)
-        : undefined,
-                createdBy: 1
-            }, {
+                subProductCode:
+                    form.SUBPRODUCTCODE ||
+                    (filteredSubProducts.length === 1
+                        ? Number(filteredSubProducts[0]?.SUBPRODUCTCODE)
+                        : undefined),
+                createdBy: 1,
+            },
+            {
                 onSuccess: () => {
                     refetchRates();
                     resetForm();
                     toastCreated("Rate");
                 },
-                onError: (error) => {
-                    console.error('Create error:', error);
-                    toastError("Failed to create rate");
-                },
-            });
-        }
-    };
+                onError: () => toastError("Failed to create rate"),
+            }
+        );
+    }
+};
 
     const handleDeleteClick = (id: number) => {
         setDeleteId(id);
@@ -353,7 +357,7 @@ function RateMaster() {
                 message="Are you sure you want to delete this rate? This action cannot be undone."
             />
 
-            <Grid templateColumns={{ base: "1fr", lg: "1fr 1fr" }} gap={2}>
+            <Grid templateColumns={{ base: "1fr", lg: "1fr 2fr" }} gap={2}>
                 {/* ---------------- FORM ---------------- */}
                 <GridItem>
                     <VStack bg={theme.colors.formColor} p={2} borderRadius="xl" border="1px solid #eef">
@@ -380,7 +384,7 @@ function RateMaster() {
                                 <AiOutlineSave /> {editId ? "Update" : "Save"}
                             </Button>
                             <Button size="xs" colorPalette="blue" onClick={resetForm}>
-                                <IoIosExit /> Exit
+                                <IoIosExit /> CLEAR
                             </Button>
                         </HStack>
                     </VStack>
@@ -405,7 +409,7 @@ function RateMaster() {
 
                         <CustomTable
                             columns={RateColumns}
-                            data={rates}
+                            data={filteredRates}
                             headerBg={theme.colors.accient}
                             headerColor="white"
                             renderRow={(rate: any, index: number) => (

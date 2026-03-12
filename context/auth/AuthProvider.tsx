@@ -28,14 +28,14 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     // };
 
     // 🏢 company list
-    const company = async () => {
-        try {
-            const res = await CompanyService.getAll();
-            setCompaniesData(res.data || []);
-        } catch {
-            setCompaniesData([]);
-        }
-    };
+   const company = async () => {
+    try {
+        const res = await CompanyService.getAll(); // res is Company[]
+        setCompaniesData(res || []);
+    } catch {
+        setCompaniesData([]);
+    }
+};
 
     useEffect(() => {
         company();

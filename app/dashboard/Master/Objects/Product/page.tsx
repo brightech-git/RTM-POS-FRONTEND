@@ -176,11 +176,15 @@ const handleSave = () => {
 
     setFormErrors(errors);
 
-    // Stop if there are validation errors
-    if (Object.keys(errors).length > 0) {
-        console.log('Validation errors:', errors);
-        return;
-    }
+// Stop if there are validation errors
+if (Object.keys(errors).length > 0) {
+    console.log("Validation errors:", errors);
+
+    const firstError = Object.values(errors)[0];
+    toastError(firstError);   // 🔥 show toast
+
+    return;
+}
 
     // Build final values
     console.log("FORM DATA:", form);
@@ -283,7 +287,7 @@ const finalOrionBarcode =
     return (
         <Box fontWeight="semibold" bg={theme.colors.primary} color={theme.colors.secondary}>
             <Toaster />
-            <Grid templateColumns={{ base: "1fr", lg: "1fr 1fr" }} gap={2}>
+            <Grid templateColumns={{ base: "1fr", lg: "1fr 2fr" }} gap={2}>
                 {/* ---------------- FORM ---------------- */}
                 <GridItem >
                     <VStack bg={theme.colors.formColor}  p={3} borderRadius="xl" border="1px solid #eef">
@@ -311,7 +315,7 @@ const finalOrionBarcode =
                                 <AiOutlineSave /> {editId ? "Update" : "Save"}
                             </Button>
                             <Button size="xs" colorPalette="blue" onClick={resetForm}>
-                                <IoIosExit /> Exit
+                                <IoIosExit /> CLEAR
                             </Button>
                         </HStack>
                     </VStack>

@@ -389,7 +389,7 @@ export default function PrinterSettingsMaster() {
                                 <AiOutlineSave /> {editId ? "Update" : "Save"}
                             </Button>
                             <Button size="xs" colorPalette="blue" onClick={resetForm} flex={1}>
-                                <IoIosExit /> Exit
+                                <IoIosExit /> CLEAR
                             </Button>
                         </HStack>
                     </VStack>

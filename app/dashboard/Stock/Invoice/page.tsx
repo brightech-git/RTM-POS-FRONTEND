@@ -47,12 +47,23 @@ interface SubProduct {
   weight: number;
   orionBarcode: string | null;
   belowSalesAmount: number;
+  
+  // Tax Codes
   belowIgstTaxCode: number;
   aboveIgstTaxCode: number;
   belowCgstTaxCode: number;
   aboveCgstTaxCode: number;
   belowSgstTaxCode: number;
   aboveSgstTaxCode: number;
+  
+  // Tax Percentages - Add these fields
+  belowIgstTaxPer?: number;
+  aboveIgstTaxPer?: number;
+  belowCgstTaxPer?: number;
+  aboveCgstTaxPer?: number;
+  belowSgstTaxPer?: number;
+  aboveSgstTaxPer?: number;
+  
   uom?: string;
   productName?: string;
 }
@@ -182,75 +193,94 @@ export default function InvoiceMaster() {
 
 
   // Tax calculation
-  const calculateTaxes = useCallback((
-    pieces: number,
-    rate: number,
-    discPer: number,
-    selectedSubProduct: SubProduct | null
-  ) => {
-
-    if (!selectedSubProduct || !pieces || !rate) {
-      return {
-        AMOUNT: 0,
-        DISCOUNTAMOUNT: 0,
-        IGSTAMOUNT: 0,
-        CGSTAMOUNT: 0,
-        SGSTAMOUNT: 0,
-        NETAMOUNT: 0,
-      };
-    }
-
-    const amount = pieces * rate;
-    const discountAmount = (amount * discPer) / 100;
-    const grossAmount = amount - discountAmount;
-
-    const useBelow = grossAmount < (selectedSubProduct.belowSalesAmount || 0);
-
-    const isSameState =
-      normalizeState(vendorState) === normalizeState(COMPANY_STATE);
-
-    const igstRate = useBelow
-      ? selectedSubProduct.belowIgstTaxCode
-      : selectedSubProduct.aboveIgstTaxCode;
-
-    const cgstRate = useBelow
-      ? selectedSubProduct.belowCgstTaxCode
-      : selectedSubProduct.aboveCgstTaxCode;
-
-    const sgstRate = useBelow
-      ? selectedSubProduct.belowSgstTaxCode
-      : selectedSubProduct.aboveSgstTaxCode;
-
-    let igstAmount = 0;
-    let cgstAmount = 0;
-    let sgstAmount = 0;
-
-    if (isSameState) {
-      cgstAmount = grossAmount * (cgstRate || 0) / 100;
-      sgstAmount = grossAmount * (sgstRate || 0) / 100;
-    } else {
-      igstAmount = grossAmount * (igstRate || 0) / 100;
-    }
-
-    const netAmount =
-      grossAmount + igstAmount + cgstAmount + sgstAmount;
-
-    console.log("Vendor State:", vendorState);
-    console.log("Same State:", normalizeState(vendorState) === normalizeState(COMPANY_STATE));
-
-
-
-
+// Tax calculation using percentages
+const calculateTaxes = useCallback((
+  pieces: number,
+  rate: number,
+  discPer: number,
+  selectedSubProduct: SubProduct | null
+) => {
+  if (!selectedSubProduct || !pieces || !rate) {
+    console.log("No product, pieces, or rate provided. Returning 0s.");
     return {
-      AMOUNT: amount,
-      DISCOUNTAMOUNT: discountAmount,
-      IGSTAMOUNT: igstAmount,
-      CGSTAMOUNT: cgstAmount,
-      SGSTAMOUNT: sgstAmount,
-      NETAMOUNT: netAmount,
+      AMOUNT: 0,
+      DISCOUNTAMOUNT: 0,
+      IGSTAMOUNT: 0,
+      CGSTAMOUNT: 0,
+      SGSTAMOUNT: 0,
+      NETAMOUNT: 0,
     };
+  }
 
-  }, [vendorState]);
+  // Step 1: Base amount
+  const amount = pieces * rate;
+  console.log(`Step 1: Base Amount = pieces (${pieces}) * rate (${rate}) = ${amount}`);
+
+  // Step 2: Discount
+  const discountAmount = (amount * discPer) / 100;
+  console.log(`Step 2: Discount Amount = amount (${amount}) * discPer (${discPer}%) = ${discountAmount}`);
+
+  // Step 3: Gross amount after discount
+  const grossAmount = amount - discountAmount;
+  console.log(`Step 3: Gross Amount = amount (${amount}) - discountAmount (${discountAmount}) = ${grossAmount}`);
+
+  // Step 4: Below or above threshold
+  const useBelow = grossAmount < (selectedSubProduct.belowSalesAmount || 0);
+  console.log(`Step 4: Below Threshold? grossAmount (${grossAmount}) < belowSalesAmount (${selectedSubProduct.belowSalesAmount}) => ${useBelow}`);
+
+  // Step 5: Check if same state
+  const isSameState = normalizeState(vendorState) === normalizeState(COMPANY_STATE);
+  console.log(`Step 5: Same State? vendorState (${vendorState}) === COMPANY_STATE (${COMPANY_STATE}) => ${isSameState}`);
+
+  // Step 6: Get Tax Percentages (use percentage fields instead of tax codes)
+  let igstPer = 0;
+  let cgstPer = 0;
+  let sgstPer = 0;
+
+  if (useBelow) {
+    // Below threshold percentages
+    igstPer = selectedSubProduct.belowIgstTaxPer || 0;
+    cgstPer = selectedSubProduct.belowCgstTaxPer || 0;
+    sgstPer = selectedSubProduct.belowSgstTaxPer || 0;
+  } else {
+    // Above threshold percentages
+    igstPer = selectedSubProduct.aboveIgstTaxPer || 0;
+    cgstPer = selectedSubProduct.aboveCgstTaxPer || 0;
+    sgstPer = selectedSubProduct.aboveSgstTaxPer || 0;
+  }
+
+  console.log(`Step 6: Tax Percentages => IGST: ${igstPer}%, CGST: ${cgstPer}%, SGST: ${sgstPer}%`);
+
+  // Step 7: Calculate Tax Amounts
+  let igstAmount = 0;
+  let cgstAmount = 0;
+  let sgstAmount = 0;
+
+  if (isSameState) {
+    // For same state: CGST + SGST
+    cgstAmount = grossAmount * (cgstPer / 100);
+    sgstAmount = grossAmount * (sgstPer / 100);
+    console.log(`Step 7: CGST Amount = ${grossAmount} * (${cgstPer}/100) = ${cgstAmount}`);
+    console.log(`Step 7: SGST Amount = ${grossAmount} * (${sgstPer}/100) = ${sgstAmount}`);
+  } else {
+    // For different state: IGST
+    igstAmount = grossAmount * (igstPer / 100);
+    console.log(`Step 7: IGST Amount = ${grossAmount} * (${igstPer}/100) = ${igstAmount}`);
+  }
+
+  // Step 8: Net Amount
+  const netAmount = grossAmount + igstAmount + cgstAmount + sgstAmount;
+  console.log(`Step 8: Net Amount = grossAmount (${grossAmount}) + IGST (${igstAmount}) + CGST (${cgstAmount}) + SGST (${sgstAmount}) = ${netAmount}`);
+
+  return {
+    AMOUNT: amount,
+    DISCOUNTAMOUNT: discountAmount,
+    IGSTAMOUNT: igstAmount,
+    CGSTAMOUNT: cgstAmount,
+    SGSTAMOUNT: sgstAmount,
+    NETAMOUNT: netAmount,
+  };
+}, [vendorState]);
 
   // Sidebar effect
   useEffect(() => {
@@ -503,71 +533,71 @@ export default function InvoiceMaster() {
 
       // Handle subproduct selection
       if (field === "SUBPRODUCTCODE") {
-  updated.SUBPRODUCTCODE = value;
+        updated.SUBPRODUCTCODE = value;
 
-  if (value) {
-    // Subproduct is selected
-    const selected = filteredProducts?.find(
-      (p: any) => p?.subProductCode?.toString() === value?.toString()
-    );
+        if (value) {
+          // Subproduct is selected
+          const selected = filteredProducts?.find(
+            (p: any) => p?.subProductCode?.toString() === value?.toString()
+          );
 
-    if (selected) {
-      setSelectedSubProduct(selected);
+          if (selected) {
+            setSelectedSubProduct(selected);
 
-      // Check if important values are missing
-      if (
-        selected.purRate == null ||
-        selected.mrp == null ||
-        selected.sellingRate == null
-      ) {
-        toaster.create({
-          title: "Product Data Missing",
-          description: "Purchase rate / MRP / Selling rate is not set in the product.",
-          type: "warning",
-          duration: 4000,
-        });
+            // Check if important values are missing
+            if (
+              selected.purRate == null ||
+              selected.mrp == null ||
+              selected.sellingRate == null
+            ) {
+              toaster.create({
+                title: "Product Data Missing",
+                description: "Purchase rate / MRP / Selling rate is not set in the product.",
+                type: "warning",
+                duration: 4000,
+              });
+            }
+
+            const pieces = Number(updated.PIECES || 0);
+            const rate = Number(selected.purRate || 0);
+            const discPer = Number(updated.DISCPER || 0);
+
+            const taxes = calculateTaxes(pieces, rate, discPer, selected);
+
+            return {
+              ...updated,
+              PRODUCTCODE: selected.productCode?.toString() || "",
+              ORIONBARCODE: formData.ORIONBARCODE || "",
+              RATE: selected.purRate ?? "",
+              WEIGHT: selected.weight ?? "",
+              MRP: selected.mrp ?? "",
+              SELLINGRATE: selected.sellingRate ?? "",
+              HSNCODE: selected.hsnCode || "",
+              HSNTAXCODE: selected.hsnTaxCode?.toString() || "0",
+              ...taxes,
+            };
+          }
+        } else {
+          // Subproduct is cleared/deselected
+          setSelectedSubProduct(null);
+          // Clear subproduct-specific fields
+          return {
+            ...updated,
+            SUBPRODUCTCODE: "",
+            RATE: "",
+            WEIGHT: "",
+            MRP: "",
+            SELLINGRATE: "",
+            HSNCODE: "",
+            HSNTAXCODE: "",
+            AMOUNT: 0,
+            IGSTAMOUNT: 0,
+            CGSTAMOUNT: 0,
+            SGSTAMOUNT: 0,
+            NETAMOUNT: 0,
+          };
+        }
       }
-
-      const pieces = Number(updated.PIECES || 0);
-      const rate = Number(selected.purRate || 0);
-      const discPer = Number(updated.DISCPER || 0);
-
-      const taxes = calculateTaxes(pieces, rate, discPer, selected);
-
-      return {
-        ...updated,
-        PRODUCTCODE: selected.productCode?.toString() || "",
-        ORIONBARCODE: formData.ORIONBARCODE || "",
-        RATE: selected.purRate ?? "",
-        WEIGHT: selected.weight ?? "",
-        MRP: selected.mrp ?? "",
-        SELLINGRATE: selected.sellingRate ?? "",
-        HSNCODE: selected.hsnCode || "",
-        HSNTAXCODE: selected.hsnTaxCode?.toString() || "0",
-        ...taxes,
-      };
-    }
-  } else {
-    // Subproduct is cleared/deselected
-    setSelectedSubProduct(null);
-    // Clear subproduct-specific fields
-    return {
-      ...updated,
-      SUBPRODUCTCODE: "",
-      RATE: "",
-      WEIGHT: "",
-      MRP: "",
-      SELLINGRATE: "",
-      HSNCODE: "",
-      HSNTAXCODE: "",
-      AMOUNT: 0,
-      IGSTAMOUNT: 0,
-      CGSTAMOUNT: 0,
-      SGSTAMOUNT: 0,
-      NETAMOUNT: 0,
-    };
-  }
-}
 
       // Calculate taxes when relevant fields change
       if (["PIECES", "RATE", "DISCPER"].includes(String(field)) && selectedSubProduct) {
@@ -597,162 +627,186 @@ export default function InvoiceMaster() {
   }, []);
 
   // Get invoice payload
-  const getInvoicePayload = useCallback((data: any) => ({
-    VENDORCODE: Number(data.VENDORCODE) || 0,
-    ORIONBARCODE: data.ORIONBARCODE || "",
-    PRODUCTCODE: Number(data.PRODUCTCODE) || 0,
-    SUBPRODUCTCODE: Number(data.SUBPRODUCTCODE) || 0,
-    PIECES: Number(data.PIECES) || 0,
-    WEIGHT: Number(data.WEIGHT) || 0,
-    MRP: Number(data.MRP) || 0,
-    PURRATE: Number(data.RATE) || 0,
-    SELLINGRATE: Number(data.SELLINGRATE) || 0,
-    MARKUPPER: "",
-    MARKUP: "",
-    INVOICENO: data.INVOICENO || "",
-    BILLDATE: data.BILLDATE || "",
-    TAGGEN: "",
-    BILLTYPE: "PU",
-    UNIQUEKEY: "TRN002",
-    AMOUNT: Number(data.AMOUNT) || 0,
-    SGSTAMOUNT: data.SGSTAMOUNT ?? null,
-    IGSTAMOUNT: data.IGSTAMOUNT ?? null,
-    CGSTAMOUNT: data.CGSTAMOUNT ?? null,
-    HSNCODE: data.HSNCODE || "",
-    HSNTAXCODE: Number(data.HSNTAXCODE) || 0,
-    ENTRYORDER: Number(data.ENTRYORDER) || 1,
-    HSNCALC: "",
-    BILLSTATUS: "",
-    IPID: 8,
-    DISCOUNTAMOUNT: Number(data.DISCOUNTAMOUNT) || 0,
-  }), []);
+  // const getInvoicePayload = useCallback((data: any) => ({
+  //   VENDORCODE: Number(data.VENDORCODE) || 0,
+  //   ORIONBARCODE: data.ORIONBARCODE || "",
+  //   PRODUCTCODE: Number(data.PRODUCTCODE) || 0,
+  //   SUBPRODUCTCODE: Number(data.SUBPRODUCTCODE) || 0,
+  //   PIECES: Number(data.PIECES) || 0,
+  //   WEIGHT: Number(data.WEIGHT) || 0,
+  //   MRP: Number(data.MRP) || 0,
+  //   PURRATE: Number(data.RATE) || 0,
+  //   SELLINGRATE: Number(data.SELLINGRATE) || 0,
+  //   MARKUPPER: "",
+  //   MARKUP: "",
+  //   INVOICENO: data.INVOICENO || "",
+  //   BILLDATE: data.BILLDATE || "",
+  //   TAGGEN: "",
+  //   BILLTYPE: "PU",
+  //   UNIQUEKEY: "TRN002",
+  //   AMOUNT: Number(data.AMOUNT) || 0,
+  //   SGSTAMOUNT: data.SGSTAMOUNT ?? null,
+  //   IGSTAMOUNT: data.IGSTAMOUNT ?? null,
+  //   CGSTAMOUNT: data.CGSTAMOUNT ?? null,
+  //   HSNCODE: data.HSNCODE || "",
+  //   HSNTAXCODE: Number(data.HSNTAXCODE) || 0,
+  //   ENTRYORDER: Number(data.ENTRYORDER) || 1,
+  //   HSNCALC: "",
+  //   BILLSTATUS: "",
+  //   IPID: 8,
+  //   DISCOUNTAMOUNT: Number(data.DISCOUNTAMOUNT) || 0,
+  // }), []);
 
   // Validate form
-const validateForm = useCallback((): boolean => {
-  if (!formData.VENDORCODE) {
-    toaster.create({
-      title: "Validation Error",
-      description: "Please select a vendor",
-      type: "warning",
-      duration: 3000,
-    });
-    return false;
-  }
+  const validateForm = useCallback((): boolean => {
+    if (!formData.VENDORCODE) {
+      toaster.create({
+        title: "Validation Error",
+        description: "Please select a vendor",
+        type: "warning",
+        duration: 3000,
+      });
+      return false;
+    }
 
-    // if (!formData.SUBPRODUCTCODE) {
-    //   toaster.create({
-    //     title: "Validation Error",
-    //     description: "Please select a subproduct",
-    //     type: "warning",
-    //     duration: 3000,
-    //   });
-    //   return false;
-    // }
+    if (!formData.INVOICENO) {
+      toaster.create({
+        title: "Validation Error",
+        description: "Please enter invoice number",
+        type: "warning",
+        duration: 3000,
+      });
+      return false;
+    }
 
- if (!formData.PIECES || Number(formData.PIECES) <= 0) {
-    toaster.create({
-      title: "Validation Error",
-      description: "Please enter valid quantity",
-      type: "warning",
-      duration: 3000,
-    });
-    return false;
-  }
+    if (!formData.BILLDATE) {
+      toaster.create({
+        title: "Validation Error",
+        description: "Please select bill date",
+        type: "warning",
+        duration: 3000,
+      });
+      return false;
+    }
 
-  return true;
-}, [formData.VENDORCODE, formData.PIECES]);
+    if (!formData.SUBPRODUCTCODE) {
+      toaster.create({
+        title: "Validation Error",
+        description: "Please select a product",
+        type: "warning",
+        duration: 3000,
+      });
+      return false;
+    }
+
+    if (!formData.PIECES || Number(formData.PIECES) <= 0) {
+      toaster.create({
+        title: "Validation Error",
+        description: "Please enter valid quantity",
+        type: "warning",
+        duration: 3000,
+      });
+      return false;
+    }
+
+    return true;
+  }, [formData]);
 
   // Add/Update item
 
   console.log("Calling add item1");
   const addItemRef = useRef(false);
-  
+
   console.log("Calling add item2");
 
-const handleAddItem = useCallback(() => {
-  if (addItemRef.current) return;
-  addItemRef.current = true;
+  const handleAddItem = useCallback(() => {
+    if (addItemRef.current) return;
+    addItemRef.current = true;
 
-  try {
-    if (!validateForm()) return;
+    try {
+      if (!validateForm()) return;
 
-    // Handle case when no subproduct is selected
-    let selected = null;
-    if (formData.SUBPRODUCTCODE) {
-      selected = filteredProducts?.find(
-        (f: SubProduct) => f && f.subProductCode?.toString() === formData.SUBPRODUCTCODE
-      );
-    }
-
-    // If no subproduct selected, create a basic item with available data
-    const newItem: InvoiceItem = {
-      sno: editingIndex !== null ? editingIndex + 1 : invoiceItems.length + 1,
-      productName: selected?.subProductName || formData.PRODUCTCODE || "Unknown Product",
-      vendorName: vendors.find(v => v.value === formData.VENDORCODE)?.label || "",
-      qty: Number(formData.PIECES),
-      uom: selected?.uom || "",
-      rate: Number(formData.RATE) || 0,
-      discPer: formData.DISCPER || 0,
-      discount: formData.DISCOUNTAMOUNT || 0,
-      sellingRate: Number(formData.SELLINGRATE) || 0,
-      amount: formData.AMOUNT || 0,
-      grossAmount: (formData.AMOUNT || 0) - (formData.DISCOUNTAMOUNT || 0),
-      igst: formData.IGSTAMOUNT || 0,
-      cgst: formData.CGSTAMOUNT || 0,
-      sgst: formData.SGSTAMOUNT || 0,
-      netAmount: formData.NETAMOUNT || 0,
-      VENDORCODE: formData.VENDORCODE,
-      INVOICENO: formData.INVOICENO,
-      BILLDATE: formData.BILLDATE,
-      ORIONBARCODE: formData.ORIONBARCODE,
-      PRODUCTCODE: formData.PRODUCTCODE,
-      SUBPRODUCTCODE: formData.SUBPRODUCTCODE || "", // Allow empty string
-      RATE: Number(formData.RATE),
-      WEIGHT: Number(formData.WEIGHT),
-      MRP: Number(formData.MRP),
-      SELLINGRATE: Number(formData.SELLINGRATE),
-      AMOUNT: formData.AMOUNT,
-      IGSTAMOUNT: formData.IGSTAMOUNT,
-      CGSTAMOUNT: formData.CGSTAMOUNT,
-      SGSTAMOUNT: formData.SGSTAMOUNT,
-      HSNCODE: formData.HSNCODE,
-      HSNTAXCODE: formData.HSNTAXCODE,
-      DISCOUNTAMOUNT: formData.DISCOUNTAMOUNT,
-      DISCPER: formData.DISCPER,
-      PIECES: Number(formData.PIECES),
-    };
-
-    setInvoiceItems(prev => {
-      let updated: InvoiceItem[];
-      if (editingIndex !== null) {
-        updated = [...prev];
-        updated[editingIndex] = { ...newItem, sno: editingIndex + 1 };
-        updated = updated.map((item, idx) => ({ ...item, sno: idx + 1 }));
-      } else {
-        updated = [...prev, newItem];
+      // Handle case when no subproduct is selected
+      let selected = null;
+      if (formData.SUBPRODUCTCODE) {
+        selected = filteredProducts?.find(
+          (f: SubProduct) => f && f.subProductCode?.toString() === formData.SUBPRODUCTCODE
+        );
       }
-      return updated;
-    });
 
-    toaster.create({
-      title: "Success",
-      description: editingIndex !== null ? "Item updated successfully" : "Item added successfully",
-      type: "success",
-      duration: 2000,
-    });
+      // If no subproduct selected, create a basic item with available data
+      const newItem: InvoiceItem = {
+        sno: editingIndex !== null ? editingIndex + 1 : invoiceItems.length + 1,
+        productName: selected?.subProductName || formData.PRODUCTCODE || "Unknown Product",
+        vendorName: vendors.find(v => v.value === formData.VENDORCODE)?.label || "",
+        qty: Number(formData.PIECES),
+        uom: selected?.uom || "",
+        rate: Number(formData.RATE) || 0,
+        discPer: formData.DISCPER || 0,
+        discount: formData.DISCOUNTAMOUNT || 0,
+        sellingRate: Number(formData.SELLINGRATE) || 0,
+        amount: formData.AMOUNT || 0,
+        grossAmount: (formData.AMOUNT || 0) - (formData.DISCOUNTAMOUNT || 0),
+        igst: formData.IGSTAMOUNT || 0,
+        cgst: formData.CGSTAMOUNT || 0,
+        sgst: formData.SGSTAMOUNT || 0,
+        netAmount: formData.NETAMOUNT || 0,
+        VENDORCODE: formData.VENDORCODE,
+        INVOICENO: formData.INVOICENO,
+        BILLDATE: formData.BILLDATE,
+        ORIONBARCODE: formData.ORIONBARCODE,
+        PRODUCTCODE: formData.PRODUCTCODE,
+        SUBPRODUCTCODE: formData.SUBPRODUCTCODE || "", // Allow empty string
+        RATE: Number(formData.RATE),
+        WEIGHT: Number(formData.WEIGHT),
+        MRP: Number(formData.MRP),
+        SELLINGRATE: Number(formData.SELLINGRATE),
+        AMOUNT: formData.AMOUNT,
+        IGSTAMOUNT: formData.IGSTAMOUNT,
+        CGSTAMOUNT: formData.CGSTAMOUNT,
+        SGSTAMOUNT: formData.SGSTAMOUNT,
+        HSNCODE: formData.HSNCODE,
+        HSNTAXCODE: formData.HSNTAXCODE,
+        DISCOUNTAMOUNT: formData.DISCOUNTAMOUNT,
+        DISCPER: formData.DISCPER,
+        PIECES: Number(formData.PIECES),
+      };
 
-    setFormData(prev => ({ ...initialFormData, BILLDATE: prev.BILLDATE }));
-    setIsProductDisabled(false);
-    setIsSubProductDisabled(false);
-    setSelectedSubProduct(null);
-    setEditingIndex(null);
-    setSubProducts([]);
-  } finally {
-    setTimeout(() => {
-      addItemRef.current = false;
-    }, 50);
-  }
-}, [formData, filteredProducts, vendors, editingIndex, invoiceItems.length, validateForm]);
+      setInvoiceItems(prev => {
+        let updated: InvoiceItem[];
+        if (editingIndex !== null) {
+          updated = [...prev];
+          updated[editingIndex] = { ...newItem, sno: editingIndex + 1 };
+          updated = updated.map((item, idx) => ({ ...item, sno: idx + 1 }));
+        } else {
+          updated = [...prev, newItem];
+        }
+        return updated;
+      });
+
+      toaster.create({
+        title: "Success",
+        description: editingIndex !== null ? "Item updated successfully" : "Item added successfully",
+        type: "success",
+        duration: 2000,
+      });
+
+      setFormData(prev => ({
+        ...initialFormData, INVOICENO: prev.INVOICENO || initialFormData.INVOICENO,
+        BILLDATE: prev.BILLDATE || initialFormData.BILLDATE,
+        VENDORCODE: prev.VENDORCODE || initialFormData.VENDORCODE,
+      }));
+      setIsProductDisabled(false);
+      setIsSubProductDisabled(false);
+      setSelectedSubProduct(null);
+      setEditingIndex(null);
+      setSubProducts([]);
+    } finally {
+      setTimeout(() => {
+        addItemRef.current = false;
+      }, 50);
+    }
+  }, [formData, filteredProducts, vendors, editingIndex, invoiceItems.length, validateForm]);
 
   // Edit item
   const handleEditItem = useCallback((index: number) => {
@@ -823,89 +877,131 @@ const handleAddItem = useCallback(() => {
   }, [handleClearForm]);
 
   // Save all
-  const handleSaveAll = useCallback(() => {
-    if (invoiceItems.length === 0) return;
-
-    const payloadArray = invoiceItems.map((item, index) => {
-      const amount = Number(item.AMOUNT || 0);
-      const cgstAmount = Number(item.CGSTAMOUNT || 0);
-      const sgstAmount = Number(item.SGSTAMOUNT || 0);
-      const igstAmount = Number(item.IGSTAMOUNT || 0);
-
-      const taxAmount = cgstAmount + sgstAmount + igstAmount;
-      const totalAmount = amount + taxAmount;
-      const sub = filteredProducts?.find(
-        (f: any) => f.subProductCode?.toString() === item.SUBPRODUCTCODE
-      )
-
-      const useBelow = amount < (sub?.belowSalesAmount || 0)
-
-      const cgstPer = useBelow ? sub?.belowCgstTaxCode || 0 : sub?.aboveCgstTaxCode || 0
-      const sgstPer = useBelow ? sub?.belowSgstTaxCode || 0 : sub?.aboveSgstTaxCode || 0
-      const igstPer = useBelow ? sub?.belowIgstTaxCode || 0 : sub?.aboveIgstTaxCode || 0
-
-      const taxPer = cgstPer + sgstPer + igstPer
-
-      return {
-        VENDORCODE: Number(item.VENDORCODE || formData.VENDORCODE),
-        ORIONBARCODE: item.ORIONBARCODE || formData.ORIONBARCODE || "", // <- always form value or empty string
-        PRODUCTCODE: Number(item.PRODUCTCODE || 0),
-        SUBPRODUCTCODE: Number(item.SUBPRODUCTCODE || 0),
-
-        PIECES: Number(item.qty || 0),
-        WEIGHT: Number(item.WEIGHT || 0),
-
-        SELLINGRATE: Number(item.SELLINGRATE || 0),
-        MRP: Number(item.MRP || 0),
-        PURRATE: Number(item.RATE || 0),
-
-        AMOUNT: amount,
-        TOTALAMOUNT: totalAmount,
-
-        HSNCODE: item.HSNCODE || "",
-        HSNTAXCODE: Number(item.HSNTAXCODE || 0),
-
-        TAXPER: taxPer,
-        TAXAMOUNT: taxAmount,
-
-        CGSTPER: cgstPer,
-        CGSTAMOUNT: cgstAmount,
-
-        SGSTPER: sgstPer,
-        SGSTAMOUNT: sgstAmount,
-
-        IGSTPER: igstPer,
-        IGSTAMOUNT: igstAmount,
-
-        INVOICENO: item.INVOICENO || formData.INVOICENO,
-        BILLDATE: item.BILLDATE || formData.BILLDATE,
-        IPID: 1,
-      };
+  // Save all
+// Save all
+const handleSaveAll = useCallback(() => {
+  if (invoiceItems.length === 0) {
+    toaster.create({
+      title: "Validation Error",
+      description: "No items to save",
+      type: "warning",
+      duration: 3000,
     });
+    return;
+  }
 
-    console.log("Payload array to send:", payloadArray);
+  // Validate required fields for all items
+  const invalidItems = invoiceItems.filter(item =>
+    !item.VENDORCODE ||
+    !item.INVOICENO ||
+    !item.BILLDATE ||
+    !item.SUBPRODUCTCODE
+  );
 
-    createInvoice.mutate(payloadArray, {
-      onSuccess: () => {
-        toaster.create({
-          title: "Success",
-          description: `${invoiceItems.length} items saved successfully`,
-          type: "success",
-          duration: 3000,
-        });
-
-        handleClearAll();
-      },
-      onError: (error: any) => {
-        toaster.create({
-          title: "Error",
-          description: `Failed to save items: ${error.message}`,
-          type: "error",
-          duration: 5000,
-        });
-      },
+  if (invalidItems.length > 0) {
+    toaster.create({
+      title: "Validation Error",
+      description: "Some items are missing required fields (Vendor, Invoice No, or Product)",
+      type: "warning",
+      duration: 3000,
     });
-  }, [invoiceItems, formData, createInvoice, handleClearAll]);
+    return;
+  }
+
+  const payloadArray = invoiceItems.map((item) => {
+    // Find the subproduct to get tax percentages
+    const sub = filteredProducts?.find(
+      (f: any) => f?.subProductCode?.toString() === item.SUBPRODUCTCODE?.toString()
+    );
+
+    const amount = Number(item.AMOUNT || 0);
+    const grossAmount = Number(item.grossAmount || amount);
+
+    // Determine if below threshold for tax calculation
+    const useBelow = grossAmount < (sub?.belowSalesAmount || 0);
+
+    // Get tax percentages based on threshold (using percentage fields)
+    let cgstPer = 0;
+    let sgstPer = 0;
+    let igstPer = 0;
+
+    if (useBelow) {
+      // Below threshold percentages
+      cgstPer = sub?.belowCgstTaxPer || 0;
+      sgstPer = sub?.belowSgstTaxPer || 0;
+      igstPer = sub?.belowIgstTaxPer || 0;
+    } else {
+      // Above threshold percentages
+      cgstPer = sub?.aboveCgstTaxPer || 0;
+      sgstPer = sub?.aboveSgstTaxPer || 0;
+      igstPer = sub?.aboveIgstTaxPer || 0;
+    }
+
+    const taxPer = cgstPer + sgstPer + igstPer;
+    const taxAmount = (item.cgst || 0) + (item.sgst || 0) + (item.igst || 0);
+    const totalAmount = grossAmount + taxAmount;
+
+    // Match the exact payload structure from your example
+    return {
+      VENDORCODE: Number(item.VENDORCODE),
+      ORIONBARCODE: item.ORIONBARCODE || "",
+      PRODUCTCODE: Number(item.PRODUCTCODE || 0),
+      SUBPRODUCTCODE: Number(item.SUBPRODUCTCODE || 0),
+
+      PIECES: Number(item.qty || 0),
+      WEIGHT: Number(item.WEIGHT || 0),
+
+      SELLINGRATE: Number(item.SELLINGRATE || 0),
+      MRP: Number(item.MRP || 0),
+      PURRATE: Number(item.RATE || 0),
+
+      AMOUNT: amount,
+      TOTALAMOUNT: totalAmount,
+
+      HSNCODE: item.HSNCODE || "",
+      HSNTAXCODE: Number(item.HSNTAXCODE || 0),
+
+      TAXPER: taxPer,
+      TAXAMOUNT: taxAmount,
+
+      CGSTPER: cgstPer,
+      CGSTAMOUNT: Number(item.cgst || 0),
+
+      SGSTPER: sgstPer,
+      SGSTAMOUNT: Number(item.sgst || 0),
+
+      IGSTPER: igstPer,
+      IGSTAMOUNT: Number(item.igst || 0),
+
+      INVOICENO: item.INVOICENO || formData.INVOICENO,
+      BILLDATE: item.BILLDATE || formData.BILLDATE,
+      IPID: 1,
+    };
+  });
+
+  console.log("Payload array to send:", JSON.stringify(payloadArray, null, 2));
+
+  createInvoice.mutate(payloadArray, {
+    onSuccess: () => {
+      toaster.create({
+        title: "Success",
+        description: `${invoiceItems.length} items saved successfully`,
+        type: "success",
+        duration: 3000,
+      });
+      handleClearAll();
+    },
+    onError: (error: any) => {
+      console.error("Save error:", error);
+      toaster.create({
+        title: "Error",
+        description: `Failed to save items: ${error?.message || "Unknown error"}`,
+        type: "error",
+        duration: 5000,
+      });
+    },
+  });
+}, [invoiceItems, formData, filteredProducts, createInvoice, handleClearAll]);
 
   // Navigation
   const fieldSequence = useMemo(() => fields.map(f => f.name), [fields]);

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
     Box,
     Button,
@@ -23,7 +23,7 @@ import { useTheme } from "@/context/theme/themeContext";
 import { Toaster } from "@/components/ui/toaster";
 import { usePrint } from "@/context/print/usePrintContext";
 import { useRouter } from "next/navigation";
-
+import axios from "axios";
 import { CustomTable } from "@/component/table/CustomTable";
 import {
     useAllVendors,
@@ -41,6 +41,13 @@ import { DynamicForm } from "@/component/form/DynamicForm";
 import { useEnterNavigation } from "@/component/form/useEnterNavigation";
 import { DeleteDialog } from "@/components/ui/DeleteDialog";
 import { VendorDetailsDialog } from "@/components/ui/VendorDetailsDialog";
+
+// Define the StateResponse type
+interface StateResponse {
+    STATECODE?: string;
+    STATENAME: string;
+    COUNTRYCODE?: string;
+}
 
 function VendorMaster() {
     const { theme } = useTheme();
@@ -67,6 +74,70 @@ function VendorMaster() {
     const { mutate: deleteVendor, isPending: isDeleting } = useDeleteVendor();
 
     const isSaving = isCreating || isUpdating;
+
+
+    /* -------------------- STATE OPTIONS -------------------- */
+    const [stateOptions, setStateOptions] = useState<{ label: string; value: string }[]>([]);
+    const [isLoadingStates, setIsLoadingStates] = useState(false);
+
+    useEffect(() => {
+        const fetchStates = async () => {
+            setIsLoadingStates(true);
+            try {
+                const response = await axios.get<StateResponse[]>(
+                    "https://rtmdepart.brightechsoftware.com/api/v1/state"
+                );
+
+                const states = response.data.map((state) => ({
+                    label: state.STATENAME.toUpperCase(),
+                    value: state.STATENAME.toUpperCase(),
+                }));
+
+                // Sort states alphabetically
+                states.sort((a, b) => a.label.localeCompare(b.label));
+                
+                setStateOptions(states);
+            } catch (error) {
+                console.error("Error fetching states:", error);
+                toastError("Failed to load states");
+
+                // Fallback hardcoded uppercase
+                setStateOptions([
+                    { label: "TAMIL NADU", value: "TAMIL NADU" },
+                    { label: "KERALA", value: "KERALA" },
+                    { label: "KARNATAKA", value: "KARNATAKA" },
+                    { label: "ANDHRA PRADESH", value: "ANDHRA PRADESH" },
+                    { label: "TELANGANA", value: "TELANGANA" },
+                    { label: "MAHARASHTRA", value: "MAHARASHTRA" },
+                    { label: "GUJARAT", value: "GUJARAT" },
+                    { label: "RAJASTHAN", value: "RAJASTHAN" },
+                    { label: "UTTAR PRADESH", value: "UTTAR PRADESH" },
+                    { label: "MADHYA PRADESH", value: "MADHYA PRADESH" },
+                    { label: "WEST BENGAL", value: "WEST BENGAL" },
+                    { label: "DELHI", value: "DELHI" },
+                ].sort((a, b) => a.label.localeCompare(b.label)));
+            } finally {
+                setIsLoadingStates(false);
+            }
+        };
+
+        fetchStates();
+    }, []);
+
+    /* -------------------- UPDATE FORM CONFIG WITH STATE OPTIONS -------------------- */
+    // Create a memoized version of VendorConfig with updated state options
+    const updatedVendorConfig = useMemo(() => {
+        return VendorConfig.map(field => {
+            if (field.name === "STATE") {
+                return {
+                    ...field,
+                    options: stateOptions,
+                    placeholder: isLoadingStates ? "Loading states..." : "Select state"
+                };
+            }
+            return field;
+        });
+    }, [stateOptions, isLoadingStates]);
 
     /* -------------------- FORM STATE -------------------- */
     const [form, setForm] = useState<VendorForm>({
@@ -147,123 +218,139 @@ function VendorMaster() {
     }, [highlightedId]);
 
     /* -------------------- VALIDATION -------------------- */
+    const requiredFields = [
+        "VENDORNAME",
+        "LASTNAME",
+        "PANNO",
+        "GSTNUMBER",
+        "ADDRESS1",
+        "AREA",
+        "CITY",
+        "DISTRICT",
+        "STATE",
+        "COUNTRY",
+        "PINCODE",
+        "MOBILENO",
+        "EMAILID",
+        "CONTACTPERSON",
+    ];
+
     const validateForm = (): Record<string, string> => {
         const errors: Record<string, string> = {};
 
-        // Required fields validation
-        if (!form.VENDORNAME?.trim()) errors.VENDORNAME = "Vendor Name is required";
-        if (!form.ADDRESS1?.trim()) errors.ADDRESS1 = "Address 1 is required";
-        if (!form.AREA?.trim()) errors.AREA = "Area is required";
-        if (!form.CITY?.trim()) errors.CITY = "City is required";
-        if (!form.DISTRICT?.trim()) errors.DISTRICT = "District is required";
-        if (!form.STATE?.trim()) errors.STATE = "State is required";
-        if (!form.COUNTRY?.trim()) errors.COUNTRY = "Country is required";
-        if (!form.PINCODE?.trim()) errors.PINCODE = "Pincode is required";
-        if (!form.MOBILENO?.trim()) errors.MOBILENO = "Mobile No is required";
-        if (!form.CONTACTPERSON?.trim()) errors.CONTACTPERSON = "Contact Person is required";
-        if (!form.ACTIVE) errors.ACTIVE = "Active selection is required";
+        requiredFields.forEach((field) => {
+            const value = form[field as keyof VendorForm]?.toString().trim();
+            if (!value) {
+                errors[field] = `${field.replace(/_/g, " ")} is required`;
+            }
+        });
 
-        // Format validations
-        if (form.MOBILENO?.trim() && !/^\d{10}$/.test(form.MOBILENO.trim())) {
+        // Field-specific validations
+        if (form.MOBILENO && !/^\d{10}$/.test(form.MOBILENO)) {
             errors.MOBILENO = "Mobile No must be 10 digits";
         }
 
-        if (form.PHONENO?.trim() && !/^\d+$/.test(form.PHONENO.trim())) {
+        if (form.PHONENO && !/^\d+$/.test(form.PHONENO)) {
             errors.PHONENO = "Phone No must contain only numbers";
         }
 
-        if (form.EMAILID?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.EMAILID.trim())) {
-            errors.EMAILID = "Please enter a valid email address";
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (form.EMAILID && !emailRegex.test(form.EMAILID)) {
+            errors.EMAILID = "Invalid Email";
         }
 
-        if (form.PINCODE?.trim() && !/^\d{6}$/.test(form.PINCODE.trim())) {
+        if (form.PANNO && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(form.PANNO)) {
+            errors.PANNO = "PAN format must be ABCDE1234F";
+        }
+
+        const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+        if (form.GSTNUMBER && !gstRegex.test(form.GSTNUMBER)) {
+            errors.GSTNUMBER = "Invalid GST Number";
+        }
+
+        if (form.PINCODE && !/^\d{6}$/.test(form.PINCODE)) {
             errors.PINCODE = "Pincode must be 6 digits";
-        }
-
-        if (form.PANNO?.trim() && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(form.PANNO.trim())) {
-            errors.PANNO = "PAN must be in format: ABCDE1234F";
-        }
-
-        if (form.GSTNUMBER?.trim()) {
-            const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[Z]{1}[0-9A-Z]{1}$/;
-            if (!gstRegex.test(form.GSTNUMBER.trim())) {
-                errors.GSTNUMBER = "Please enter a valid GST number";
-            }
         }
 
         return errors;
     };
 
     const validateField = (field: string, value: any): string => {
-        const fieldErrors: Record<string, string> = {};
+        const trimmedValue = value?.toString().trim();
 
         switch (field) {
             case "VENDORNAME":
-                if (!value?.trim()) return "Vendor Name is required";
-                break;
+            case "LASTNAME":
             case "ADDRESS1":
-                if (!value?.trim()) return "Address 1 is required";
-                break;
             case "AREA":
-                if (!value?.trim()) return "Area is required";
-                break;
             case "CITY":
-                if (!value?.trim()) return "City is required";
-                break;
             case "DISTRICT":
-                if (!value?.trim()) return "District is required";
-                break;
             case "STATE":
-                if (!value?.trim()) return "State is required";
-                break;
             case "COUNTRY":
-                if (!value?.trim()) return "Country is required";
-                break;
-            case "PINCODE":
-                if (!value?.trim()) return "Pincode is required";
-                if (value?.trim() && !/^\d{6}$/.test(value.trim())) return "Pincode must be 6 digits";
-                break;
-            case "MOBILENO":
-                if (!value?.trim()) return "Mobile No is required";
-                if (value?.trim() && !/^\d{10}$/.test(value.trim())) return "Mobile No must be 10 digits";
-                break;
             case "CONTACTPERSON":
-                if (!value?.trim()) return "Contact Person is required";
+                if (!trimmedValue) return `${field.replace(/_/g, " ")} is required`;
                 break;
+
+            case "PINCODE":
+                if (!trimmedValue) return "Pincode is required";
+                if (!/^\d{6}$/.test(trimmedValue)) return "Pincode must be 6 digits";
+                break;
+
+            case "MOBILENO":
+                if (!trimmedValue) return "Mobile No is required";
+                if (!/^\d{10}$/.test(trimmedValue)) return "Mobile No must be 10 digits";
+                break;
+
+            case "PHONENO":
+                if (trimmedValue && !/^\d+$/.test(trimmedValue)) return "Phone No must contain only numbers";
+                break;
+
             case "EMAILID":
-                if (value?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())) return "Please enter a valid email address";
+                if (trimmedValue && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedValue)) return "Invalid Email";
                 break;
+
             case "PANNO":
-                if (value?.trim() && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(value.trim())) return "PAN must be in format: ABCDE1234F";
+                if (trimmedValue && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(trimmedValue)) return "PAN format must be ABCDE1234F";
                 break;
+
             case "GSTNUMBER":
-                if (value?.trim()) {
-                    const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[Z]{1}[0-9A-Z]{1}$/;
-                    if (!gstRegex.test(value.trim())) return "Please enter a valid GST number";
+                if (trimmedValue) {
+                    const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+                    if (!gstRegex.test(trimmedValue)) return "Invalid GST Number";
                 }
                 break;
-            case "PHONENO":
-                if (value?.trim() && !/^\d+$/.test(value.trim())) return "Phone No must contain only numbers";
+
+            case "HSNSTATECODE":
+                if (!trimmedValue) return "HSN State Code is required";
                 break;
         }
+
         return "";
     };
 
     /* -------------------- HANDLERS -------------------- */
     const handleChange = (field: string | number, value: any) => {
+        // Convert to uppercase for text fields (except for select fields where we want to preserve the value)
+        let processedValue = value;
+        if (typeof field === 'string' && 
+            !['STATE', 'ACTIVE'].includes(field) && 
+            typeof value === 'string') {
+            processedValue = value.toUpperCase();
+        }
+
         setForm(prev => ({
             ...prev,
-            [field]: value
+            [field]: processedValue
         }));
 
-        const fieldKey = String(field); // convert to string for Sets and objects
+        const fieldKey = String(field);
 
         // Mark field as touched
         setTouchedFields(prev => new Set(prev).add(fieldKey));
 
         // Validate field on change if it's been touched
         if (touchedFields.has(fieldKey)) {
-            const error = validateField(fieldKey, value);
+            const error = validateField(fieldKey, processedValue);
             setFormErrors(prev => ({
                 ...prev,
                 [fieldKey]: error
@@ -479,14 +566,14 @@ function VendorMaster() {
     };
 
     /* -------------------- FORM CONFIG -------------------- */
-    const vendorFormFields = VendorConfig;
+    const vendorFormFields = updatedVendorConfig; // Use the updated config with state options
     const fieldSequence = vendorFormFields.map(f => f.name);
 
     const { register, focusNext } = useEnterNavigation(fieldSequence, () => {
         handleSave();
     });
 
-    // Split fields into two columns
+    // Split fields into four columns
     const chunkSize = Math.ceil(vendorFormFields.length / 4);
 
     const firstColumnFields = vendorFormFields.slice(0, chunkSize);
@@ -555,6 +642,7 @@ function VendorMaster() {
                                             register={register}
                                             focusNext={focusNext}
                                             errors={formErrors}
+                                            onBlur={handleBlur}
                                             grid={{ columns: 1 }}
                                         />
                                     </VStack>
@@ -567,6 +655,7 @@ function VendorMaster() {
                                             register={register}
                                             focusNext={focusNext}
                                             errors={formErrors}
+                                            onBlur={handleBlur}
                                             grid={{ columns: 1 }}
                                         />
                                     </VStack>
@@ -579,6 +668,7 @@ function VendorMaster() {
                                             register={register}
                                             focusNext={focusNext}
                                             errors={formErrors}
+                                            onBlur={handleBlur}
                                             grid={{ columns: 1 }}
                                         />
                                     </VStack>
@@ -591,6 +681,7 @@ function VendorMaster() {
                                             register={register}
                                             focusNext={focusNext}
                                             errors={formErrors}
+                                            onBlur={handleBlur}
                                             grid={{ columns: 1 }}
                                         />
                                     </VStack>
@@ -616,7 +707,7 @@ function VendorMaster() {
                             >
                                 <HStack gap={1}>
                                     <IoIosExit />
-                                    <Text>Exit</Text>
+                                    <Text>CLEAR</Text>
                                 </HStack>
                             </Button>
                         </HStack>

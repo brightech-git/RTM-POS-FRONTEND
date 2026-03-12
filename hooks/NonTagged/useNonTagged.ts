@@ -1,81 +1,42 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-
 import {
   getAllNonTaged,
-  getNonTagedById,
+
   syncNonTaged,
-  updateNonTaged,
-  deleteNonTaged,
-  filterNonTaged
+ 
+  filterNonTaged,
 } from "@/service/NonTaggedService";
+import { NonTaged, NonTagedFilter, NonTagedResponse } from "@/types/NonTagged/NonTagged";
 
-
-// 🔹 Get All
+// 🔹 Get All NonTaged
 export const useAllNonTaged = () => {
-  return useQuery({
+  return useQuery<NonTagedResponse>({
     queryKey: ["nontaged"],
     queryFn: getAllNonTaged,
     staleTime: 1000 * 60 * 5,
   });
 };
-
-
-// 🔹 Get By Id
-export const useNonTagedById = (rowSign: string) => {
-  return useQuery({
-    queryKey: ["nontaged", rowSign],
-    queryFn: () => getNonTagedById(rowSign),
-    enabled: !!rowSign,
-  });
-};
-
-
-// 🔹 Sync
+// 🔹 Sync NonTaged
+// 🔹 Sync NonTaged
 export const useSyncNonTaged = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ from, to }: { from: string; to: string }) =>
-      syncNonTaged(from, to),
+    mutationFn: (params: {
+      from?: string;
+      to?: string;
+      billNos?: number[];  // Changed to array
+      vendorCode?: number;
+      productCode?: number;
+    }) => syncNonTaged(params),
 
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["nontaged"] });
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["nontaged"] }),
   });
 };
 
 
-// 🔹 Update
-export const useUpdateNonTaged = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ rowSign, item }: { rowSign: string; item: any }) =>
-      updateNonTaged(rowSign, item),
-
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["nontaged"] });
-    },
-  });
-};
-
-
-// 🔹 Delete
-export const useDeleteNonTaged = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: deleteNonTaged,
-
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["nontaged"] });
-    },
-  });
-};
-
-
-// 🔹 Filter
-export const useFilterNonTaged = (filters: any) => {
+// 🔹 Filter NonTaged
+export const useFilterNonTaged = (filters: NonTagedFilter) => {
   return useQuery({
     queryKey: ["nontaged", "filter", filters],
     queryFn: () => filterNonTaged(filters),

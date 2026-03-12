@@ -1,84 +1,48 @@
 import { axiosInstance } from "@/api/axiosInstance";
-import { NonTaged, NonTagedFilter } from "@/types/NonTagged/NonTagged";
-
+import { NonTaged, NonTagedFilter, NonTagedResponse } from "@/types/NonTagged/NonTagged";
 
 // 🔹 Get All NonTaged
-export const getAllNonTaged = async () => {
-  try {
-    const { data } = await axiosInstance.get("/nontaged");
-    return data;
-  } catch (err) {
-    console.warn("Error fetching NonTaged", err);
-    return err;
-  }
+export const getAllNonTaged = async (): Promise<NonTagedResponse> => {
+  const { data } = await axiosInstance.get("/nontaged/filter");
+  return data;
 };
 
 
-// 🔹 Sync invoices (create)
-export const syncNonTaged = async (from: string, to: string) => {
-  try {
-    const { data } = await axiosInstance.post(
-      `/nontaged/sync?from=${from}&to=${to}`
-    );
-    return data;
-  } catch (err) {
-    console.warn("Error syncing NonTaged", err);
-    return err;
+
+// 🔹 Sync invoices (POST /sync)
+// 🔹 Sync invoices (POST /sync)
+export const syncNonTaged = async (params: {
+  from?: string;
+  to?: string;
+  billNos?: number[];  // Changed to array
+  vendorCode?: number;
+  productCode?: number;
+}) => {
+  const query = new URLSearchParams();
+
+  if (params.from) query.append("fromDate", params.from);
+  if (params.to) query.append("toDate", params.to);
+  if (params.billNos && params.billNos.length > 0) {
+    // If your API supports multiple bill numbers
+    params.billNos.forEach(billNo => query.append("billNo", billNo.toString()));
   }
+  if (params.vendorCode) query.append("vendorCode", params.vendorCode.toString());
+  if (params.productCode) query.append("productCode", params.productCode.toString());
+
+  const { data } = await axiosInstance.post(`/nontaged/sync?${query.toString()}`);
+  return data;
 };
 
-
-// 🔹 Get by ID
-export const getNonTagedById = async (rowSign: string) => {
-  try {
-    const { data } = await axiosInstance.get(`/nontaged/${rowSign}`);
-    return data;
-  } catch (err) {
-    console.warn("Error fetching NonTaged", err);
-    return err;
-  }
-};
-
-
-// 🔹 Update
-export const updateNonTaged = async (rowSign: string, item: NonTaged) => {
-  try {
-    const { data } = await axiosInstance.put(`/nontaged/${rowSign}`, item);
-    return data;
-  } catch (err) {
-    console.warn("Error updating NonTaged", err);
-    return err;
-  }
-};
-
-
-// 🔹 Delete
-export const deleteNonTaged = async (rowSign: string) => {
-  try {
-    const { data } = await axiosInstance.delete(`/nontaged/${rowSign}`);
-    return data;
-  } catch (err) {
-    console.warn("Error deleting NonTaged", err);
-    return err;
-  }
-};
-
-
-// 🔹 Filter
+// 🔹 Filter NonTaged
 export const filterNonTaged = async (filters: NonTagedFilter) => {
-  try {
-    const params = new URLSearchParams();
+  const query = new URLSearchParams();
 
-    if (filters.from) params.append("from", filters.from);
-    if (filters.to) params.append("to", filters.to);
-    if (filters.billNo) params.append("billNo", filters.billNo.toString());
-    if (filters.vendorCode) params.append("vendorCode", filters.vendorCode.toString());
-    if (filters.productCode) params.append("productCode", filters.productCode.toString());
+  if (filters.from) query.append("fromDate", filters.from);
+  if (filters.to) query.append("toDate", filters.to);
+  if (filters.billNo) query.append("billNo", filters.billNo.toString());
+  if (filters.vendorCode) query.append("vendorCode", filters.vendorCode.toString());
+  if (filters.productCode) query.append("productCode", filters.productCode.toString());
 
-    const { data } = await axiosInstance.get(`/nontaged/filter?${params.toString()}`);
-    return data;
-  } catch (err) {
-    console.warn("Error filtering NonTaged", err);
-    return err;
-  }
+  const { data } = await axiosInstance.get(`/nontaged/filter?${query.toString()}`);
+  return data;
 };

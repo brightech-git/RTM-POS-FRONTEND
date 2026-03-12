@@ -40,6 +40,7 @@ function CompanyMaster() {
 
     /* -------------------- API HOOKS -------------------- */
     const { data, isLoading, refetch: companyRefetch } = useAllCompanies();
+    console.log("Company's data",data)
 
     const { mutate: createCompany, isPending: isCreating } = useCreateCompany();
     const { mutate: updateCompany, isPending: isUpdating } = useUpdateCompany();
@@ -269,33 +270,26 @@ function CompanyMaster() {
         }
     };
 
-    /* -------------------- TABLE COLUMNS -------------------- */
+    /* -------------------- TABLE COLUMNS - EXPANDED TO SHOW ALL FIELDS -------------------- */
     const CompanyColumn = [
         { key: 'sno', label: 'S.No' },
         { key: 'COMPANYCODE', label: 'Company Id' },
         { key: 'COMPANYNAME', label: 'Company Name' },
         { key: 'COMPANYSHORTNAME', label: 'Short Name' },
+        { key: 'ADDRESS1', label: 'Address 1' },
+        { key: 'ADDRESS2', label: 'Address 2' },
+        { key: 'AREA', label: 'Area' },
+        { key: 'CITY', label: 'City' },
+        { key: 'PINCODE', label: 'Pincode' },
+        { key: 'MOBILENO', label: 'Mobile No' },
+        { key: 'GSTTINNO', label: 'GSTIN' },
         { key: 'actions', label: 'Actions' },
     ];
 
     // Map companies for display
-    const companies = (data?.data || []).map((c: Company) => ({
-        COMPANYCODE: c.COMPANYCODE,
-        COMPANYNAME: c.COMPANYNAME,
-        COMPANYSHORTNAME: c.COMPANYSHORTNAME || "",
-        ADDRESS1: c.ADDRESS1 || "",
-        ADDRESS2: c.ADDRESS2 || "",
-        AREA: c.AREA || "",
-        CITY: c.CITY || "",
-        PINCODE: c.PINCODE || "",
-        MOBILENO: c.MOBILENO || "",
-        GSTTINNO: c.GSTTINNO || "",
-        PASSWORD: "",
-        SERVERNAME: c.SERVERNAME || "",
-        PORTNO: c.PORTNO || "",
-        USERID: c.USERID || "",
-         ACTIVE: c.ACTIVE || "Y", // <-- provide default if missing
-    }));
+  const companies: Company[] = data ?? [];
+
+
 
     /* -------------------- EXPORT HANDLER -------------------- */
     const handleExport = (option: string) => {
@@ -470,7 +464,7 @@ function CompanyMaster() {
                                 <AiOutlineSave /> {editId ? "Update" : "Save"}
                             </Button>
                             <Button size="xs" colorPalette="blue" onClick={resetForm}>
-                                <IoIosExit /> Exit
+                                <IoIosExit /> CLEAR
                             </Button>
                         </HStack>
                     </VStack>
@@ -518,6 +512,13 @@ function CompanyMaster() {
                                     <Table.Cell>{company.COMPANYCODE}</Table.Cell>
                                     <Table.Cell>{company.COMPANYNAME}</Table.Cell>
                                     <Table.Cell>{company.COMPANYSHORTNAME}</Table.Cell>
+                                    <Table.Cell>{company.ADDRESS1 || '-'}</Table.Cell>
+                                    <Table.Cell>{company.ADDRESS2 || '-'}</Table.Cell>
+                                    <Table.Cell>{company.AREA || '-'}</Table.Cell>
+                                    <Table.Cell>{company.CITY || '-'}</Table.Cell>
+                                    <Table.Cell>{company.PINCODE || '-'}</Table.Cell>
+                                    <Table.Cell>{company.MOBILENO || '-'}</Table.Cell>
+                                    <Table.Cell>{company.GSTTINNO || '-'}</Table.Cell>
                                     <Table.Cell>
                                         <Box display="flex" justifyContent="center">
                                             <FaEdit

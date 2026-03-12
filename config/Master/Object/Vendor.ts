@@ -26,6 +26,7 @@ export const VendorConfig: FormField[] = [
 {
     name: "LASTNAME",
     label: "Last Name",
+     required: true,
     type: "text",
     width: "150px",
     size: "xs",
@@ -35,6 +36,7 @@ export const VendorConfig: FormField[] = [
 {
     name: "PANNO",
     label: "PAN No",
+     required: true,
     type: "text",
     width: "150px",
     size: "xs",
@@ -62,20 +64,12 @@ export const VendorConfig: FormField[] = [
 {
     name: "GSTNUMBER",
     label: "GST Number",
+     required: true,
     type: "text",
     width: "180px",
     size: "xs",
     rounded: "full"
 },
-
-// {
-//     name: "HSNSTATECODE",
-//     label: "HSN State Code",
-//     type: "text",
-//     width: "120px",
-//     size: "xs",
-//     rounded: "full"
-// },
 
 {
     name: "ADDRESS1",
@@ -138,11 +132,12 @@ export const VendorConfig: FormField[] = [
 {
     name: "STATE",
     label: "State",
-    type: "text",
+    type: "select", // Changed from "text" to "select"
     required: true,
     width: "150px",
     size: "xs",
-    rounded: "full"
+    rounded: "full",
+    options: [] // Will be populated dynamically
 },
 
 {
@@ -187,6 +182,7 @@ export const VendorConfig: FormField[] = [
 {
     name: "EMAILID",
     label: "Email",
+     required: true,
     type: "text",
     width: "200px",
     size: "xs",

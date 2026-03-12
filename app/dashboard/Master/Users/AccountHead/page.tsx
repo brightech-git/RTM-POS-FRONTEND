@@ -58,7 +58,7 @@ function AccountHeadMaster() {
     const { data, isLoading } = useAllCompanies();
     const router = useRouter();
     const { setData, setColumns, setShowSno, title } = usePrint();
-    const companies = data?.data ?? [];
+    const companies = data?? [];
 
     const [search, setSearch] = useState<string>('');
 
@@ -718,7 +718,7 @@ function AccountHeadMaster() {
                                 <AiOutlineSave /> {editId ? "Update" : "Save"}
                             </Button>
                             <Button size="xs" colorPalette="blue" onClick={resetForm}>
-                                <IoIosExit /> Exit
+                                <IoIosExit /> CLEAR
                             </Button>
                         </HStack>
                     </VStack>

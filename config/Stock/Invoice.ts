@@ -18,15 +18,7 @@ export const InvoiceDetailsConfig = ({
   isSubProductDisabled,
 }: InvoiceConfigParams): FormField[] => {
   return [
-    {
-      name: "INVOICENO",
-      label: "INVOICE NO",
-      type: "number",
-      required: true,
-      size: "xs",
-      rounded: "sm",
-      width: "150px",
-    },
+   
     {
       name: "BILLDATE",
       label: "BILL DATE",
@@ -37,6 +29,16 @@ export const InvoiceDetailsConfig = ({
       width: "200px",
       maxDate: todayDate,
       colSpan: 2,
+    },
+     {
+      name: "INVOICENO",
+      label: "INVOICE NO",
+      type: "number",
+      required: true,
+      size: "xs",
+      rounded: "sm",
+      width: "150px",
+        colSpan: 2,
     },
 
     {
@@ -79,7 +81,7 @@ export const InvoiceDetailsConfig = ({
     },
    {
       name: "SUBPRODUCTCODE",
-      label: "SUP PRODUCT NAME",
+      label: "SUB PRODUCT NAME",
       type: "combobox",
       options: subProducts.map((p) => ({
         value: p.value,
@@ -116,7 +118,7 @@ export const InvoiceDetailsConfig = ({
     },
     {
       name: "PIECES",
-      label: "PICES",
+      label: "PIECES",
       type: "number",
       size: "xs",
       rounded: "sm",

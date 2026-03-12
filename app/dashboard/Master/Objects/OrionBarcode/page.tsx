@@ -95,52 +95,54 @@ function OrionBarcodeMaster() {
 
     // Prepare products with string values for the dropdown - like in RateMaster
     const productsForDropdown = useMemo(() => {
-        return products.map((p: any) => ({
-            ...p,
-            PRODUCTCODE: p.PRODUCTCODE?.toString()
-        }));
+        return products
+            .filter((p: any) => p.ORIONBARCODE === "Y") // ✅ Only N
+            .map((p: any) => ({
+                ...p,
+                PRODUCTCODE: p.PRODUCTCODE?.toString()
+            }));
     }, [products]);
 
     // Filter subproducts based on selected product
     const [filteredSubProducts, setFilteredSubProducts] = useState<any[]>([]);
 
     // Filter subproducts when product changes
- useEffect(() => {
-    if (form.PRODUCTCODE && allSubProducts.length > 0) {
+    useEffect(() => {
+        if (form.PRODUCTCODE && allSubProducts.length > 0) {
 
-        const filtered = allSubProducts.filter(
-            (s: any) =>
-                s.product?.PRODUCTCODE?.toString() === form.PRODUCTCODE.toString()
-        );
-
-        setFilteredSubProducts(filtered);
-
-        // ✅ AUTO SELECT if only one subproduct
-        if (filtered.length === 1) {
-            setForm(prev => ({
-                ...prev,
-                SUBPRODUCTCODE: filtered[0].SUBPRODUCTCODE.toString()
-            }));
-            return;
-        }
-
-        // Clear invalid selection
-        if (form.SUBPRODUCTCODE) {
-            const stillValid = filtered.some(
+            const filtered = allSubProducts.filter(
                 (s: any) =>
-                    s.SUBPRODUCTCODE?.toString() === form.SUBPRODUCTCODE?.toString()
+                    s.product?.PRODUCTCODE?.toString() === form.PRODUCTCODE.toString()
             );
 
-            if (!stillValid) {
-                setForm(prev => ({ ...prev, SUBPRODUCTCODE: "" }));
-            }
-        }
+            setFilteredSubProducts(filtered);
 
-    } else {
-        setFilteredSubProducts([]);
-        setForm(prev => ({ ...prev, SUBPRODUCTCODE: "" }));
-    }
-}, [form.PRODUCTCODE, allSubProducts]);
+            // ✅ AUTO SELECT if only one subproduct
+            if (filtered.length === 1) {
+                setForm(prev => ({
+                    ...prev,
+                    SUBPRODUCTCODE: filtered[0].SUBPRODUCTCODE.toString()
+                }));
+                return;
+            }
+
+            // Clear invalid selection
+            if (form.SUBPRODUCTCODE) {
+                const stillValid = filtered.some(
+                    (s: any) =>
+                        s.SUBPRODUCTCODE?.toString() === form.SUBPRODUCTCODE?.toString()
+                );
+
+                if (!stillValid) {
+                    setForm(prev => ({ ...prev, SUBPRODUCTCODE: "" }));
+                }
+            }
+
+        } else {
+            setFilteredSubProducts([]);
+            setForm(prev => ({ ...prev, SUBPRODUCTCODE: "" }));
+        }
+    }, [form.PRODUCTCODE, allSubProducts]);
 
     // Prepare subproducts with string values for the dropdown - like in RateMaster
     const subProductsForDropdown = useMemo(() => {
@@ -155,7 +157,7 @@ function OrionBarcodeMaster() {
         if (!barcode) return;
 
         console.log('Loading barcode for edit:', barcode);
-        
+
         setForm({
             VENDORCODE: barcode.vendor?.VENDORCODE?.toString() || barcode.VENDORCODE?.toString() || "",
             PRODUCTCODE: barcode.product?.PRODUCTCODE?.toString() || barcode.PRODUCTCODE?.toString() || "",
@@ -180,14 +182,14 @@ function OrionBarcodeMaster() {
     }, [highlightedId]);
 
     /* -------------------- HANDLERS -------------------- */
-const handleChange = (field: string | number, value: any) => {
-    console.log("Field changed:", field, value);
+    const handleChange = (field: string | number, value: any) => {
+        console.log("Field changed:", field, value);
 
-    setForm(prev => ({
-        ...prev,
-        [field]: value // ✅ works because object keys in JS can be strings or numbers
-    }));
-};
+        setForm(prev => ({
+            ...prev,
+            [field]: value // ✅ works because object keys in JS can be strings or numbers
+        }));
+    };
 
     const resetForm = () => {
         setEditId(null);
@@ -207,7 +209,7 @@ const handleChange = (field: string | number, value: any) => {
     const handleEdit = (barcode: any) => {
         console.log('Editing barcode:', barcode);
         setEditId(barcode.ORIONID || "");
-        
+
         setForm({
             VENDORCODE: barcode.vendor?.VENDORCODE?.toString() || barcode.VENDORCODE?.toString() || "",
             PRODUCTCODE: barcode.product?.PRODUCTCODE?.toString() || barcode.PRODUCTCODE?.toString() || "",
@@ -218,57 +220,52 @@ const handleChange = (field: string | number, value: any) => {
             SELLINGRATE: barcode.SELLINGRATE?.toString() || "",
             ACTIVE: barcode.ACTIVE || "Y",
         });
-        
+
         ScrollToTop();
     };
 
-  const handleSave = () => {
-    const errors: Record<string, string> = {};
+    const handleSave = () => {
+        const errors: Record<string, string> = {};
 
-    if (!form.VENDORCODE) errors.VENDORCODE = "Vendor is required";
-    if (!form.PRODUCTCODE) errors.PRODUCTCODE = "Product is required";
-    if (!form.ORIONBARCODE?.trim()) errors.ORIONBARCODE = "Barcode is required";
-    if (!form.MRP) errors.MRP = "MRP is required";
-    if (!form.PURRATE) errors.PURRATE = "Purchase Rate is required";
-    if (!form.SELLINGRATE) errors.SELLINGRATE = "Selling Rate is required";
+        // -------------------- REQUIRED FIELDS --------------------
+        if (!form.VENDORCODE) errors.VENDORCODE = "Vendor is required";
+        if (!form.PRODUCTCODE) errors.PRODUCTCODE = "Product is required";
+        if (!form.ORIONBARCODE?.trim()) errors.ORIONBARCODE = "Barcode is required";
+        if (!form.MRP) errors.MRP = "MRP is required";
+        if (!form.PURRATE) errors.PURRATE = "Purchase Rate is required";
+        if (!form.SELLINGRATE) errors.SELLINGRATE = "Selling Rate is required";
 
-    console.log("Form Data:", form);
-    console.log("Validation Errors:", errors);
-
-    setFormErrors(errors);
-
-    if (Object.keys(errors).length > 0) {
-        console.log("Save stopped due to validation errors");
-        return;
-    }
-        // Validate numeric values
-        if (form.MRP && isNaN(Number(form.MRP))) {
-            errors.MRP = "MRP must be a number";
-        } else if (Number(form.MRP) <= 0) errors.MRP = "MRP must be greater than 0";
-        
-        if (form.PURRATE && isNaN(Number(form.PURRATE))) {
-            errors.PURRATE = "Purchase Rate must be a number";
-        } else if (Number(form.PURRATE) <= 0) errors.PURRATE = "Purchase Rate must be greater than 0";
-        
-        if (form.SELLINGRATE && isNaN(Number(form.SELLINGRATE))) {
-            errors.SELLINGRATE = "Selling Rate must be a number";
-        } else if (Number(form.SELLINGRATE) <= 0) errors.SELLINGRATE = "Selling Rate must be greater than 0";
-
-        setFormErrors(errors);
-
-        // Stop if there are validation errors
-        if (Object.keys(errors).length > 0) {
-            return;
+        // -------------------- NUMERIC VALIDATION --------------------
+        if (form.MRP && (isNaN(Number(form.MRP)) || Number(form.MRP) <= 0)) {
+            errors.MRP = "MRP must be a number greater than 0";
+        }
+        if (form.PURRATE && (isNaN(Number(form.PURRATE)) || Number(form.PURRATE) <= 0)) {
+            errors.PURRATE = "Purchase Rate must be a number greater than 0";
+        }
+        if (form.SELLINGRATE && (isNaN(Number(form.SELLINGRATE)) || Number(form.SELLINGRATE) <= 0)) {
+            errors.SELLINGRATE = "Selling Rate must be a number greater than 0";
         }
 
+        // -------------------- SET ERRORS AND SHOW TOAST --------------------
+        setFormErrors(errors);
+
+        if (Object.keys(errors).length > 0) {
+            // Show first error as toast
+            const firstError = Object.values(errors)[0];
+            toastError(firstError); // Using your existing toast function
+            return; // Stop save
+        }
+
+        // -------------------- PREPARE PAYLOAD --------------------
         const payload: Barcode = {
             VENDORCODE: Number(form.VENDORCODE),
             PRODUCTCODE: Number(form.PRODUCTCODE),
             SUBPRODUCTCODE:
-    form.SUBPRODUCTCODE ||
-    filteredSubProducts.length === 1
-        ? Number(form.SUBPRODUCTCODE || filteredSubProducts[0]?.SUBPRODUCTCODE)
-        : undefined,
+                form.SUBPRODUCTCODE
+                    ? Number(form.SUBPRODUCTCODE) // ✅ convert string to number
+                    : filteredSubProducts.length === 1
+                        ? Number(filteredSubProducts[0]?.SUBPRODUCTCODE)
+                        : undefined,
             ORIONBARCODE: form.ORIONBARCODE,
             MRP: Number(form.MRP),
             PURRATE: Number(form.PURRATE),
@@ -276,41 +273,36 @@ const handleChange = (field: string | number, value: any) => {
             ACTIVE: form.ACTIVE,
         };
 
-        console.log('Saving payload:', payload);
+        console.log("Saving barcode payload:", payload);
 
+        // -------------------- SAVE --------------------
         if (editId) {
             // Update existing barcode
-            updateBarcode({
-                ...payload,
-                ORIONID: Number(editId)
-            }, {
-                onSuccess: () => {
-                    refetchBarcodes();
-                    resetForm();
-                    setHighlightedId(Number(editId));
-                    toastUpdated("Barcode");
-                },
-                onError: (error) => {
-                    console.error('Update error:', error);
-                    toastError("Failed to update barcode");
-                },
-            });
+            updateBarcode(
+                { ...payload, ORIONID: Number(editId) },
+                {
+                    onSuccess: () => {
+                        refetchBarcodes();
+                        resetForm();
+                        setHighlightedId(Number(editId));
+                        toastUpdated("Barcode");
+                    },
+                    onError: () => toastError("Failed to update barcode"),
+                }
+            );
         } else {
             // Create new barcode
-            createBarcode({
-                barcode: payload,
-                createdBy: 1 // You might want to get this from auth context
-            }, {
-                onSuccess: () => {
-                    refetchBarcodes();
-                    resetForm();
-                    toastCreated("Barcode");
-                },
-                onError: (error) => {
-                    console.error('Create error:', error);
-                    toastError("Failed to create barcode");
-                },
-            });
+            createBarcode(
+                { barcode: payload, createdBy: 1 }, // adjust createdBy as needed
+                {
+                    onSuccess: () => {
+                        refetchBarcodes();
+                        resetForm();
+                        toastCreated("Barcode");
+                    },
+                    onError: () => toastError("Failed to create barcode"),
+                }
+            );
         }
     };
 
@@ -356,18 +348,18 @@ const handleChange = (field: string | number, value: any) => {
         return subProduct?.SUBPRODUCTNAME || barcode.SUBPRODUCTCODE?.toString() || '-';
     };
 
-  const BarcodeColumns = [
-    { key: "ACTION", label: "Action" },   // 👈 add this
-    { key: "ORIONID", label: "ID" },
-    { key: "VENDORNAME", label: "Vendor" },
-    { key: "PRODUCTNAME", label: "Product" },
-    { key: "SUBPRODUCTNAME", label: "Sub Product" },
-    { key: "ORIONBARCODE", label: "Barcode" },
-    { key: "MRP", label: "MRP (₹)" },
-    { key: "PURRATE", label: "Purchase Rate (₹)" },
-    { key: "SELLINGRATE", label: "Selling Rate (₹)" },
-    { key: "ACTIVE", label: "Status" },
-];
+    const BarcodeColumns = [
+        { key: "ACTION", label: "Action" },   // 👈 add this
+        { key: "ORIONID", label: "ID" },
+        { key: "VENDORNAME", label: "Vendor" },
+        { key: "PRODUCTNAME", label: "Product" },
+        { key: "SUBPRODUCTNAME", label: "Sub Product" },
+        { key: "ORIONBARCODE", label: "Barcode" },
+        { key: "MRP", label: "MRP (₹)" },
+        { key: "PURRATE", label: "Purchase Rate (₹)" },
+        { key: "SELLINGRATE", label: "Selling Rate (₹)" },
+        { key: "ACTIVE", label: "Status" },
+    ];
 
     const handleExport = (option: string) => {
         const exportData = barcodes.map((barcode: any) => ({
@@ -392,11 +384,11 @@ const handleChange = (field: string | number, value: any) => {
     /* -------------------- FORM CONFIG -------------------- */
     // Pass the prepared dropdown data to the config
     const barcodeFormFields = BarcodeConfig(
-        vendorsForDropdown, 
-        productsForDropdown, 
+        vendorsForDropdown,
+        productsForDropdown,
         subProductsForDropdown
     );
-    
+
     const fieldSequence = barcodeFormFields.map(f => f.name);
 
     const { register, focusNext } = useEnterNavigation(fieldSequence, () => {
@@ -421,7 +413,7 @@ const handleChange = (field: string | number, value: any) => {
                 message="Are you sure you want to delete this barcode? This action cannot be undone."
             />
 
-            <Grid templateColumns={{ base: "1fr", lg: "1fr 1fr" }} gap={2}>
+            <Grid templateColumns={{ base: "1fr", lg: "1fr 2.3fr" }} gap={2}>
                 {/* ---------------- FORM ---------------- */}
                 <GridItem>
                     <VStack bg={theme.colors.formColor} p={2} borderRadius="xl" border="1px solid #eef">
@@ -485,9 +477,9 @@ const handleChange = (field: string | number, value: any) => {
                                     <Table.Cell>
                                         <Box display="flex" justifyContent="center" alignItems='center' gap={2}>
                                             {index + 1}
-                                            <FaEdit 
-                                                onClick={() => handleEdit(barcode)} 
-                                                cursor="pointer" 
+                                            <FaEdit
+                                                onClick={() => handleEdit(barcode)}
+                                                cursor="pointer"
                                                 color="blue"
                                                 size={16}
                                                 title="Edit"

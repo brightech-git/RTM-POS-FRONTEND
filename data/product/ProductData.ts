@@ -12,6 +12,7 @@ export const TaggedOrNonTagged = [
 ]
 
 export const TagType = [
-    { value: "S", label: "SINGLE" },
-    { value: "B", label: 'BULK' }
+    { value: "B", label: 'BULK' },
+    { value: "S", label: "SINGLE" }
+    
 ]

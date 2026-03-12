@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import {
   Box,
   Button,
@@ -87,6 +87,7 @@ interface ApiTagedItem {
   UNIQUEKEY: string;
   UNITCODE: number;
   VENDORCODE: number;
+  VENDORNAME: string | null; // <-- Added this field
   WEIGHT: number;
 }
 
@@ -121,21 +122,49 @@ interface TaggedRow {
   billNo: number;
   billDate: string;
   vendorCode: number;
+  vendorName: string | null; // Added
   barcode: string;
   productCode: number;
+  productName: string | null; // Added
   subProductCode: number;
+  subProductName: string | null; // Added
   purRate: number;
   pieces: number;
   weight: number;
   discount: number | null;
+  discPer: number | null; // Added
   sellingRate: number;
   markup: number | null;
+  markupPer: number | null; // Added
   amount: number | null;
   mrp: number;
   billStatus: string | null;
+  billType: string; // Added
   invoiceNo: string;
   totalAmount: number;
   taxAmount: number;
+  taxPer: number; // Added
+  taxCalc: string; // Added
+  cgstAmount: number | null; // Added
+  cgstPer: number | null; // Added
+  cgstTaxCode: number | null; // Added
+  sgstAmount: number | null; // Added
+  sgstPer: number | null; // Added
+  sgstTaxCode: number | null; // Added
+  igstAmount: number | null; // Added
+  igstPer: number | null; // Added
+  igstTaxCode: number | null; // Added
+  srvAmount: number | null; // Added
+  srvPer: number | null; // Added
+  srvTaxCode: number | null; // Added
+  hsnCalc: string | null; // Added
+  hsnCode: string;
+  hsnTaxCode: number;
+  tagGen: string; // Added
+  createdBy: number; // Added
+  createdDate: string; // Added
+  createdTime: string; // Added
+  unitCode: number; // Added
 }
 
 interface SyncModalItem {
@@ -145,6 +174,12 @@ interface SyncModalItem {
   isSelected: boolean;
   copies: number;
   sellingRate: number;
+  productCode?: number; // Optional, added
+  subProductCode?: number; // Optional, added
+  barcode?: string; // Optional, added
+  weight?: number; // Optional, added
+  amount?: number; // Optional, added
+  totalAmount?: number; // Optional, added
 }
 
 // ─── Design Tokens ────────────────────────────────────────────────────────
@@ -314,10 +349,17 @@ export default function TaggedListPage() {
   const { theme } = useTheme();
   const router = useRouter();
   const { setData, setColumns, setShowSno, title } = usePrint();
+  const getTodayDateString = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   const [filters, setFilters] = useState<TagedUIFilter>({
-    fromDate: "",
-    toDate: "",
+    fromDate: getTodayDateString(), // Auto set to today
+    toDate: getTodayDateString(),   // Auto set to today
     billNo: "",
     vendorCode: "ALL",
     productCode: "",
@@ -328,9 +370,33 @@ export default function TaggedListPage() {
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [syncModalItems, setSyncModalItems] = useState<SyncModalItem[]>([]);
+  const [vendorMap, setVendorMap] = useState<Map<string, number>>(new Map());
+
+
 
   const { data: allTagedData, isLoading: isLoadingAll, refetch: refetchAll } = useAllTaged();
   const syncMutation = useSyncTaged();
+
+
+  useEffect(() => {
+    const map = new Map<string, number>();
+    const sourceData = allTagedData as any;
+
+    const items: ApiTagedItem[] = Array.isArray(sourceData)
+      ? sourceData
+      : Array.isArray(sourceData?.data)
+        ? sourceData.data
+        : [];
+
+    items.forEach((item: ApiTagedItem) => {
+      if (item.VENDORNAME && item.VENDORCODE) {
+        map.set(item.VENDORNAME, item.VENDORCODE);
+      }
+    });
+
+    setVendorMap(map);
+  }, [allTagedData]);
+
 
   const hasActiveFilters = useMemo(() => {
     return (
@@ -348,14 +414,20 @@ export default function TaggedListPage() {
         fromDate: filters.fromDate || undefined,
         toDate: filters.toDate || undefined,
         billNo: filters.billNo ? parseInt(filters.billNo) : undefined,
-        vendorCode: filters.vendorCode !== "ALL" ? parseInt(filters.vendorCode) : undefined,
+        vendorCode: filters.vendorCode !== "ALL" ? parseInt(filters.vendorCode) : undefined, // This now gets the code
         productCode: filters.productCode ? parseInt(filters.productCode) : undefined,
       }
       : null
   );
 
   const transformApiData = useCallback(
-    (apiResponse: { message: string; data: ApiTagedItem[] } | ApiTagedItem[] | Taged[] | undefined): TaggedRow[] => {
+    (
+      apiResponse:
+        | { message: string; data: ApiTagedItem[] }
+        | ApiTagedItem[]
+        | Taged[]
+        | undefined
+    ): TaggedRow[] => {
       if (!apiResponse) return [];
 
       let items: ApiTagedItem[] = [];
@@ -371,21 +443,49 @@ export default function TaggedListPage() {
         billNo: item.BILLNO || 0,
         billDate: item.BILLDATE || "",
         vendorCode: item.VENDORCODE || 0,
+        vendorName: item.VENDORNAME || "",          // fixed
         barcode: item.ORIONBARCODE || "—",
         productCode: item.PRODUCTCODE || 0,
+        productName: item.PRODUCTNAME || "",        // fixed
         subProductCode: item.SUBPRODUCTCODE || 0,
+        subProductName: item.SUBPRODUCTNAME || "",  // fixed
         purRate: item.PURRATE || 0,
         pieces: item.PIECES || 0,
         weight: item.WEIGHT || 0,
         discount: item.DISCOUNT,
+        discPer: item.DISCPER,
         sellingRate: item.SELLINGRATE || 0,
         markup: item.MARKUP,
+        markupPer: item.MARKUPPER,
         amount: item.AMOUNT,
         mrp: item.MRP || 0,
         billStatus: item.BILLSTATUS,
+        billType: item.BILLTYPE || "",
         invoiceNo: item.INVOICENO || "—",
         totalAmount: item.TOTALAMOUNT || 0,
         taxAmount: item.TAXAMOUNT || 0,
+        taxPer: item.TAXPER || 0,
+        taxCalc: item.TAXCALC || "",
+        cgstAmount: item.CGSTAMOUNT || 0,
+        cgstPer: item.CGSTPER || 0,
+        cgstTaxCode: item.CGSTTAXCODE || 0,
+        sgstAmount: item.SGSTAMOUNT || 0,
+        sgstPer: item.SGSTPER || 0,
+        sgstTaxCode: item.SGSTTAXCODE || 0,
+        igstAmount: item.IGSTAMOUNT || 0,
+        igstPer: item.IGSTPER || 0,
+        igstTaxCode: item.IGSTTAXCODE || 0,
+        srvAmount: item.SRVAMOUNT || 0,
+        srvPer: item.SRVPER || 0,
+        srvTaxCode: item.SRVTAXCODE || 0,
+        hsnCalc: item.HSNCALC || "",
+        hsnCode: item.HSNCODE || "",
+        hsnTaxCode: item.HSNTAXCODE || 0,
+        tagGen: item.TAGGEN || "",
+        createdBy: item.CREATEDBY || 0,
+        createdDate: item.CREATEDDATE || "",
+        createdTime: item.CREATEDTIME || "",
+        unitCode: item.UNITCODE || 0,
       }));
     },
     []
@@ -399,22 +499,16 @@ export default function TaggedListPage() {
   const isLoading = isLoadingAll || (hasActiveFilters && isLoadingFiltered);
 
   const vendorOptions = useMemo(() => {
-    const vendors = new Set<number>();
-    const sourceData = allTagedData;
-    if (sourceData) {
-      const source = sourceData as any;
-      const items = Array.isArray(source) ? source : Array.isArray(source?.data) ? source.data : [];
-      items.forEach((item: ApiTagedItem) => {
-        if (item.VENDORCODE) vendors.add(item.VENDORCODE);
-      });
-    }
     return [
       { label: "All Vendors", value: "ALL" },
-      ...Array.from(vendors)
-        .sort((a, b) => a - b)
-        .map((code) => ({ label: `Vendor ${code}`, value: code.toString() })),
+      ...Array.from(vendorMap.entries())
+        .sort((a, b) => a[0].localeCompare(b[0])) // Sort by name
+        .map(([name, code]) => ({
+          label: name,
+          value: code.toString() // Store code as value
+        })),
     ];
-  }, [allTagedData]);
+  }, [vendorMap]);
 
   const filteredInvoices = useMemo(() => {
     let filtered = [...invoiceList];
@@ -438,7 +532,13 @@ export default function TaggedListPage() {
   }, []);
 
   const clearFilters = useCallback(() => {
-    setFilters({ fromDate: "", toDate: "", billNo: "", vendorCode: "ALL", productCode: "" });
+    setFilters({
+      fromDate: getTodayDateString(),
+      toDate: getTodayDateString(),
+      billNo: "",
+      vendorCode: "ALL",
+      productCode: ""
+    });
     setSearchTerm("");
   }, []);
 
@@ -492,8 +592,22 @@ export default function TaggedListPage() {
         });
       }
 
-      if (hasActiveFilters) await refetchFiltered();
-      else await refetchAll();
+      // Clear filters after successful sync
+      setFilters({
+        fromDate: getTodayDateString(),
+        toDate: getTodayDateString(),
+        billNo: "",
+        vendorCode: "ALL",
+        productCode: ""
+      });
+      setSearchTerm("");
+
+      // Then refetch the data with the cleared filters
+      if (hasActiveFilters) {
+        await refetchFiltered();
+      } else {
+        await refetchAll();
+      }
 
     } catch (error: any) {
       toaster.dismiss(loadingToastId);
@@ -619,7 +733,7 @@ export default function TaggedListPage() {
     { label: "Date", align: "left" },
     { label: "Vendor", align: "left" },
     { label: "Invoice No", align: "left" },
-    { label: "Barcode", align: "left" },
+    // { label: "Barcode", align: "left" },
     { label: "Product", align: "right" },
     { label: "Sub Prod.", align: "right" },
     { label: "Pur Rate", align: "right" },
@@ -627,12 +741,13 @@ export default function TaggedListPage() {
     { label: "Weight", align: "right" },
     { label: "Disc", align: "right" },
     { label: "Sell Rate", align: "right" },
-    { label: "Markup", align: "right" },
+    { label: "MRP", align: "right" },
+    // { label: "Markup", align: "right" },
     { label: "Amount", align: "right" },
     { label: "Tax", align: "right" },
     { label: "Total", align: "right" },
-    { label: "MRP", align: "right" },
-    { label: "Status", align: "center" },
+    
+    // { label: "Status", align: "center" },
   ];
 
   return (
@@ -996,7 +1111,7 @@ export default function TaggedListPage() {
               <GridItem>
                 <FieldLabel>Search</FieldLabel>
                 <Input
-                  placeholder="Bill No, Barcode, Invoice…"
+                  placeholder="Bill No,Invoice…"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   {...inputStyle}
@@ -1206,7 +1321,7 @@ export default function TaggedListPage() {
                               borderColor={`${tokens.violet}25`}
                             >
                               <Text fontSize="10px" fontWeight="700" color={tokens.violet}>
-                                {row.vendorCode}
+                                {row.vendorName}
                               </Text>
                             </Box>
                           </Table.Cell>
@@ -1217,7 +1332,7 @@ export default function TaggedListPage() {
                             </Text>
                           </Table.Cell>
 
-                          <Table.Cell px={3} py={2} borderRight="1px solid" borderColor={tokens.borderLight}>
+                          {/* <Table.Cell px={3} py={2} borderRight="1px solid" borderColor={tokens.borderLight}>
                             {row.barcode && row.barcode !== "—" ? (
                               <Box
                                 display="inline-flex"
@@ -1236,14 +1351,14 @@ export default function TaggedListPage() {
                             ) : (
                               <Text fontSize="11px" color={tokens.textLight}>—</Text>
                             )}
+                          </Table.Cell> */}
+
+                          <Table.Cell px={3} py={2} borderRight="1px solid" borderColor={tokens.borderLight} textAlign="right">
+                            <Text fontSize="11px" fontWeight="600" color={tokens.text}>{row.productName}</Text>
                           </Table.Cell>
 
                           <Table.Cell px={3} py={2} borderRight="1px solid" borderColor={tokens.borderLight} textAlign="right">
-                            <Text fontSize="11px" fontWeight="600" color={tokens.text}>{row.productCode}</Text>
-                          </Table.Cell>
-
-                          <Table.Cell px={3} py={2} borderRight="1px solid" borderColor={tokens.borderLight} textAlign="right">
-                            <Text fontSize="11px" color={tokens.textMid}>{row.subProductCode}</Text>
+                            <Text fontSize="11px" color={tokens.textMid}>{row.subProductName}</Text>
                           </Table.Cell>
 
                           <Table.Cell px={3} py={2} borderRight="1px solid" borderColor={tokens.borderLight} textAlign="right">
@@ -1273,12 +1388,17 @@ export default function TaggedListPage() {
                               {row.sellingRate ? row.sellingRate.toFixed(2) : "0.00"}
                             </Text>
                           </Table.Cell>
-
                           <Table.Cell px={3} py={2} borderRight="1px solid" borderColor={tokens.borderLight} textAlign="right">
+                            <Text fontSize="11px" fontWeight="500" color={tokens.textMid}>
+                              {formatCurrency(row.mrp)}
+                            </Text>
+                          </Table.Cell>
+
+                          {/* <Table.Cell px={3} py={2} borderRight="1px solid" borderColor={tokens.borderLight} textAlign="right">
                             <Text fontSize="11px" fontWeight="600" color={row.markup && row.markup > 0 ? tokens.green : tokens.textLight}>
                               {row.markup && row.markup > 0 ? `+${row.markup.toFixed(2)}` : "—"}
                             </Text>
-                          </Table.Cell>
+                          </Table.Cell> */}
 
                           <Table.Cell px={3} py={2} borderRight="1px solid" borderColor={tokens.borderLight} textAlign="right">
                             <Text fontSize="11px" fontWeight="700" color={tokens.text}>
@@ -1296,13 +1416,9 @@ export default function TaggedListPage() {
                             </Text>
                           </Table.Cell>
 
-                          <Table.Cell px={3} py={2} borderRight="1px solid" borderColor={tokens.borderLight} textAlign="right">
-                            <Text fontSize="11px" fontWeight="500" color={tokens.textMid}>
-                              {formatCurrency(row.mrp)}
-                            </Text>
-                          </Table.Cell>
+                          
 
-                          <Table.Cell px={4} py={2} textAlign="center">
+                          {/* <Table.Cell px={4} py={2} textAlign="center">
                             <Box
                               display="inline-flex"
                               alignItems="center"
@@ -1326,7 +1442,7 @@ export default function TaggedListPage() {
                                 {row.billStatus || "—"}
                               </Text>
                             </Box>
-                          </Table.Cell>
+                          </Table.Cell> */}
                         </Table.Row>
                       );
                     })
