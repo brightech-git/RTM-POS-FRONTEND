@@ -551,73 +551,81 @@ export default function TaggedListPage() {
       toaster.error({ title: "Error", description: "Failed to refresh data", duration: 3000 });
     }
   }, [hasActiveFilters, refetchFiltered, refetchAll]);
+ const handleClick = () => {
+    // This will trigger the custom protocol
+    window.location.href = 'mypos://launch';
+  };
 
-  const handleSync = useCallback(async () => {
-    const syncFilters = {
-      fromDate: filters.fromDate || undefined,
-      toDate: filters.toDate || undefined,
-      billNo: filters.billNo ? parseInt(filters.billNo) : undefined,
-      vendorCode: filters.vendorCode !== "ALL" ? parseInt(filters.vendorCode) : undefined,
-      productCode: filters.productCode ? parseInt(filters.productCode) : undefined,
-    };
+const handleSync = useCallback(async () => {
+  const syncFilters = {
+    fromDate: filters.fromDate || undefined,
+    toDate: filters.toDate || undefined,
+    billNo: filters.billNo ? parseInt(filters.billNo) : undefined,
+    vendorCode: filters.vendorCode !== "ALL" ? parseInt(filters.vendorCode) : undefined,
+    productCode: filters.productCode ? parseInt(filters.productCode) : undefined,
+  };
 
-    const loadingToastId = toaster.create({
-      title: "Syncing…",
-      description: "Please wait while invoices are being synced",
-      type: "loading",
-      duration: 30000,
-    });
+  const loadingToastId = toaster.create({
+    title: "Syncing…",
+    description: "Please wait while invoices are being synced",
+    type: "loading",
+    duration: 30000,
+  });
 
-    try {
-      const response = await syncMutation.mutateAsync(syncFilters);
-      toaster.dismiss(loadingToastId);
+  try {
+    const response = await syncMutation.mutateAsync(syncFilters);
+    toaster.dismiss(loadingToastId);
 
-      if (Array.isArray(response) && response.length > 0) {
-        const modalItems: SyncModalItem[] = response.map((item) => ({
-          billNo: item.BILLNO ?? 0,
-          tagNo: item.TAGNO ?? item.TAGGEN ?? "",
-          pieces: Number(item.PIECES ?? 0),
-          isSelected: true,
-          copies: Number(item.PIECES ?? 0),
-          sellingRate: item.SELLINGRATE ?? 0,
-        }));
+    if (Array.isArray(response) && response.length > 0) {
+      const modalItems: SyncModalItem[] = response.map((item) => ({
+        billNo: item.BILLNO ?? 0,
+        tagNo: item.TAGNO ?? item.TAGGEN ?? "",
+        pieces: Number(item.PIECES ?? 0),
+        isSelected: true,
+        copies: Number(item.PIECES ?? 0),
+        sellingRate: item.SELLINGRATE ?? 0,
+      }));
 
-        setSyncModalItems(modalItems);
-        setIsSyncModalOpen(true);
-      } else {
-        toaster.success({
-          title: "Success",
-          description: "No items to sync",
-          duration: 3000,
-        });
-      }
-
-      // Clear filters after successful sync
-      setFilters({
-        fromDate: getTodayDateString(),
-        toDate: getTodayDateString(),
-        billNo: "",
-        vendorCode: "ALL",
-        productCode: ""
+      setSyncModalItems(modalItems);
+      // Open the POS app after sync
+      handleClick();
+    } else {
+      toaster.success({
+        title: "Success",
+        description: "No items to sync",
+        duration: 3000,
       });
-      setSearchTerm("");
 
-      // Then refetch the data with the cleared filters
-      if (hasActiveFilters) {
-        await refetchFiltered();
-      } else {
-        await refetchAll();
-      }
-
-    } catch (error: any) {
-      toaster.dismiss(loadingToastId);
-      toaster.error({
-        title: "Sync Failed",
-        description: error?.response?.data?.message || "Failed to sync invoices. Please try again.",
-        duration: 5000,
-      });
+      // Optional: still open POS even if no items
+      // handleClick();
     }
-  }, [syncMutation, filters, hasActiveFilters, refetchFiltered, refetchAll]);
+
+    // Clear filters
+    setFilters({
+      fromDate: getTodayDateString(),
+      toDate: getTodayDateString(),
+      billNo: "",
+      vendorCode: "ALL",
+      productCode: ""
+    });
+    setSearchTerm("");
+
+    // Refetch data
+    if (hasActiveFilters) {
+      await refetchFiltered();
+    } else {
+      await refetchAll();
+    }
+
+  } catch (error: any) {
+    toaster.dismiss(loadingToastId);
+    toaster.error({
+      title: "Sync Failed",
+      description: error?.response?.data?.message || "Failed to sync invoices. Please try again.",
+      duration: 5000,
+    });
+  }
+}, [syncMutation, filters, hasActiveFilters, refetchFiltered, refetchAll]);
 
   const handleSelectAll = useCallback((checked: boolean) => {
     setSyncModalItems((prev) => prev.map((item) => ({ ...item, isSelected: checked })));

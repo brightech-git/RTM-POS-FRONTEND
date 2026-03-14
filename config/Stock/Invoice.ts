@@ -37,7 +37,7 @@ export const InvoiceDetailsConfig = ({
       required: true,
       size: "xs",
       rounded: "sm",
-      width: "150px",
+      width: "300px",
         colSpan: 2,
     },
 

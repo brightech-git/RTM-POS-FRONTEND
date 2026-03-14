@@ -280,6 +280,7 @@ const finalOrionBarcode =
 
     const { register, focusNext, focusFirst } = useEnterNavigation(fieldSequence, () => {
         handleSave();
+        return true;
     });
 
 

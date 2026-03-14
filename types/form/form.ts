@@ -39,6 +39,7 @@ export interface FormField {
     options?: SelectItem[];
     // items?: SelectItem[];
 
+     inputRef?: React.RefObject<HTMLInputElement>;
     // // For radio inputs
     // radioOptions?: Array<{ label: string; value: string; }>;
     defaultValue?: string;

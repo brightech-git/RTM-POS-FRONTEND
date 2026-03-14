@@ -11,7 +11,7 @@ interface UseEnterNavigationReturn {
 
 export const useEnterNavigation = (
     fields: FieldName[],
-    onSubmit?: () => void
+    onSubmit?: () => boolean  // ← was () => void
 ): UseEnterNavigationReturn => {
     const inputRefs = useRef<Record<FieldName, InputElement>>({});
     const hasMounted = useRef(false);
@@ -20,32 +20,32 @@ export const useEnterNavigation = (
         inputRefs.current[fieldName] = el;
     };
 
-   const focusNext = (currentField: FieldName) => {
-    const currentIndex = fields.indexOf(currentField);
-    if (currentIndex === -1) return;
-
-    for (let i = currentIndex + 1; i < fields.length; i++) {
-        const nextField = fields[i];
-        const element = inputRefs.current[nextField] as HTMLInputElement | null;
-
-        if (
-            element &&
-            !element.disabled &&
-            !element.readOnly &&
-            element.offsetParent !== null // not hidden
-        ) {
-            element.focus();
-            return;
-        }
-    }
-
-    // If no enabled fields found → submit
-    if (onSubmit) onSubmit();
-};
-
     const focusFirst = () => {
         if (fields.length > 0) {
             inputRefs.current[fields[0]]?.focus();
+        }
+    };
+
+    const focusNext = (currentField: FieldName) => {
+        const currentIndex = fields.indexOf(currentField);
+        if (currentIndex === -1) return;
+
+        for (let i = currentIndex + 1; i < fields.length; i++) {
+            const nextField = fields[i];
+            const element = inputRefs.current[nextField] as HTMLInputElement | null;
+            if (element && !element.disabled && !element.readOnly && element.offsetParent !== null) {
+                element.focus();
+                return;
+            }
+        }
+
+        // Last field — only focus first if submit succeeds
+        if (onSubmit) {
+            const success = onSubmit(); // ← capture return value
+            if (success) {
+                setTimeout(() => focusFirst(), 150); // ← only runs on success
+            }
+            // on failure: focus stays on SALEMANCODE (validate() already focused it)
         }
     };
 
@@ -53,10 +53,10 @@ export const useEnterNavigation = (
     useEffect(() => {
         if (!hasMounted.current) {
             hasMounted.current = true;
-            const timer = setTimeout(() => focusFirst(), 100); // small delay for DOM
+            const timer = setTimeout(() => focusFirst(), 100);
             return () => clearTimeout(timer);
         }
-    }, []); // Empty dependency array - runs only once on mount
+    }, []);
 
     return { register, focusNext, focusFirst };
 };

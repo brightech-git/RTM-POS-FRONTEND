@@ -571,6 +571,7 @@ function VendorMaster() {
 
     const { register, focusNext } = useEnterNavigation(fieldSequence, () => {
         handleSave();
+        return true;
     });
 
     // Split fields into four columns

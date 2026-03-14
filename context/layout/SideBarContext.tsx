@@ -174,16 +174,17 @@ const createMenuData = (): SidebarMenu => ({
       { label: "Invoice", route: "/dashboard/Stock/Invoice", icon: Receipt },
       { label: "Orion Barcode Generation", route: "/dashboard/Stock/Non-TagGeneration", icon: FileText },
       { label: "Tag Generation", route: "/dashboard/Stock/TagGeneration", icon: Tag },
-      // { label: "Tag Print", route: "/dashboard/Stock/TagPrint", icon: PrinterIcon },
+      { label: "Tag Duplicate Print", route: "/dashboard/Stock/TagPrint", icon: PrinterIcon },
     ],
   },
   Billing: {
     type: "flat",
     icon: DollarSign,
     items: [
+         { label: "Sales", route: "/dashboard/Billing/Sales", icon: TrendingUp },
       // { label: "Bill Cancel", route: "/dashboard/Billing/BillCancel", icon: XCircle },
       // { label: "Bill Print", route: "/dashboard/Billing/BillPrint", icon: PrinterIcon },
-      // { label: "Sales", route: "/dashboard/Billing/Sales", icon: TrendingUp },
+   
     ],
   },
   Reports: {

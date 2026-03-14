@@ -1005,7 +1005,10 @@ const handleSaveAll = useCallback(() => {
 
   // Navigation
   const fieldSequence = useMemo(() => fields.map(f => f.name), [fields]);
-  const { register, focusNext } = useEnterNavigation(fieldSequence, () => handleAddItem());
+const { register, focusNext } = useEnterNavigation(fieldSequence, () => {
+    handleAddItem();
+    return true; // ✅ now it returns a boolean
+});
 
   // Totals
   const totalNetAmount = useMemo(() =>

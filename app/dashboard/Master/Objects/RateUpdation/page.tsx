@@ -343,6 +343,7 @@ const handleSave = () => {
 
     const { register, focusNext } = useEnterNavigation(fieldSequence, () => {
         handleSave();
+        return true;
     });
 
     /* -------------------- UI -------------------- */

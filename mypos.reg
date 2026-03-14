@@ -1,0 +1,12 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_CLASSES_ROOT\mypos]
+@="URL:My POS Protocol"
+"URL Protocol"=""
+
+[HKEY_CLASSES_ROOT\mypos\shell]
+
+[HKEY_CLASSES_ROOT\mypos\shell\open]
+
+[HKEY_CLASSES_ROOT\mypos\shell\open\command]
+@="\"D:\\Kiruba\\prjbarcodeprint.exe\" \"%1\""

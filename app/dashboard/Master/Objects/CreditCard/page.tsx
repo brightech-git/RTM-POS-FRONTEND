@@ -212,9 +212,10 @@ const creditCards = creditCardsData as CreditCard[];
     const creditCardFormFields = CreditCardConfig();
     const fieldSequence = creditCardFormFields.map(f => f.name);
 
-    const { register, focusNext } = useEnterNavigation(fieldSequence, () => {
-        handleSave();
-    });
+  const { register, focusNext } = useEnterNavigation(fieldSequence, () => {
+    handleSave();
+    return true; // or false depending on your logic
+});
 
     /* -------------------- UI -------------------- */
     return (

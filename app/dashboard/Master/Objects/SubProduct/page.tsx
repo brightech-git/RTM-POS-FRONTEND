@@ -271,6 +271,7 @@ function SubProductMaster() {
 
     const { register, focusNext } = useEnterNavigation(fieldSequence, () => {
         handleSave();
+        return true;
     });
 
     // Debug logs

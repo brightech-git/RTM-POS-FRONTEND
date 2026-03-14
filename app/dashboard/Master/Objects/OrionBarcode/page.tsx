@@ -393,6 +393,7 @@ function OrionBarcodeMaster() {
 
     const { register, focusNext } = useEnterNavigation(fieldSequence, () => {
         handleSave();
+        return true;
     });
 
     // Log to check if data is being passed correctly
